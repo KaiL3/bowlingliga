@@ -1,0 +1,165 @@
+# Development
+
+## Requirements
+
+| Component | Version / note |
+|---|---|
+| PHP | ≥ 8.1 (developed with 8.5) with the extensions `pdo_mysql`, `sodium`, `gd`, `fileinfo`, `zip`, `curl` |
+| Composer | 2.x |
+| MariaDB | 10.11 or newer (Debian 12; CI tests 11.4), local, on `127.0.0.1:3306` by default. MySQL is not supported: the migrations use MariaDB syntax |
+| Firefox | optional, for screenshots (skill `visual-check`) |
+| Node.js | not needed; JavaScript is checked via Firefox headless (screenshot) |
+| Tesseract | not needed (OCR is deferred) |
+
+Linux, macOS and Windows work alike. Notes:
+
+- If `php` is not on the PATH, call it with its full path. The skills and
+  examples accept the variable `PHP` for this (`PHP=${PHP:-php}`).
+- **Windows / PowerShell:** after installing PHP or Composer, reload PATH in
+  an open shell:
+  `$env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')`.
+- No `mysql` client needed: database queries via short PHP/PDO scripts
+  (skill `db-query`).
+- Uploads of score sheet photos up to 10 MB need `upload_max_filesize = 10M`
+  and `post_max_size = 12M` in `php.ini` (PHP defaults: 2M and 8M);
+  `deploy/install.sh` sets them on the server.
+- Development server: `php -S 127.0.0.1:8000 -t public`.
+  The server delivers existing files (CSS/JS) directly, all other paths go to
+  `public/index.php`. The tests start the server with `public/index.php` as
+  router script; then there are no static files, which is enough for the
+  tests.
+
+## Databases
+
+| Database | Purpose | Rules |
+|---|---|---|
+| Development database (e.g. `bowlingliga`), named in `config/database.php` | Your own data for the development server | May hold real league data: read for smoke tests, or remove temporary data completely afterwards. |
+| `bowlingliga_test` | Integration tests (root without password by default) | Dropped and rebuilt from the migrations for every test |
+
+For a fictional league to try things out or take screenshots, fill an
+empty database with `php bin/seed-demo.php` (see
+[operations.md](operations.md)); `InstallationIntegrationTest` runs it
+against the test database, so it keeps up with the schema.
+
+The uploaded original score sheets do not lie in the database but in
+`score_sheet_dir` (locally empty = `storage/score-sheets/` in the project,
+ignored by git). Tests use their own temporary directories or the
+`InMemoryBlobStore`.
+
+The connection of the integration tests can be overridden via
+`BOWLINGLIGA_TEST_DB_HOST/PORT/NAME/USER/PASSWORD/CHARSET`.
+
+## Tests
+
+```bash
+php vendor/bin/phpunit                         # all (≈ 3–5 min)
+php vendor/bin/phpunit --testsuite Unit
+php vendor/bin/phpunit tests/Integration/Admin  # E2E via HTTP
+```
+
+| Suite | Content |
+|---|---|
+| `tests/Unit` | Controllers, views, use cases with in-memory ports, security |
+| `tests/Property` | Correctness properties 1–23, see [testing.md](testing.md) (eris, ≥ 100 iterations) |
+| `tests/Integration` | Real test database: repositories, aggregation, result entry, season planning, login, public views |
+| `tests/Integration/Admin` | End-to-end: starts `php -S` with `public/index.php` (configuration via `BOWLINGLIGA_CONFIG`), logs in and runs through all admin areas via cURL |
+
+Expectation: all tests green, no skipped tests, no deprecations. Run the
+complete suite before finishing any change. If MariaDB is not running, the
+integration tests are skipped – start it first.
+
+**Continuous integration:** [.github/workflows/tests.yml](../.github/workflows/tests.yml)
+runs the complete suite on GitHub for every push to `main` and every pull
+request, with PHP 8.1, 8.3 and 8.5 against a MariaDB service. It calls
+PHPUnit with `--fail-on-all-issues`, so a skipped test, a deprecation or a
+notice fails the run as well. Locally the same check is
+`php vendor/bin/phpunit --fail-on-all-issues --display-all-issues`.
+
+## Conventions
+
+- English identifiers and comments, German UI texts; domain terms according
+  to the [glossary](glossary.md). Rule references as `(R12.9)` or
+  `R3.3–R3.14` in comments and docblocks only, never in visible texts (test
+  `NoRequirementNumbersInTextsTest`). Every referenced rule must exist in
+  [domain-logic.md](domain-logic.md), also as part of a range there (test
+  `RuleReferencesTest`); a new rule therefore goes into the document first.
+- `declare(strict_types=1)`, `final` classes, `readonly` constructor
+  properties.
+- Domain errors as their own `…Exception` with a user-facing message;
+  the controller translates them into an `ActionResult`.
+- Views escape every output; forms contain `$csrf->fieldHtml()`.
+- New schema changes: add a new numbered migration and update
+  `applySchema()`/`dropSchema()` in the integration tests. Locally, after an
+  update with new migrations, run `php bin/migrate.php` once (against the
+  development database). Migrations must be repeatable (`IF NOT EXISTS`), because
+  `bin/migrate.php` (table `schema_migration`) applies them on the server
+  during an update and brings older databases up to date.
+- What was implemented and why is described by the commit message.
+- Commit only on request.
+
+## Recipe: new admin feature area
+
+1. Use case in `src/Application/…` with port interfaces. It checks
+   `WriteAccess` and uses `Transaction` when there are several writing steps.
+2. Adapter in `src/Persistence/…` (extends `AbstractRepository`, uses
+   `transactional()` and prepared statements).
+3. Controller + view in `src/Presentation/`. The controller takes
+   `array $input` and returns an `ActionResult` or HTML. The view escapes.
+4. Wire it in `public/index.php` (composition root) and create the routes
+   following the pattern in [architecture.md](architecture.md). Add the link
+   in `AdminView::renderOverview()` and the entry in `AdminView::barEntries()`.
+5. Tests: unit tests for controller/view/use case, an integration test
+   against the test database, an E2E case in `AdminAreaIntegrationTest`
+   (401 without login, writing run with a persistence check).
+
+The skill `new-admin-area` contains the detailed recipe.
+
+## Visual check via screenshot (without Node)
+
+Firefox headless takes screenshots of pages and PDFs. This allows checking
+every view without changing data. Ready-made scripts and procedure:
+[.claude/skills/visual-check/](../.claude/skills/visual-check/SKILL.md)
+(plain PHP, so it runs on every platform without shell scripts).
+
+- **Server with router script** (`router.php`): it sets the cookies
+  `bl_style`/`bl_mode`/`bl_lang` from the environment variables
+  `BOWLINGLIGA_STYLE`/`_MODE`/`_LANG`, delivers existing files below
+  `public/` with `return false` and otherwise includes `public/index.php`.
+  For admin pages (`BOWLINGLIGA_ADMIN=<account id>`) it additionally sets up
+  a logged-in session – only for plain requests (GET).
+- **Screenshot** (`screenshot.php`): `firefox --headless --profile <own
+  profile next to the target> --no-remote --screenshot <target.png>
+  --window-size=1280,1500 <url>`, with a time limit of 40 s (a direct call
+  hung once). Desktop 1280 px, phone 390 px width. `FIREFOX` overrides the
+  path of the binary.
+- **PDFs:** first save with `curl`, then open `file:///…pdf` in the same way
+  (Firefox shows it with pdf.js). Quick page count check: count
+  `/Type /Page` in the PDF.
+- Only terminate your own processes (Firefox with its own profile, PHP on
+  the test port), never a Firefox the user has open.
+
+## mPDF quirks (print score sheet)
+
+mPDF renders HTML differently from a browser. For the print layout:
+
+- **Page breaks** only with `<pagebreak />`; `page-break-before` on a `div`
+  is ignored. For the HTML fallback via CSS
+  `pagebreak { display:block; page-break-before:always; }`.
+- **Column widths** from `<colgroup>` are ignored. Write widths as
+  `style="width:…"` on the cells of the first row.
+- **Child selectors** (`a > b`) in the stylesheet have no effect; use simple
+  classes or inline styles.
+- **Halves of equal width:** mPDF fits nested tables to their content. Two
+  blocks with `float:left/right; width:48.5%` are reliable.
+- **Vertical text** in table headers: attribute `text-rotate="90"` on the
+  `th`.
+- The A4 landscape format comes from the mPDF configuration
+  (`'format' => 'A4-L'`), not from CSS `@page size`.
+
+## Templates
+
+The virtual and the print score sheet reproduce the league's paper score
+sheet; `ScoreSheetCalculatorTest` recalculates the values of a real one
+(811/782/804 = 2397, points 8 : 6). The original templates of the league
+(score sheet, average list, table, schedule scheme) are not part of the
+repository; maintainers keep them under `.local/`, which git ignores.

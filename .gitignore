@@ -1,0 +1,39 @@
+# Dependencies (composer install)
+/vendor/
+
+# Local credentials and TOTP key (template: config/database.php.example)
+/config/database.php
+
+# Local score sheet directory (original score sheets, contains league data)
+/storage/
+
+# Local only: maintainer's files such as a local database server, start
+# script, league templates and the decision log (contain league data)
+/.local/
+
+# Test and tool caches
+/.phpunit.cache/
+.phpunit.result.cache
+
+# Local Claude Code settings and notes of the maintainer (skills under .claude/skills/ are versioned)
+/.claude/settings.local.json
+/CLAUDE.local.md
+
+# Temporary files and output
+*.log
+*.tmp
+/stdout.txt
+
+# Editor and operating system
+/.idea/
+/.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Data exports of bin/transfer-data.php (contain real league data)
+*.json.gz
+
+# Upload packages
+*.zip

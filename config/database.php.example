@@ -1,0 +1,52 @@
+<?php
+
+declare(strict_types=1);
+
+/**
+ * Example configuration of the database connection.
+ *
+ * Copy this file to `config/database.php` and fill in the local credentials.
+ * The actual `database.php` does NOT belong in version control (see
+ * .gitignore).
+ *
+ * R4.2: the MariaDB database runs only locally on the same server
+ * (no external/cloud-based service).
+ */
+
+return [
+    // R4.2: local host, no external services.
+    'host'     => '127.0.0.1',
+    'port'     => 3306,
+    'dbname'   => 'bowlingliga',
+    'user'     => 'bowlingliga',
+    'password' => '',
+    'charset'  => 'utf8mb4',
+
+    // R4.4: connection timeout of 10 seconds.
+    'connect_timeout' => 10,
+
+    // R23.9: server-side key for encrypting the TOTP secret, kept
+    // outside the database. Expects a base64-encoded sequence of exactly 32
+    // bytes. To generate one, e.g.:
+    //   php -r "echo base64_encode(random_bytes(32)), PHP_EOL;"
+    // (Configurations from before the English conversion use the former key
+    // name `totp_schluessel`; it is still accepted.)
+    'totp_key' => '',
+
+    // R3.15: directory of the uploaded original score sheets
+    // (content-addressed files, see FileSystemBlobStore). Outside `public/`,
+    // writable for the web server, part of the backup. Empty = the folder
+    // `storage/score-sheets` in the project.
+    'score_sheet_dir' => '',
+
+    // R37: address of the website for the QR codes on the printed
+    // score sheets (e.g. 'https://liga.example.de'). Empty = scheme and host of
+    // the request that prints.
+    'base_url' => '',
+
+    // Default language: for a visitor whose browser asks for none of the
+    // site's languages (one catalog lang/<code>.php each, e.g. 'de', 'en') and for
+    // the printed score sheets of a season without a language of its own.
+    // Every visitor can choose their own in the footer.
+    'language' => 'de',
+];
