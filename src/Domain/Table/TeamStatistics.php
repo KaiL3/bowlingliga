@@ -62,23 +62,23 @@ final class TeamStatistics
         public readonly bool $isGhostTeam = false,
     ) {
         if ($teamName === '') {
-            throw new \InvalidArgumentException('Der Teamname einer Team-Statistik darf nicht leer sein.');
+            throw new \InvalidArgumentException('The team name of a team statistic must not be empty.');
         }
 
         if ($points < 0) {
-            throw new \InvalidArgumentException('Die Punkte einer Team-Statistik dürfen nicht negativ sein, gegeben: ' . $points);
+            throw new \InvalidArgumentException('The points of a team statistic must not be negative, given: ' . $points);
         }
 
         if ($netPins < 0) {
-            throw new \InvalidArgumentException('Die Pins Netto einer Team-Statistik dürfen nicht negativ sein, gegeben: ' . $netPins);
+            throw new \InvalidArgumentException('The net pins of a team statistic must not be negative, given: ' . $netPins);
         }
 
         if ($grossPins < 0) {
-            throw new \InvalidArgumentException('Die Pins Brutto einer Team-Statistik dürfen nicht negativ sein, gegeben: ' . $grossPins);
+            throw new \InvalidArgumentException('The gross pins of a team statistic must not be negative, given: ' . $grossPins);
         }
 
         if ($numberOfGames < 0) {
-            throw new \InvalidArgumentException('Die Anzahl geleisteter Spiele einer Team-Statistik darf nicht negativ sein, gegeben: ' . $numberOfGames);
+            throw new \InvalidArgumentException('The number of games played of a team statistic must not be negative, given: ' . $numberOfGames);
         }
     }
 }

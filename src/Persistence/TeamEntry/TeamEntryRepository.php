@@ -41,7 +41,7 @@ final class TeamEntryRepository extends AbstractRepository implements TeamEntryS
 
     public function setEnabled(int $seasonId, bool $enabled): void
     {
-        $this->transactional('Teamerfassung umschalten', function () use ($seasonId, $enabled): void {
+        $this->transactional('switch_team_entry', function () use ($seasonId, $enabled): void {
             $this->perform('UPDATE season SET team_entry = :on WHERE id = :id', ['on' => $enabled ? 1 : 0, 'id' => $seasonId]);
         });
     }
@@ -127,7 +127,7 @@ final class TeamEntryRepository extends AbstractRepository implements TeamEntryS
 
     public function setParticipation(int $fixtureId, int $teamSeasonId, int $playerId, int $gameNumber, ?bool $isBlind): void
     {
-        $this->transactional('Aufstellung der Teamerfassung speichern', function () use ($fixtureId, $teamSeasonId, $playerId, $gameNumber, $isBlind): void {
+        $this->transactional('save_team_entry_lineup', function () use ($fixtureId, $teamSeasonId, $playerId, $gameNumber, $isBlind): void {
             if ($isBlind === null) {
                 $this->perform(
                     'DELETE FROM team_entry_game WHERE fixture_id = :f AND player_id = :p AND game_number = :g',
@@ -148,7 +148,7 @@ final class TeamEntryRepository extends AbstractRepository implements TeamEntryS
 
     public function setNet(int $fixtureId, int $playerId, int $gameNumber, ?int $net): void
     {
-        $this->transactional('Ergebnis der Teamerfassung speichern', function () use ($fixtureId, $playerId, $gameNumber, $net): void {
+        $this->transactional('save_team_entry_result', function () use ($fixtureId, $playerId, $gameNumber, $net): void {
             $this->perform(
                 'UPDATE team_entry_game SET net = :n WHERE fixture_id = :f AND player_id = :p AND game_number = :g',
                 ['n' => $net, 'f' => $fixtureId, 'p' => $playerId, 'g' => $gameNumber]
@@ -224,7 +224,7 @@ final class TeamEntryRepository extends AbstractRepository implements TeamEntryS
     /** @param array<string, mixed> $parameters */
     private function updateSide(int $fixtureId, string $side, string $assignment, array $parameters = []): void
     {
-        $this->transactional('Stand der Teamerfassung speichern', function () use ($fixtureId, $side, $assignment, $parameters): void {
+        $this->transactional('save_team_entry_state', function () use ($fixtureId, $side, $assignment, $parameters): void {
             $this->perform(
                 'INSERT INTO team_entry (fixture_id, side) VALUES (:f, :s) ON DUPLICATE KEY UPDATE fixture_id = fixture_id',
                 ['f' => $fixtureId, 's' => $side]

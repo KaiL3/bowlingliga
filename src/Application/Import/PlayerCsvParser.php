@@ -9,9 +9,11 @@ use Bowlingliga\Domain\Message;
 /**
  * Reads the player import file (CSV) without side effects.
  *
- * Expected columns (header in the first line, order free, case ignored):
- * `Team`, `Name`, `Geschlecht` (`m`/`w`) and optionally `Vorjahr Schnitt`
- * and `Vorjahr Spiele` – either both or neither filled in per line.
+ * Expected columns (header in the first line, order free): team, name,
+ * gender and optionally previous average and previous games – either both or
+ * neither filled in per line. Column names and gender values come from the
+ * {@see ImportVocabulary}, in any language of the installation (e.g.
+ * `Geschlecht` or `Gender`, `w` or `f`).
  *
  * Separator `;`, `,` or tab is detected from the header. The file may be
  * UTF-8 (with or without BOM) or Windows-1252, the default of Excel on
@@ -20,16 +22,9 @@ use Bowlingliga\Domain\Message;
  */
 final class PlayerCsvParser
 {
-    /** @var array<string, string> normalised header → field */
-    private const COLUMNS = [
-        'team'            => 'team',
-        'name'            => 'name',
-        'geschlecht'      => 'gender',
-        'vorjahr schnitt' => 'previous_average',
-        'vorjahr spiele'  => 'previous_games',
-    ];
-
-    private const REQUIRED = ['team' => 'Team', 'name' => 'Name', 'gender' => 'Geschlecht'];
+    public function __construct(private readonly ImportVocabulary $vocabulary)
+    {
+    }
 
     /**
      * @return array{rows: list<PlayerImportRow>, errors: list<Message>}
@@ -54,19 +49,19 @@ final class PlayerCsvParser
         $columns = [];
         $errors = [];
         foreach (self::cells($lines[$headerIndex], $delimiter) as $position => $title) {
-            $key = mb_strtolower((string) preg_replace('/\s+/u', ' ', trim($title)));
-            if ($key === '') {
+            if (trim($title) === '') {
                 continue;
             }
-            if (! isset(self::COLUMNS[$key])) {
+            $field = $this->vocabulary->field($title);
+            if ($field === null) {
                 $errors[] = new Message('import.error.unknown_column', ['column' => trim($title)]);
                 continue;
             }
-            $columns[self::COLUMNS[$key]] = $position;
+            $columns[$field] = $position;
         }
-        foreach (self::REQUIRED as $field => $label) {
+        foreach (ImportVocabulary::REQUIRED as $field) {
             if (! isset($columns[$field])) {
-                $errors[] = new Message('import.error.missing_column', ['column' => $label]);
+                $errors[] = new Message('import.error.missing_column', ['column' => new Message("import.column.{$field}")]);
             }
         }
         if ($errors !== []) {
@@ -82,7 +77,7 @@ final class PlayerCsvParser
             $value = static fn (string $field): string => isset($columns[$field]) ? trim($cells[$columns[$field]] ?? '') : '';
             $lineNumber = $index + 1;
 
-            $row = self::row($lineNumber, $value('team'), $value('name'), $value('gender'), $value('previous_average'), $value('previous_games'));
+            $row = $this->row($lineNumber, $value('team'), $value('name'), $value('gender'), $value('previous_average'), $value('previous_games'));
             if ($row instanceof Message) {
                 $errors[] = new Message('import.error.line', ['line' => $lineNumber, 'problem' => $row]);
             } else {
@@ -96,7 +91,7 @@ final class PlayerCsvParser
     /**
      * Builds a row or returns the reason why the line is invalid.
      */
-    private static function row(int $line, string $team, string $name, string $gender, string $average, string $games): PlayerImportRow|Message
+    private function row(int $line, string $team, string $name, string $gender, string $average, string $games): PlayerImportRow|Message
     {
         if ($team === '') {
             return new Message('import.error.team_missing');
@@ -104,11 +99,7 @@ final class PlayerCsvParser
         if ($name === '') {
             return new Message('import.error.name_missing');
         }
-        $genderValue = match (mb_strtolower($gender)) {
-            'm'     => 'male',
-            'w'     => 'female',
-            default => null,
-        };
+        $genderValue = $this->vocabulary->gender($gender);
         if ($genderValue === null) {
             return new Message('import.error.gender', ['value' => $gender]);
         }
@@ -117,7 +108,7 @@ final class PlayerCsvParser
             return new PlayerImportRow($line, $team, $name, $genderValue);
         }
         if ($average === '' || $games === '') {
-            return new Message('import.error.previous_both');
+            return new Message('import.error.previous_both', self::previousColumns());
         }
         if (preg_match('/^\d{1,3}(?:[.,]\d+)?$/', $average) !== 1 || (float) str_replace(',', '.', $average) > 300) {
             return new Message('import.error.previous_average', ['value' => $average]);
@@ -127,6 +118,17 @@ final class PlayerCsvParser
         }
 
         return new PlayerImportRow($line, $team, $name, $genderValue, (float) str_replace(',', '.', $average), (int) $games);
+    }
+
+    /**
+     * The two previous season columns as message parameters, named in the
+     * visitor's language.
+     *
+     * @return array{average: Message, games: Message}
+     */
+    public static function previousColumns(): array
+    {
+        return ['average' => new Message('import.column.previous_average'), 'games' => new Message('import.column.previous_games')];
     }
 
     /**

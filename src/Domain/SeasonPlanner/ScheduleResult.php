@@ -71,7 +71,7 @@ final class ScheduleResult
     public static function successWithWarning(Schedule $schedule, array $warnings): self
     {
         if ($warnings === []) {
-            throw new \InvalidArgumentException('Ein Ergebnis mit Warnung muss mindestens eine Warnung enthalten.');
+            throw new \InvalidArgumentException('A result with a warning must contain at least one warning.');
         }
 
         return new self(true, $schedule, $warnings, null);
@@ -86,7 +86,7 @@ final class ScheduleResult
     public static function error(Message $errorCause): self
     {
         if ($errorCause->key === '') {
-            throw new \InvalidArgumentException('Ein Fehlerergebnis muss eine Ursache benennen.');
+            throw new \InvalidArgumentException('A failed result must name a cause.');
         }
 
         return new self(false, null, [], $errorCause);

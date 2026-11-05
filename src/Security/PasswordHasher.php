@@ -39,7 +39,7 @@ final class PasswordHasher
         // so that an invalid hash is never stored.
         if (! is_string($hash) || $hash === '') {
             throw new PasswordHashException(
-                'Das Passwort konnte nicht gehasht werden.'
+                'The password could not be hashed.'
             );
         }
 

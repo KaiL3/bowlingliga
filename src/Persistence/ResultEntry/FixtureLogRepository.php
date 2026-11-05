@@ -49,7 +49,7 @@ final class FixtureLogRepository extends AbstractRepository implements ResultLog
         ?string $after = null,
         string $detail = '',
     ): void {
-        $this->transactional('Verlauf der Paarung schreiben', function () use ($fixtureId, $side, $action, $playerId, $gameNumber, $before, $after, $detail): void {
+        $this->transactional('write_fixture_log', function () use ($fixtureId, $side, $action, $playerId, $gameNumber, $before, $after, $detail): void {
             $this->perform(
                 'INSERT INTO fixture_log (fixture_id, side, actor, action, player_id, game_number, value_before, value_after, detail)
                  VALUES (:fixture, :side, :actor, :action, :player, :game, :before, :after, :detail)',

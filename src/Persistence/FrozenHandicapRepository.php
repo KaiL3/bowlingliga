@@ -25,7 +25,7 @@ final class FrozenHandicapRepository extends AbstractRepository implements Froze
      */
     public function save(int $matchdayId, int $playerId, int $hdcValue): void
     {
-        $this->transactional('Eingefrorenes Handicap speichern', function () use ($matchdayId, $playerId, $hdcValue): void {
+        $this->transactional('save_frozen_handicap', function () use ($matchdayId, $playerId, $hdcValue): void {
             $this->perform(
                 'INSERT INTO frozen_handicap (matchday_id, player_id, handicap)
                  VALUES (:matchday_id, :player_id, :handicap)
@@ -40,7 +40,7 @@ final class FrozenHandicapRepository extends AbstractRepository implements Froze
      */
     public function delete(int $id): void
     {
-        $this->transactional('Eingefrorenes Handicap löschen', function () use ($id): void {
+        $this->transactional('delete_frozen_handicap', function () use ($id): void {
             $this->perform('DELETE FROM frozen_handicap WHERE id = :id', ['id' => $id]);
         });
     }

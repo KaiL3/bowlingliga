@@ -20,7 +20,7 @@ final class TeamRepository extends AbstractRepository implements \Bowlingliga\Ap
      */
     public function create(): int
     {
-        return $this->transactional('Team anlegen', function ($pdo): int {
+        return $this->transactional('create_team', function ($pdo): int {
             // team only has an AUTO_INCREMENT id.
             $this->perform('INSERT INTO team () VALUES ()');
 
@@ -33,7 +33,7 @@ final class TeamRepository extends AbstractRepository implements \Bowlingliga\Ap
      */
     public function delete(int $id): void
     {
-        $this->transactional('Team löschen', function () use ($id): void {
+        $this->transactional('delete_team', function () use ($id): void {
             $this->perform('DELETE FROM team WHERE id = :id', ['id' => $id]);
         });
     }

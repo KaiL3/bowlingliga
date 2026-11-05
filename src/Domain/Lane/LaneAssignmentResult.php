@@ -78,10 +78,10 @@ final class LaneAssignmentResult
     public static function successWithWarning(array $assignments, Message $warning, array $deviations): self
     {
         if ($warning === '') {
-            throw new \InvalidArgumentException('Ein Ergebnis mit Warnung muss eine Warnung enthalten.');
+            throw new \InvalidArgumentException('A result with a warning must contain a warning.');
         }
         if ($deviations === []) {
-            throw new \InvalidArgumentException('Ein Ergebnis mit Warnung muss eine Übersicht der Abweichungen enthalten.');
+            throw new \InvalidArgumentException('A result with a warning must contain an overview of the deviations.');
         }
 
         return new self($assignments, null, $warning, $deviations);

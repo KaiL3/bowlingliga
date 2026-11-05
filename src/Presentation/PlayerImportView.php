@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Bowlingliga\Presentation;
 
+use Bowlingliga\Application\Import\ImportVocabulary;
 use Bowlingliga\Application\Import\PlayerImportPlan;
 use Bowlingliga\Application\Import\PlayerImportRow;
 use Bowlingliga\Domain\Message;
+use Bowlingliga\I18n\CatalogImportVocabulary;
 use Bowlingliga\I18n\Formatter;
 use Bowlingliga\I18n\Translator;
 
@@ -47,6 +49,7 @@ final class PlayerImportView
             );
         }
         $note = $error !== null ? AdminComponents::notes(null, $error) : '';
+        $columns = implode(', ', array_map($this->column(...), ImportVocabulary::FIELDS));
 
         return $note . AdminComponents::card($this->plain('import.title'), <<<HTML
             <form class="form" method="post" action="/admin/master-data/import-preview" enctype="multipart/form-data">
@@ -63,16 +66,58 @@ final class PlayerImportView
             </form>
             <h3 class="import-help">{$this->text('import.format_title')}</h3>
             <p>{$this->text('import.format_text')}</p>
-            <pre class="import-example">Team;Name;Geschlecht;Vorjahr Schnitt;Vorjahr Spiele
-            Pin Busters;Kurt;m;143,64;99
-            Jolly Rollers;Alma;w;;</pre>
+            <p><a class="button button--secondary" href="/admin/master-data/import-template" download>{$this->text('import.template')}</a></p>
+            <pre class="import-example">{$this->e($this->example())}</pre>
             <ul>
-                <li>{$this->text('import.help_gender', [], ['column' => '<strong>Geschlecht</strong>'])}</li>
-                <li>{$this->text('import.help_previous', [], ['average' => '<strong>Vorjahr Schnitt</strong>', 'games' => '<strong>Vorjahr Spiele</strong>'])}</li>
+                <li>{$this->text('import.help_columns', [], ['columns' => $columns])}</li>
+                <li>{$this->text('import.help_gender', ['male' => CatalogImportVocabulary::genderValue($this->t, 'male'), 'female' => CatalogImportVocabulary::genderValue($this->t, 'female')], ['column' => $this->column('gender')])}</li>
+                <li>{$this->text('import.help_previous', [], ['average' => $this->column('previous_average'), 'games' => $this->column('previous_games')])}</li>
                 <li>{$this->text('import.help_names')}</li>
                 <li>{$this->text('import.help_teams')}</li>
             </ul>
             HTML);
+    }
+
+    /**
+     * The template file in the visitor's language: UTF-8 with BOM (so that
+     * Excel shows umlauts), the column names and two example lines (R6).
+     */
+    public function template(): string
+    {
+        return "\xEF\xBB\xBF" . $this->example();
+    }
+
+    /** File name of the template in the visitor's language. */
+    public function templateFileName(): string
+    {
+        return $this->plain('import.template_file');
+    }
+
+    /**
+     * Column names and two example lines in the visitor's language, with its
+     * separator and decimal mark.
+     */
+    private function example(): string
+    {
+        $separator = $this->t->t('import.template_separator');
+        $lines = [
+            array_map(fn (string $field): string => CatalogImportVocabulary::columnName($this->t, $field), ImportVocabulary::FIELDS),
+            ['Pin Busters', 'Kurt', CatalogImportVocabulary::genderValue($this->t, 'male'), $this->format->number(143.64, 2), '99'],
+            ['Jolly Rollers', 'Alma', CatalogImportVocabulary::genderValue($this->t, 'female'), '', ''],
+        ];
+
+        // Quotes only where needed, so that the example stays readable.
+        $cell = static fn (string $value): string => strpbrk($value, $separator . "\"\r\n") === false
+            ? $value
+            : '"' . str_replace('"', '""', $value) . '"';
+
+        return implode('', array_map(static fn (array $line): string => implode($separator, array_map($cell, $line)) . "\r\n", $lines));
+    }
+
+    /** A column name in the visitor's language, highlighted. */
+    private function column(string $field): string
+    {
+        return '<strong>' . $this->e(CatalogImportVocabulary::columnName($this->t, $field)) . '</strong>';
     }
 
     public function renderPreview(string $csrfField, PlayerImportPlan $plan, string $seasonName, int $seasonId, string $encodedContent): string

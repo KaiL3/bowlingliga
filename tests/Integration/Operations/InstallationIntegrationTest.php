@@ -88,11 +88,11 @@ final class InstallationIntegrationTest extends TestCase
         try {
             [$code, $output] = $this->admin(['erster', '--only-if-empty'], $configFilePath, 'Sehr-Geheim-123');
             self::assertSame(0, $code, $output);
-            self::assertStringContainsString('Adminkonto "erster" angelegt', $output);
+            self::assertStringContainsString('Admin account "erster" created', $output);
 
             [$code, $output] = $this->admin(['zweiter', '--only-if-empty'], $configFilePath, 'Sehr-Geheim-123');
             self::assertSame(0, $code);
-            self::assertStringContainsString('bereits ein Adminkonto', $output);
+            self::assertStringContainsString('There is an admin account already', $output);
 
             [$code] = $this->admin(['third'], $configFilePath, 'kurz');
             self::assertSame(1, $code, 'Passwords that are too short are rejected.');

@@ -67,7 +67,7 @@ final class TableRow
     public static function fromStatistic(TeamStatistics $statistic, int $rank): self
     {
         if ($rank < 1) {
-            throw new \InvalidArgumentException('Der Rang einer Tabellenzeile muss mindestens 1 betragen, gegeben: ' . $rank);
+            throw new \InvalidArgumentException('The rank of a table row must be at least 1, given: ' . $rank);
         }
 
         return new self(

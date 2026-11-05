@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Bowlingliga\Tests\Unit\Application\Import;
 
 use Bowlingliga\Application\Import\PlayerCsvParser;
+use Bowlingliga\I18n\CatalogImportVocabulary;
 use Bowlingliga\Application\Import\PlayerImport;
 use Bowlingliga\Application\Import\PlayerImportException;
 use Bowlingliga\Application\Import\PlayerImportReader;
@@ -55,7 +56,7 @@ final class PlayerImportTest extends TestCase
         $this->teamSeasons->createGhostTeam(101, 1, 'Geisterteam');
 
         $this->import = new PlayerImport(
-            new PlayerCsvParser(),
+            new PlayerCsvParser(CatalogImportVocabulary::all()),
             new FixedPlayerImportReader($this->players, $this->teamSeasons, [1]),
             $this->records,
             new PlayerManagement($this->players, $this->roster, $validator, $this->access),
@@ -114,7 +115,7 @@ final class PlayerImportTest extends TestCase
             $this->import->import(1, self::HEADER . "Pin Busters;Kurt;m;;\nPin Busters;Anna;x;;\n");
             self::fail('A faulty file must be rejected.');
         } catch (PlayerImportException $e) {
-            self::assertSame(['Zeile 3: Das Geschlecht muss „m“ oder „w“ sein, nicht „x“.'], GermanText::all($e->errors));
+            self::assertSame(['Zeile 3: Das Geschlecht „x“ ist unbekannt, erwartet wird z. B. „m“ oder „w“.'], GermanText::all($e->errors));
         }
 
         self::assertSame(0, $this->players->quantity());

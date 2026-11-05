@@ -63,7 +63,7 @@ class AdminAccountRepository extends AbstractRepository
      */
     public function updatePasswordHash(int $id, string $passwordHash): void
     {
-        $this->transactional('Passwort-Hash aktualisieren', function () use ($id, $passwordHash): void {
+        $this->transactional('update_password_hash', function () use ($id, $passwordHash): void {
             $this->perform(
                 'UPDATE admin_account SET password_hash = :password_hash, session_version = session_version + 1 WHERE id = :id',
                 ['password_hash' => $passwordHash, 'id' => $id]
@@ -80,7 +80,7 @@ class AdminAccountRepository extends AbstractRepository
      */
     public function updateFailedAttempts(int $id, int $failedAttempts): void
     {
-        $this->transactional('Fehlversuchszähler aktualisieren', function () use ($id, $failedAttempts): void {
+        $this->transactional('update_failed_attempts', function () use ($id, $failedAttempts): void {
             $this->perform(
                 'UPDATE admin_account SET failed_attempts = :failed_attempts WHERE id = :id',
                 ['failed_attempts' => $failedAttempts, 'id' => $id]
@@ -97,7 +97,7 @@ class AdminAccountRepository extends AbstractRepository
      */
     public function setLockedUntil(int $id, ?\DateTimeImmutable $lockedUntil): void
     {
-        $this->transactional('Sperrstatus aktualisieren', function () use ($id, $lockedUntil): void {
+        $this->transactional('update_lock_state', function () use ($id, $lockedUntil): void {
             $this->perform(
                 'UPDATE admin_account SET locked_until = :locked_until WHERE id = :id',
                 [
@@ -117,7 +117,7 @@ class AdminAccountRepository extends AbstractRepository
      */
     public function saveTotpSecret(int $id, ?string $totpSecretEncrypted): void
     {
-        $this->transactional('TOTP-Secret speichern', function ($pdo) use ($id, $totpSecretEncrypted): void {
+        $this->transactional('save_totp_secret', function ($pdo) use ($id, $totpSecretEncrypted): void {
             $statement = $pdo->prepare(
                 // New secret: the remembered time step belongs to the old one.
                 'UPDATE admin_account SET totp_secret_encrypted = :totp_secret, totp_last_time_step = NULL,
@@ -135,7 +135,7 @@ class AdminAccountRepository extends AbstractRepository
      */
     public function raiseSessionVersion(int $id): void
     {
-        $this->transactional('Sitzungsversion erhöhen', function () use ($id): void {
+        $this->transactional('raise_session_version', function () use ($id): void {
             $this->perform(
                 'UPDATE admin_account SET session_version = session_version + 1 WHERE id = :id',
                 ['id' => $id]
@@ -149,7 +149,7 @@ class AdminAccountRepository extends AbstractRepository
      */
     public function setTotpTimeStep(int $id, int $timeStep): void
     {
-        $this->transactional('TOTP-Zeitschritt speichern', function () use ($id, $timeStep): void {
+        $this->transactional('save_totp_time_step', function () use ($id, $timeStep): void {
             $this->perform(
                 'UPDATE admin_account SET totp_last_time_step = :step WHERE id = :id',
                 ['step' => $timeStep, 'id' => $id]
@@ -166,7 +166,7 @@ class AdminAccountRepository extends AbstractRepository
      */
     public function delete(int $id): void
     {
-        $this->transactional('Adminkonto löschen', function () use ($id): void {
+        $this->transactional('delete_admin_account', function () use ($id): void {
             $this->perform('DELETE FROM admin_account WHERE id = :id', ['id' => $id]);
         });
     }

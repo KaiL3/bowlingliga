@@ -31,7 +31,7 @@ if (PHP_SAPI !== 'cli') {
 
 $configurationFile = getenv('BOWLINGLIGA_CONFIG') ?: dirname(__DIR__) . '/config/database.php';
 if (! is_file($configurationFile)) {
-    fwrite(STDERR, "Konfiguration fehlt: {$configurationFile}\n");
+    fwrite(STDERR, "Configuration missing: {$configurationFile}\n");
     exit(1);
 }
 
@@ -40,21 +40,21 @@ $files = FileSystemBlobStore::forScoreSheets($config, dirname(__DIR__));
 $repository = new OriginalScoreSheetRepository(new Database($config), $files);
 
 $result = $repository->verifyFiles();
-echo "Verzeichnis: {$files->directory()}\n";
-echo "Geprüft: {$result['checked']} Spielzettel\n";
+echo "Directory: {$files->directory()}\n";
+echo "Checked: {$result['checked']} score sheets\n";
 
 $problem = false;
-foreach (['missing' => 'Datei fehlt', 'damaged' => 'Inhalt passt nicht zum Hash'] as $key => $text) {
+foreach (['missing' => 'File missing', 'damaged' => 'Content does not match the hash'] as $key => $text) {
     if ($result[$key] !== []) {
-        echo "  {$text}: Spielzettel " . implode(', ', $result[$key]) . "\n";
+        echo "  {$text}: score sheets " . implode(', ', $result[$key]) . "\n";
         $problem = true;
     }
 }
 
 if (in_array('--clean', array_slice($argv, 1), true)) {
     $removed = $repository->removeOrphanedFiles();
-    echo "Nicht mehr benötigte Dateien gelöscht: {$removed}\n";
+    echo "Files no longer needed deleted: {$removed}\n";
 }
 
-echo $problem ? "Es gibt Probleme, siehe oben.\n" : "Alles in Ordnung.\n";
+echo $problem ? "There are problems, see above.\n" : "Everything is in order.\n";
 exit($problem ? 1 : 0);

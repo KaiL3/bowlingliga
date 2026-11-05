@@ -44,15 +44,15 @@ final class PositiondayFixture
         public readonly bool $awayIsGhostTeam = false,
     ) {
         if ($homeTeamId === $awayTeamId) {
-            throw new \InvalidArgumentException('Eine Positionday-Paarung muss aus zwei verschiedenen Teams bestehen.');
+            throw new \InvalidArgumentException('A positionday fixture must consist of two different teams.');
         }
 
         if ($homeRank < 1) {
-            throw new \InvalidArgumentException('Der Rang des Heim-Teams muss mindestens 1 betragen, gegeben: ' . $homeRank);
+            throw new \InvalidArgumentException('The rank of the home team must be at least 1, given: ' . $homeRank);
         }
 
         if ($awayRank < 1) {
-            throw new \InvalidArgumentException('Der Rang des Gast-Teams muss mindestens 1 betragen, gegeben: ' . $awayRank);
+            throw new \InvalidArgumentException('The rank of the away team must be at least 1, given: ' . $awayRank);
         }
     }
 }

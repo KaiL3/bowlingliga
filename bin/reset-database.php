@@ -34,7 +34,7 @@ const KEPT_TABLES = ['admin_account', 'schema_migration'];
 
 $configurationFile = getenv('BOWLINGLIGA_CONFIG') ?: dirname(__DIR__) . '/config/database.php';
 if (! is_file($configurationFile)) {
-    fwrite(STDERR, "Konfiguration fehlt: {$configurationFile}\n");
+    fwrite(STDERR, "Configuration missing: {$configurationFile}\n");
     exit(1);
 }
 
@@ -52,18 +52,18 @@ $emptied = array_values(array_diff($tables, KEPT_TABLES));
 
 $count = static fn (string $table): int => (int) $pdo->query("SELECT COUNT(*) FROM `{$table}`")->fetchColumn();
 
-echo "Datenbank: {$configuration['dbname']}\n\n";
-echo "Wird geleert:\n";
+echo "Database: {$configuration['dbname']}\n\n";
+echo "Will be emptied:\n";
 foreach ($emptied as $table) {
-    printf("  %-28s %6d Zeilen\n", $table, $count($table));
+    printf("  %-28s %6d rows\n", $table, $count($table));
 }
-echo "\nBleibt erhalten:\n";
+echo "\nKept:\n";
 foreach (array_intersect(KEPT_TABLES, $tables) as $table) {
-    printf("  %-28s %6d Zeilen\n", $table, $count($table));
+    printf("  %-28s %6d rows\n", $table, $count($table));
 }
 
 if (! $confirmed) {
-    echo "\nNichts geändert. Zum Leeren erneut mit --yes aufrufen.\n";
+    echo "\nNothing changed. Run again with --yes to empty the database.\n";
     exit(0);
 }
 
@@ -79,7 +79,7 @@ try {
 } catch (Throwable $e) {
     $pdo->rollBack();
     $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
-    fwrite(STDERR, "Fehler, nichts geändert: {$e->getMessage()}\n");
+    fwrite(STDERR, "Error, nothing changed: {$e->getMessage()}\n");
     exit(1);
 }
 $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
@@ -94,4 +94,4 @@ foreach ($emptied as $table) {
 $removed = (new OriginalScoreSheetRepository($database, FileSystemBlobStore::forScoreSheets($configuration, dirname(__DIR__))))
     ->removeOrphanedFiles(0);
 
-echo "\nGeleert, {$removed} Spielzettel-Dateien gelöscht. Die Adminkonten sind erhalten.\n";
+echo "\nEmptied, {$removed} score sheet files deleted. The admin accounts are kept.\n";

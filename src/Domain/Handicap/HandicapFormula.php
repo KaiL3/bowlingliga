@@ -52,7 +52,7 @@ final class HandicapFormula
     public static function withFactor(float $factor): self
     {
         if (!is_finite($factor)) {
-            throw new \InvalidArgumentException('Der Handicap-Faktor muss ein endlicher Wert sein.');
+            throw new \InvalidArgumentException('The handicap factor must be a finite value.');
         }
 
         return new self($factor);

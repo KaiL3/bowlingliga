@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Bowlingliga\Tests\Integration\MasterData;
 
 use Bowlingliga\Application\Import\PlayerCsvParser;
+use Bowlingliga\I18n\CatalogImportVocabulary;
 use Bowlingliga\Application\Import\PlayerImport;
 use Bowlingliga\Application\Import\PlayerImportException;
 use Bowlingliga\Application\PlayerManagement;
@@ -168,7 +169,7 @@ final class PlayerImportIntegrationTest extends TestCase
         $context = new PreviousSeasonContextRepository($this->database, static fn (): \DateTimeImmutable => new \DateTimeImmutable('2099-08-01'));
 
         return new PlayerImport(
-            new PlayerCsvParser(),
+            new PlayerCsvParser(CatalogImportVocabulary::all()),
             new PlayerImportRepository($this->database),
             $context,
             new PlayerManagement(new PlayerRepository($this->database), $rosters, $validator, $access),

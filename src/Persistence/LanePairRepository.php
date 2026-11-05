@@ -19,7 +19,7 @@ final class LanePairRepository extends AbstractRepository
      */
     public function create(int $seasonId, int $laneA, int $laneB): int
     {
-        return $this->transactional('Bahnpaar anlegen', function ($pdo) use ($seasonId, $laneA, $laneB): int {
+        return $this->transactional('create_lane_pair', function ($pdo) use ($seasonId, $laneA, $laneB): int {
             $this->perform(
                 'INSERT INTO lane_pair (season_id, lane_a, lane_b) VALUES (:season_id, :lane_a, :lane_b)',
                 ['season_id' => $seasonId, 'lane_a' => $laneA, 'lane_b' => $laneB]
@@ -34,7 +34,7 @@ final class LanePairRepository extends AbstractRepository
      */
     public function delete(int $id): void
     {
-        $this->transactional('Bahnpaar löschen', function () use ($id): void {
+        $this->transactional('delete_lane_pair', function () use ($id): void {
             $this->perform('DELETE FROM lane_pair WHERE id = :id', ['id' => $id]);
         });
     }

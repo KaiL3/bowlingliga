@@ -46,7 +46,8 @@ abstract class AbstractRepository
      * ending a transaction of its own.
      *
      * @template T
-     * @param string          $operation Name of the operation for the error message.
+     * @param string          $operation Key of the operation name for the error message
+     *                                   (catalog key `operation.<key>`).
      * @param callable(PDO):T $execution The operation to run in the transaction context.
      * @return T Return value of the operation.
      *

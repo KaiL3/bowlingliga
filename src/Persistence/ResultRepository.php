@@ -28,7 +28,7 @@ final class ResultRepository extends AbstractRepository implements ResultStore
 {
     public function saveResults(EnteredResults $results): void
     {
-        $this->transactional('Einzelspiel-Ergebnisse speichern', function () use ($results): void {
+        $this->transactional('save_game_results', function () use ($results): void {
             $this->removeInternal($results->fixtureId);
 
             foreach ($results->gamesByTeam() as $teamSeasonId => $games) {
@@ -75,7 +75,7 @@ final class ResultRepository extends AbstractRepository implements ResultStore
 
     public function removeResults(int $fixtureId): void
     {
-        $this->transactional('Einzelspiel-Ergebnisse entfernen', function () use ($fixtureId): void {
+        $this->transactional('delete_game_results', function () use ($fixtureId): void {
             $this->removeInternal($fixtureId);
         });
     }

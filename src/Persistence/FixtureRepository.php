@@ -46,7 +46,7 @@ final class FixtureRepository extends AbstractRepository implements FixtureStatu
     ): int {
         $this->validator->checkDifferentTeams($teamSeasonHomeId, $teamSeasonAwayId);
 
-        return $this->transactional('Teampaarung anlegen', function ($pdo) use ($matchdayId, $teamSeasonHomeId, $teamSeasonAwayId, $lanePairId, $completionStatus): int {
+        return $this->transactional('create_fixture', function ($pdo) use ($matchdayId, $teamSeasonHomeId, $teamSeasonAwayId, $lanePairId, $completionStatus): int {
             $this->perform(
                 'INSERT INTO fixture
                     (matchday_id, home_team_season_id, away_team_season_id, lane_pair_id, completion_status)
@@ -74,7 +74,7 @@ final class FixtureRepository extends AbstractRepository implements FixtureStatu
     {
         $this->validator->checkDifferentTeams($teamSeasonHomeId, $teamSeasonAwayId);
 
-        $this->transactional('Teampaarung-Teams setzen', function () use ($id, $teamSeasonHomeId, $teamSeasonAwayId): void {
+        $this->transactional('set_fixture_teams', function () use ($id, $teamSeasonHomeId, $teamSeasonAwayId): void {
             $this->perform(
                 'UPDATE fixture SET home_team_season_id = :home_id, away_team_season_id = :away_id WHERE id = :id',
                 ['id' => $id, 'home_id' => $teamSeasonHomeId, 'away_id' => $teamSeasonAwayId]
@@ -87,7 +87,7 @@ final class FixtureRepository extends AbstractRepository implements FixtureStatu
      */
     public function setLanePair(int $id, ?int $lanePairId): void
     {
-        $this->transactional('Teampaarung-Bahnpaar setzen', function () use ($id, $lanePairId): void {
+        $this->transactional('set_fixture_lane_pair', function () use ($id, $lanePairId): void {
             $this->perform(
                 'UPDATE fixture SET lane_pair_id = :lane_pair_id WHERE id = :id',
                 ['id' => $id, 'lane_pair_id' => $lanePairId]
@@ -102,7 +102,7 @@ final class FixtureRepository extends AbstractRepository implements FixtureStatu
      */
     public function setCompletionStatus(int $id, string $completionStatus): void
     {
-        $this->transactional('Teampaarung-Ausfuellstatus setzen', function () use ($id, $completionStatus): void {
+        $this->transactional('set_fixture_status', function () use ($id, $completionStatus): void {
             $this->perform(
                 'UPDATE fixture SET completion_status = :completion_status WHERE id = :id',
                 ['id' => $id, 'completion_status' => $completionStatus]
@@ -133,7 +133,7 @@ final class FixtureRepository extends AbstractRepository implements FixtureStatu
      */
     public function delete(int $id): void
     {
-        $this->transactional('Teampaarung löschen', function () use ($id): void {
+        $this->transactional('delete_fixture', function () use ($id): void {
             $this->perform('DELETE FROM fixture WHERE id = :id', ['id' => $id]);
         });
     }

@@ -34,7 +34,7 @@ final class TeamSeasonRepository extends AbstractRepository implements \Bowlingl
 
     private function append(int $teamId, int $seasonId, string $teamLabel, bool $isGhostTeam): int
     {
-        return $this->transactional('Team-Saison-Zuordnung anlegen', function ($pdo) use ($teamId, $seasonId, $teamLabel, $isGhostTeam): int {
+        return $this->transactional('create_team_season', function ($pdo) use ($teamId, $seasonId, $teamLabel, $isGhostTeam): int {
             $this->perform(
                 'INSERT INTO team_season (team_id, season_id, team_name, is_ghost_team)
                  VALUES (:team_id, :season_id, :team_name, :is_ghost_team)',
@@ -55,7 +55,7 @@ final class TeamSeasonRepository extends AbstractRepository implements \Bowlingl
      */
     public function updateTeamName(int $id, string $teamLabel): void
     {
-        $this->transactional('Teamname aktualisieren', function () use ($id, $teamLabel): void {
+        $this->transactional('update_team_name', function () use ($id, $teamLabel): void {
             $this->perform(
                 'UPDATE team_season SET team_name = :team_name WHERE id = :id',
                 ['id' => $id, 'team_name' => $teamLabel]
@@ -68,7 +68,7 @@ final class TeamSeasonRepository extends AbstractRepository implements \Bowlingl
      */
     public function delete(int $id): void
     {
-        $this->transactional('Team-Saison-Zuordnung löschen', function () use ($id): void {
+        $this->transactional('delete_team_season', function () use ($id): void {
             $this->perform('DELETE FROM team_season WHERE id = :id', ['id' => $id]);
         });
     }

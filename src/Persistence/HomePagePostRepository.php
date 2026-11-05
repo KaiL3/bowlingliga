@@ -19,7 +19,7 @@ final class HomePagePostRepository extends AbstractRepository implements HomePag
 {
     public function create(string $title, string $text): int
     {
-        return $this->transactional('Startseiten-Inhalt anlegen', function ($pdo) use ($title, $text): int {
+        return $this->transactional('create_home_page_post', function ($pdo) use ($title, $text): int {
             $this->perform(
                 'INSERT INTO home_page_post (title, text) VALUES (:title, :text)',
                 ['title' => $title, 'text' => $text]
@@ -31,7 +31,7 @@ final class HomePagePostRepository extends AbstractRepository implements HomePag
 
     public function update(int $id, string $title, string $text): void
     {
-        $this->transactional('Startseiten-Inhalt ändern', function () use ($id, $title, $text): void {
+        $this->transactional('update_home_page_post', function () use ($id, $title, $text): void {
             $this->perform(
                 'UPDATE home_page_post SET title = :title, text = :text WHERE id = :id',
                 ['id' => $id, 'title' => $title, 'text' => $text]
@@ -41,7 +41,7 @@ final class HomePagePostRepository extends AbstractRepository implements HomePag
 
     public function delete(int $id): void
     {
-        $this->transactional('Startseiten-Inhalt entfernen', function () use ($id): void {
+        $this->transactional('delete_home_page_post', function () use ($id): void {
             $this->perform('DELETE FROM home_page_post WHERE id = :id', ['id' => $id]);
         });
     }

@@ -57,7 +57,7 @@ final class HandicapChainRecalculation
     {
         if ($fromMatchdayCounter < 1) {
             throw new \InvalidArgumentException(
-                'Der Startspieltag der Neuberechnung muss mindestens 1 betragen, gegeben: ' . $fromMatchdayCounter
+                'The first matchday of the recalculation must be at least 1, given: ' . $fromMatchdayCounter
             );
         }
 

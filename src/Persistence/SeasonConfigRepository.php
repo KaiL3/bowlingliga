@@ -36,7 +36,7 @@ final class SeasonConfigRepository extends AbstractRepository implements \Bowlin
         int $previousSeasonMatchdays = \Bowlingliga\Application\SeasonConfiguration::DEFAULT_PREVIOUS_SEASON_MATCHDAYS,
         int $positiondayInterval = \Bowlingliga\Application\SeasonConfiguration::DEFAULT_POSITIONDAY_INTERVAL,
     ): void {
-        $this->transactional('Saison-Konfiguration speichern', function () use (
+        $this->transactional('save_season_config', function () use (
             $seasonId,
             $laneCount,
             $entryFee,
@@ -86,7 +86,7 @@ final class SeasonConfigRepository extends AbstractRepository implements \Bowlin
      */
     public function delete(int $seasonId): void
     {
-        $this->transactional('Saison-Konfiguration löschen', function () use ($seasonId): void {
+        $this->transactional('delete_season_config', function () use ($seasonId): void {
             $this->perform('DELETE FROM season_config WHERE season_id = :season_id', ['season_id' => $seasonId]);
         });
     }

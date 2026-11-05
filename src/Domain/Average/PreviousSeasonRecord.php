@@ -29,12 +29,12 @@ final class PreviousSeasonRecord
     ) {
         if ($numberOfGames < 0) {
             throw new \InvalidArgumentException(
-                'Die Anzahl der Vorsaison-Spiele darf nicht negativ sein, gegeben: ' . $numberOfGames
+                'The number of previous season games must not be negative, given: ' . $numberOfGames
             );
         }
         if ($netPinsTotal < 0) {
             throw new \InvalidArgumentException(
-                'Die Summe der Vorsaison-Netto-Pins darf nicht negativ sein, gegeben: ' . $netPinsTotal
+                'The sum of previous season net pins must not be negative, given: ' . $netPinsTotal
             );
         }
     }

@@ -25,7 +25,7 @@ final class LeagueSettingsRepository extends AbstractRepository implements Leagu
 
     public function saveLeagueName(string $name): void
     {
-        $this->transactional('Liganamen speichern', function () use ($name): void {
+        $this->transactional('save_league_name', function () use ($name): void {
             $this->perform(
                 'INSERT INTO league_setting (id, name) VALUES (1, :name) ON DUPLICATE KEY UPDATE name = :changed',
                 ['name' => $name, 'changed' => $name]

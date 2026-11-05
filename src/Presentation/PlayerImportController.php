@@ -37,6 +37,16 @@ final class PlayerImportController
     }
 
     /**
+     * The template file in the visitor's language (R6).
+     *
+     * @return array{file: string, content: string}
+     */
+    public function template(): array
+    {
+        return ['file' => $this->view->templateFileName(), 'content' => $this->view->template()];
+    }
+
+    /**
      * Preview of an uploaded file; `$content` is null if no readable file was
      * uploaded.
      *

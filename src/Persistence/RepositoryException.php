@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Bowlingliga\Persistence;
 
 use Bowlingliga\Domain\CarriesMessage;
+use Bowlingliga\Domain\Message;
 use Bowlingliga\Domain\Translatable;
 use RuntimeException;
 use Throwable;
@@ -23,10 +24,10 @@ final class RepositoryException extends RuntimeException implements Translatable
 
     /**
      * Creates an exception whose message explicitly names the failed operation
-     * (R4.3).
+     * (R4.3); `$operation` is the key of its name in the catalogs (`operation.<key>`).
      */
     public static function forOperation(string $operation, Throwable $cause): self
     {
-        return new self('error.database_operation', ['operation' => $operation], $cause);
+        return new self('error.database_operation', ['operation' => new Message('operation.' . $operation)], $cause);
     }
 }

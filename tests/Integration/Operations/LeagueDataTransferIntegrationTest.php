@@ -153,12 +153,12 @@ final class LeagueDataTransferIntegrationTest extends TestCase
         try {
             [$code, $output] = $this->commandLine(['export', $exportFile], $configFilePath);
             self::assertSame(0, $code, $output);
-            self::assertStringContainsString('Exportiert', $output);
+            self::assertStringContainsString('Exported from', $output);
 
             $this->pdo->exec("UPDATE player SET name = 'Geändert'");
             [$code, $output] = $this->commandLine(['import', $exportFile], $configFilePath);
             self::assertSame(0, $code, $output);
-            self::assertStringContainsString('Nichts geändert', $output);
+            self::assertStringContainsString('Nothing changed', $output);
             self::assertSame(0, (int) $this->pdo->query("SELECT COUNT(*) FROM player WHERE name <> 'Geändert'")->fetchColumn());
 
             [$code, $output] = $this->commandLine(['import', $exportFile, '--yes'], $configFilePath);
@@ -181,7 +181,7 @@ final class LeagueDataTransferIntegrationTest extends TestCase
             (new LeagueDataTransfer($this->pdo, $this->targetFiles))->import($export, false);
             self::fail('A damaged file must not be imported.');
         } catch (RuntimeException $error) {
-            self::assertStringContainsString('Beschädigte Spielzettel-Datei', $error->getMessage());
+            self::assertStringContainsString('Damaged score sheet file', $error->getMessage());
         }
 
         self::assertFalse($this->targetFiles->exists((string) $hash));
@@ -194,7 +194,7 @@ final class LeagueDataTransferIntegrationTest extends TestCase
         $this->sourceFiles->delete(hash('sha256', self::PHOTO));
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('fehlt im Spielzettel-Verzeichnis');
+        $this->expectExceptionMessage('is missing in the score sheet directory');
         (new LeagueDataTransfer($this->pdo, $this->sourceFiles))->export();
     }
 

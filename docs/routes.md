@@ -37,6 +37,7 @@ scrolls the active area into view).
 | `/admin` | GET | Overview with links | `AdminView` |
 | `/admin/master-data?tab=` | GET | Tabs players, seasons, teams (with roster), matchdays, admin accounts, import; after an action its tab stays selected | `MasterDataController` |
 | `/admin/master-data/import-preview` | POST (upload) | Player import: check the CSV and show it as a preview, save nothing | `PlayerImportController`, `Application/Import/PlayerImport` |
+| `/admin/master-data/import-template` | GET | Download the template CSV of the player import in the current language (column names, separator, example rows) | `PlayerImportController::template`, `PlayerImportView::template` |
 | `/admin/master-data/import` | POST | Save the confirmed import in one transaction (teams, players, rosters, previous season records), then tab "Teams" | as above |
 | `/admin/master-data/{action}` | POST | `spieler-anlegen/-entfernen`, `saison-anlegen/-entfernen`, `team-anlegen/-entfernen`, `spieltag-anlegen`, `konto-anlegen/-entfernen`, `kader-zuordnen/-entfernen` (create/remove player, season, team, account; create matchday; assign/remove roster) | as above |
 | `/admin/season` | GET | Selected season: master data, configuration (display only after the season start, R12.7), positiondays with fixtures | `SeasonManagementController` |
@@ -80,5 +81,5 @@ Until they get a UI they can only be changed directly in the database:
 
 | Function | Use case | Consequence without a UI |
 |---|---|---|
-| Edit previous season records | `PreviousSeasonRecordManagement` | Only via the player import (columns "Vorjahr Schnitt"/"Vorjahr Spiele"); changing a single record is not possible yet |
+| Edit previous season records | `PreviousSeasonRecordManagement` | Only via the player import (columns previous average/previous games); changing a single record is not possible yet |
 | OCR of the score sheets | `Domain/Ocr/OcrModule`, `Ocr/TesseractTextRecognizer` | Deferred: handwriting cannot be recognised |

@@ -42,7 +42,7 @@ final class HonourPlace
     {
         if ($rank < 1 || $rank > 3) {
             throw new \InvalidArgumentException(
-                'Der Rang eines Ehrungs-Platzes muss im Bereich 1 bis 3 liegen, gegeben: ' . $rank
+                'The rank of an honours place must be between 1 and 3, given: ' . $rank
             );
         }
 

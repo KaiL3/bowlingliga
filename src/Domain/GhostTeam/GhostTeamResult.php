@@ -32,7 +32,7 @@ final class GhostTeamResult
     {
         if ($targetScore < 0 || $targetScore > 300) {
             throw new \InvalidArgumentException(
-                'Der Zielwert eines Geisterteam-Ergebnisses muss im Bereich 0 bis 300 liegen, gegeben: ' . $targetScore
+                'The ghost score of a ghost team result must be between 0 and 300, given: ' . $targetScore
             );
         }
     }
@@ -69,7 +69,7 @@ final class GhostTeamResult
     {
         if ($game < 1 || $game > self::GAME_COUNT) {
             throw new \InvalidArgumentException(
-                'Einzelspiel muss zwischen 1 und ' . self::GAME_COUNT . ' liegen, gegeben: ' . $game
+                'The single game must be between 1 and ' . self::GAME_COUNT . ', given: ' . $game
             );
         }
     }

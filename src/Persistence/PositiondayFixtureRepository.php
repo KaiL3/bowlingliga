@@ -25,7 +25,7 @@ final class PositiondayFixtureRepository extends AbstractRepository implements P
      */
     public function saveFixtures(int $matchdayId, array $fixtures): void
     {
-        $this->transactional('Positionday-Paarungen speichern', function () use ($matchdayId, $fixtures): void {
+        $this->transactional('save_positionday_fixtures', function () use ($matchdayId, $fixtures): void {
             $seasonId = $this->findSeasonId($matchdayId);
 
             $lanePairIdByIndex = $this->ensureLanePairs($seasonId, $fixtures);
@@ -66,7 +66,7 @@ final class PositiondayFixtureRepository extends AbstractRepository implements P
         );
 
         if ($row === null) {
-            throw new \RuntimeException('Der Positionday-Spieltag existiert nicht: ' . $matchdayId);
+            throw new \RuntimeException('The positionday matchday does not exist: ' . $matchdayId);
         }
 
         return (int) $row['season_id'];

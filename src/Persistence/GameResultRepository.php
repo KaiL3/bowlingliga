@@ -24,7 +24,7 @@ final class GameResultRepository extends AbstractRepository
         int $net,
         bool $isBlind = false
     ): int {
-        return $this->transactional('Einzelspiel-Ergebnis anlegen', function ($pdo) use ($lineupId, $gameNumber, $net, $isBlind): int {
+        return $this->transactional('create_game_result', function ($pdo) use ($lineupId, $gameNumber, $net, $isBlind): int {
             $this->perform(
                 'INSERT INTO game_result (lineup_id, game_number, net, is_blind)
                  VALUES (:lineup_id, :game_number, :net, :is_blind)',
@@ -45,7 +45,7 @@ final class GameResultRepository extends AbstractRepository
      */
     public function update(int $id, int $net, bool $isBlind): void
     {
-        $this->transactional('Einzelspiel-Ergebnis aktualisieren', function () use ($id, $net, $isBlind): void {
+        $this->transactional('update_game_result', function () use ($id, $net, $isBlind): void {
             $this->perform(
                 'UPDATE game_result SET net = :net, is_blind = :is_blind WHERE id = :id',
                 ['id' => $id, 'net' => $net, 'is_blind' => $isBlind ? 1 : 0]
@@ -58,7 +58,7 @@ final class GameResultRepository extends AbstractRepository
      */
     public function delete(int $id): void
     {
-        $this->transactional('Einzelspiel-Ergebnis löschen', function () use ($id): void {
+        $this->transactional('delete_game_result', function () use ($id): void {
             $this->perform('DELETE FROM game_result WHERE id = :id', ['id' => $id]);
         });
     }

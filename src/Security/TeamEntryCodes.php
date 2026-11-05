@@ -38,10 +38,10 @@ final class TeamEntryCodes
     public function create(int $fixtureId, string $side, int $version): string
     {
         if (! $this->isAvailable()) {
-            throw new RuntimeException('Für die Team-Codes fehlt der Schlüssel (totp_key) in der Konfiguration.');
+            throw new RuntimeException('The key for the team codes (totp_key) is missing in the configuration.');
         }
         if (! isset(self::SIDES[$side]) || $fixtureId < 1 || $version < 1 || $version > 0xFFFF) {
-            throw new RuntimeException('Ungültige Angaben für einen Team-Code.');
+            throw new RuntimeException('Invalid data for a team code.');
         }
 
         $payload = pack('NCn', $fixtureId, self::SIDES[$side], $version);

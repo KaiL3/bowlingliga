@@ -116,12 +116,17 @@ A rule without a number in brackets belongs to the section as a whole.
 - A player is assigned to a team's roster per season (R6.6); a second
   assignment to the same roster is rejected (R6.7). A player belongs to at
   most one roster per season – no change of team within a season (R6.8).
-- **CSV import** (Stammdaten → Import): columns
-  `Team;Name;Geschlecht;Vorjahr Schnitt;Vorjahr Spiele`, gender required,
-  previous season values optional but only together (stored as a previous
-  season record, [R29](#r29--previous-season-records)). Duplicate names in the
-  file or existing players abort the import; preview first, then one
-  transaction (`Application/Import/*`).
+- **CSV import** (Stammdaten → Import): columns team, name, gender
+  (required) and previous average, previous games (optional, but only
+  together; stored as a previous season record,
+  [R29](#r29--previous-season-records)). Column names and gender values are
+  recognised in every language of the website, also mixed in one file, in
+  any order and case (catalog keys `import.column.*` and `import.gender.*`,
+  `ImportVocabulary`, `CatalogImportVocabulary`); a word may not mean two
+  things in different languages. The import tab names the columns and offers
+  a template CSV in the current language. Duplicate names in the file or
+  existing players abort the import; preview first, then one transaction
+  (`Application/Import/*`).
 
 ## R7 – Teams
 

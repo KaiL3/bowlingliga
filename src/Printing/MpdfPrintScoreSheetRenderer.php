@@ -41,8 +41,8 @@ final class MpdfPrintScoreSheetRenderer
         if (! $this->isAvailable()) {
             // R19.4: fall back to the print-optimised HTML view.
             throw new \RuntimeException(
-                'mPDF ist nicht verfügbar; das PDF kann nicht erzeugt werden. '
-                . 'Alternativ kann die druckoptimierte HTML-Ansicht ausgeliefert werden.'
+                'mPDF is not available; the PDF cannot be created. '
+                . 'The print-optimised HTML view can be delivered instead.'
             );
         }
 

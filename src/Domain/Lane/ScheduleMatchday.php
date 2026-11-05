@@ -38,13 +38,13 @@ final class ScheduleMatchday
         array $fixtures
     ) {
         if ($number < 1) {
-            throw new InvalidArgumentException('Die Spieltagnummer muss mindestens 1 sein.');
+            throw new InvalidArgumentException('The matchday number must be at least 1.');
         }
 
         $normalised = [];
         foreach ($fixtures as $fixture) {
             if (!$fixture instanceof Fixture) {
-                throw new InvalidArgumentException('Jede Paarung muss eine ' . Fixture::class . ' sein.');
+                throw new InvalidArgumentException('Every fixture must be a ' . Fixture::class . ' sein.');
             }
             $normalised[] = $fixture;
         }

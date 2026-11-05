@@ -64,7 +64,7 @@ final class HandicapChainMatchday
     ) {
         if ($previousHandicap !== null && ($previousHandicap < 0 || $previousHandicap > 300)) {
             throw new \InvalidArgumentException(
-                'Das bisherige eingefrorene Handicap muss im Bereich 0 bis 300 liegen, gegeben: ' . $previousHandicap
+                'The previous frozen handicap must be between 0 and 300, given: ' . $previousHandicap
             );
         }
     }

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Bowlingliga\Tests\Unit\Application\Import;
 
 use Bowlingliga\Application\Import\PlayerCsvParser;
+use Bowlingliga\I18n\CatalogImportVocabulary;
+use Bowlingliga\I18n\Translator;
 use Bowlingliga\Tests\GermanText;
 use PHPUnit\Framework\TestCase;
 
@@ -17,7 +19,7 @@ final class PlayerCsvParserTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->parser = new PlayerCsvParser();
+        $this->parser = new PlayerCsvParser(CatalogImportVocabulary::all());
     }
 
     public function testSemicolonFileWithPreviousSeason(): void
@@ -52,11 +54,31 @@ final class PlayerCsvParserTest extends TestCase
 
     public function testMissingAndUnknownColumns(): void
     {
-        $errors = GermanText::all($this->parser->parse("Team;Spielername;Geschlecht\nA;B;m\n")['errors']);
+        $result = $this->parser->parse("Team;Vorname;Geschlecht\nA;B;m\n");
+        $errors = GermanText::all($result['errors']);
 
-        self::assertContains('Unbekannte Spalte „Spielername“. Erlaubt sind: Team, Name, Geschlecht, Vorjahr Schnitt, Vorjahr Spiele.', $errors);
+        self::assertContains('Unbekannte Spalte „Vorname“. Die erkannten Spaltennamen stehen unter „Aufbau der Datei“.', $errors);
         self::assertContains('Die Spalte „Name“ fehlt.', $errors);
+        self::assertContains('The column "Name" is missing.', array_map((new Translator('en'))->message(...), $result['errors']), 'The missing column is named in the visitor\'s language.');
         self::assertSame(['Die Datei ist leer.'], GermanText::all($this->parser->parse("\n  \n")['errors']));
+    }
+
+    public function testEnglishColumnNamesAndGenderValues(): void
+    {
+        $result = $this->parser->parse("Team,Name,Gender,Previous average,Previous games\r\nPin Busters,Kurt,m,143.64,99\r\nJolly Rollers,Alma,f,,\r\n");
+
+        self::assertSame([], $result['errors']);
+        self::assertSame(['male', 'female'], [$result['rows'][0]->gender, $result['rows'][1]->gender]);
+        self::assertSame(14220, $result['rows'][0]->previousPins());
+    }
+
+    public function testColumnNamesOfDifferentLanguagesAndAliasesMayBeMixed(): void
+    {
+        $result = $this->parser->parse("Mannschaft;Player;SEX;Schnitt Vorjahr;Previous games\nA;Kurt;Herr;150;3\nA;Alma;D;;\nA;Olaf;male;;\nA;Ida;weiblich;;\n");
+
+        self::assertSame([], $result['errors']);
+        self::assertSame(['male', 'female', 'male', 'female'], array_map(static fn ($row): string => $row->gender, $result['rows']));
+        self::assertSame(450, $result['rows'][0]->previousPins());
     }
 
     public function testInvalidLinesAreReportedWithLineNumber(): void
@@ -72,7 +94,7 @@ final class PlayerCsvParserTest extends TestCase
         ]));
 
         self::assertSame([
-            'Zeile 2: Das Geschlecht muss „m“ oder „w“ sein, nicht „x“.',
+            'Zeile 2: Das Geschlecht „x“ ist unbekannt, erwartet wird z. B. „m“ oder „w“.',
             'Zeile 3: Der Teamname fehlt.',
             'Zeile 4: Vorjahr Schnitt und Vorjahr Spiele müssen beide ausgefüllt oder beide leer sein.',
             'Zeile 5: Der Vorjahr-Schnitt „350“ ist keine Zahl zwischen 0 und 300.',

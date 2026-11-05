@@ -93,13 +93,13 @@ final class Database
             // R4.4: deny access and return an error message that
             // points to the missing database connection.
             throw new DatabaseConnectionException(
-                'Die Datenbankverbindung konnte nicht hergestellt werden.',
+                'The database connection could not be established.',
                 0,
                 $exception
             );
         } catch (Throwable $throwable) {
             throw new DatabaseConnectionException(
-                'Die Datenbankverbindung konnte nicht hergestellt werden.',
+                'The database connection could not be established.',
                 0,
                 $throwable
             );

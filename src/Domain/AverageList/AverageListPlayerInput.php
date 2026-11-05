@@ -62,21 +62,21 @@ final class AverageListPlayerInput
         public readonly ?int $frozenHandicap,
     ) {
         if ($playerId === '') {
-            throw new \InvalidArgumentException('Die Spieler-Kennung einer Schnittlisten-Eingabe darf nicht leer sein.');
+            throw new \InvalidArgumentException('The player id of an average list input must not be empty.');
         }
 
         if ($playerName === '') {
-            throw new \InvalidArgumentException('Der Spielername einer Schnittlisten-Eingabe darf nicht leer sein.');
+            throw new \InvalidArgumentException('The player name of an average list input must not be empty.');
         }
 
         foreach ($netResults as $net) {
             if ($net < 0 || $net > 300) {
-                throw new \InvalidArgumentException('Ein Netto-Ergebnis einer Schnittlisten-Eingabe muss im Bereich 0 bis 300 liegen, gegeben: ' . $net);
+                throw new \InvalidArgumentException('A net result of an average list input must be between 0 and 300, given: ' . $net);
             }
         }
 
         if ($frozenHandicap !== null && ($frozenHandicap < 0 || $frozenHandicap > 300)) {
-            throw new \InvalidArgumentException('Das eingefrorene Handicap einer Schnittlisten-Eingabe muss im Bereich 0 bis 300 liegen, gegeben: ' . $frozenHandicap);
+            throw new \InvalidArgumentException('The frozen handicap of an average list input must be between 0 and 300, given: ' . $frozenHandicap);
         }
     }
 }

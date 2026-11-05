@@ -49,7 +49,7 @@ final class SeasonPlanRepository extends AbstractRepository implements SeasonPla
             throw SeasonPlanningException::planCannotBeGenerated($reason);
         }
 
-        $this->transactional('Spielplan speichern', function () use ($seasonId, $matchdays): void {
+        $this->transactional('save_schedule', function () use ($seasonId, $matchdays): void {
             // Replace the existing (not yet started) plan; fixtures and
             // dependent rows are dropped via ON DELETE CASCADE.
             $this->perform('DELETE FROM matchday WHERE season_id = :season_id', ['season_id' => $seasonId]);

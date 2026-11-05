@@ -119,7 +119,7 @@ final class OcrModule
     public function mergeShared(array $parts): RecognizedGameData
     {
         if ($parts === []) {
-            throw new \InvalidArgumentException('Es müssen mindestens ein Spielzettel-Teil übergeben werden.');
+            throw new \InvalidArgumentException('At least one part of a score sheet must be given.');
         }
 
         $merged = $parts[0];

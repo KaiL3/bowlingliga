@@ -166,7 +166,7 @@ final class LeagueDataTransfer
         $foreign  = array_diff($sourceText, $target);
         if ($missingItems !== [] || $foreign !== []) {
             throw new RuntimeException(
-                'Die Tabellen von Quelle und Ziel unterscheiden sich ('
+                'The tables of source and target differ ('
                 . implode(', ', array_merge($missingItems, $foreign))
                 . '). Beide Datenbanken erst auf denselben Migrationsstand bringen (bin/migrate.php).'
             );
@@ -179,8 +179,8 @@ final class LeagueDataTransfer
             sort($sourceColumns);
             if ($targetColumns !== $sourceColumns) {
                 throw new RuntimeException(
-                    "Die Spalten der Tabelle {$table} unterscheiden sich zwischen Quelle und Ziel. "
-                    . 'Beide Datenbanken erst auf denselben Migrationsstand bringen (bin/migrate.php).'
+                    "The columns of the table {$table} differ between source and target. "
+                    . 'Bring both databases to the same migration state first (bin/migrate.php).'
                 );
             }
         }
@@ -248,7 +248,7 @@ final class LeagueDataTransfer
         foreach (self::referencedHashes($tables) as $hash) {
             $content = $this->files?->read($hash);
             if ($content === null) {
-                throw new RuntimeException("Die Datei {$hash} eines Original-Spielzettels fehlt im Spielzettel-Verzeichnis.");
+                throw new RuntimeException("The file {$hash} of an original score sheet is missing in the score sheet directory.");
             }
             $files[$hash] = base64_encode($content);
         }
@@ -269,20 +269,20 @@ final class LeagueDataTransfer
             return;
         }
         if ($this->files === null) {
-            throw new RuntimeException('Für die Spielzettel-Dateien fehlt das Zielverzeichnis.');
+            throw new RuntimeException('The target directory for the score sheet files is missing.');
         }
 
         foreach ((array) ($export['files'] ?? []) as $hash => $encoded) {
             $content = base64_decode((string) $encoded, true);
             if ($content === false || hash('sha256', $content) !== $hash) {
-                throw new RuntimeException("Beschädigte Spielzettel-Datei {$hash} im Export.");
+                throw new RuntimeException("Damaged score sheet file {$hash} in the export.");
             }
             $this->files->put($content);
         }
 
         foreach ($hashes as $hash) {
             if (! $this->files->exists($hash)) {
-                throw new RuntimeException("Die Datei {$hash} eines Original-Spielzettels fehlt im Export.");
+                throw new RuntimeException("The file {$hash} of an original score sheet is missing in the export.");
             }
         }
     }
@@ -333,7 +333,7 @@ final class LeagueDataTransfer
         if (is_array($value)) {
             $raw = base64_decode((string) ($value['b64'] ?? ''), true);
             if ($raw === false) {
-                throw new RuntimeException('Beschädigte Binärdaten im Export.');
+                throw new RuntimeException('Damaged binary data in the export.');
             }
 
             return $raw;

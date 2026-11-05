@@ -35,14 +35,14 @@ final class TotpSecretEncryption
     {
         if (! self::isAvailable()) {
             throw new TotpSecretEncryptionException(
-                'Die libsodium-Erweiterung ist nicht verfügbar; das TOTP-Secret '
-                . 'kann nicht verschlüsselt werden.'
+                'The libsodium extension is not available; the TOTP secret '
+                . 'cannot be encrypted.'
             );
         }
 
         if (strlen($this->key) !== SODIUM_CRYPTO_SECRETBOX_KEYBYTES) {
             throw new TotpSecretEncryptionException(sprintf(
-                'Der Verschlüsselungsschlüssel muss genau %d Bytes lang sein.',
+                'The encryption key must be exactly %d bytes long.',
                 SODIUM_CRYPTO_SECRETBOX_KEYBYTES
             ));
         }
@@ -89,7 +89,7 @@ final class TotpSecretEncryption
             return $nonce . $ciphertext;
         } catch (\SodiumException $exception) {
             throw new TotpSecretEncryptionException(
-                'Das TOTP-Secret konnte nicht verschlüsselt werden.',
+                'The TOTP secret could not be encrypted.',
                 0,
                 $exception
             );
@@ -116,7 +116,7 @@ final class TotpSecretEncryption
 
         if (strlen($ciphertextWithNonce) <= $nonceLength) {
             throw new TotpSecretEncryptionException(
-                'Das verschlüsselte TOTP-Secret ist unvollständig oder ungültig.'
+                'The encrypted TOTP secret is incomplete or invalid.'
             );
         }
 
@@ -127,7 +127,7 @@ final class TotpSecretEncryption
             $plaintext = sodium_crypto_secretbox_open($ciphertext, $nonce, $this->key);
         } catch (\SodiumException $exception) {
             throw new TotpSecretEncryptionException(
-                'Das TOTP-Secret konnte nicht entschlüsselt werden.',
+                'The TOTP secret could not be decrypted.',
                 0,
                 $exception
             );
@@ -135,8 +135,8 @@ final class TotpSecretEncryption
 
         if ($plaintext === false) {
             throw new TotpSecretEncryptionException(
-                'Das TOTP-Secret konnte nicht entschlüsselt werden '
-                . '(ungültiges oder manipuliertes Chiffrat).'
+                'The TOTP secret could not be decrypted '
+                . '(invalid or manipulated ciphertext).'
             );
         }
 

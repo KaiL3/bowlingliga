@@ -77,7 +77,7 @@ final class AverageModule
     ): ?float {
         if ($matchdayCounter < 1) {
             throw new \InvalidArgumentException(
-                'Der Spieltag_Zaehler muss mindestens 1 betragen, gegeben: ' . $matchdayCounter
+                'The matchday counter must be at least 1, given: ' . $matchdayCounter
             );
         }
 
@@ -104,7 +104,7 @@ final class AverageModule
     ): ?float {
         if ($matchdayCounter < 0) {
             throw new \InvalidArgumentException(
-                'Der Spieltag_Zaehler darf nicht negativ sein, gegeben: ' . $matchdayCounter
+                'The matchday counter must not be negative, given: ' . $matchdayCounter
             );
         }
 

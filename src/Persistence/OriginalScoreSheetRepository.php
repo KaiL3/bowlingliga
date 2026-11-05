@@ -49,7 +49,7 @@ final class OriginalScoreSheetRepository extends AbstractRepository implements O
     {
         $hash = $this->files->put($file);
 
-        return $this->transactional('Original-Spielzettel speichern', function (PDO $pdo) use ($fixtureId, $hash, $file, $mimeType): int {
+        return $this->transactional('save_score_sheet', function (PDO $pdo) use ($fixtureId, $hash, $file, $mimeType): int {
             $statement = $pdo->prepare(
                 'INSERT INTO original_score_sheet (fixture_id, content_hash, size_bytes, mime_type, uploaded_at)
                  VALUES (:fixture_id, :content_hash, :size_bytes, :mime_type, NOW())'
@@ -75,7 +75,7 @@ final class OriginalScoreSheetRepository extends AbstractRepository implements O
     {
         $row = $this->findOne('SELECT content_hash FROM original_score_sheet WHERE id = :id', ['id' => $id]);
 
-        $this->transactional('Original-Spielzettel löschen', function () use ($id): void {
+        $this->transactional('delete_score_sheet', function () use ($id): void {
             $this->perform('DELETE FROM original_score_sheet WHERE id = :id', ['id' => $id]);
         });
 

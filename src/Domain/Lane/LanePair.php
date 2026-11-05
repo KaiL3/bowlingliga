@@ -33,13 +33,13 @@ final class LanePair
         public readonly int $rightLane
     ) {
         if ($index < 1) {
-            throw new InvalidArgumentException('Der Bahnpaar-Index muss mindestens 1 sein.');
+            throw new InvalidArgumentException('The lane pair index must be at least 1.');
         }
         if ($leftLane < 1 || $rightLane < 1) {
-            throw new InvalidArgumentException('Bahnnummern müssen positiv sein.');
+            throw new InvalidArgumentException('Lane numbers must be positive.');
         }
         if ($rightLane !== $leftLane + 1) {
-            throw new InvalidArgumentException('Ein Bahnpaar muss aus zwei benachbarten Bahnen bestehen.');
+            throw new InvalidArgumentException('A lane pair must consist of two neighbouring lanes.');
         }
     }
 
@@ -53,7 +53,7 @@ final class LanePair
     public static function fromIndex(int $index): self
     {
         if ($index < 1) {
-            throw new InvalidArgumentException('Der Bahnpaar-Index muss mindestens 1 sein.');
+            throw new InvalidArgumentException('The lane pair index must be at least 1.');
         }
 
         $leftLane = ($index - 1) * 2 + 1;

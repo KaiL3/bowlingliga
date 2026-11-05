@@ -35,7 +35,7 @@ final class MatchdayRepository extends AbstractRepository implements MatchdaySto
         string $matchdayType = 'regular',
         bool $isPlayed = false
     ): int {
-        return $this->transactional('Spieltag anlegen', function ($pdo) use ($seasonId, $matchdayCounter, $date, $matchdayType, $isPlayed): int {
+        return $this->transactional('create_matchday', function ($pdo) use ($seasonId, $matchdayCounter, $date, $matchdayType, $isPlayed): int {
             $this->perform(
                 'INSERT INTO matchday (season_id, matchday_number, date, matchday_type, is_played)
                  VALUES (:season_id, :matchday_number, :date, :matchday_type, :is_played)',
@@ -59,7 +59,7 @@ final class MatchdayRepository extends AbstractRepository implements MatchdaySto
      */
     public function update(int $id, string $date, string $matchdayType): void
     {
-        $this->transactional('Spieltag aktualisieren', function () use ($id, $date, $matchdayType): void {
+        $this->transactional('update_matchday', function () use ($id, $date, $matchdayType): void {
             $this->perform(
                 'UPDATE matchday SET date = :date, matchday_type = :matchday_type WHERE id = :id',
                 ['id' => $id, 'date' => $date, 'matchday_type' => $matchdayType]
@@ -72,7 +72,7 @@ final class MatchdayRepository extends AbstractRepository implements MatchdaySto
      */
     public function setIsPlayed(int $id, bool $isPlayed): void
     {
-        $this->transactional('Spieltag-Status setzen', function () use ($id, $isPlayed): void {
+        $this->transactional('set_matchday_status', function () use ($id, $isPlayed): void {
             $this->perform(
                 'UPDATE matchday SET is_played = :is_played WHERE id = :id',
                 ['id' => $id, 'is_played' => $isPlayed ? 1 : 0]
@@ -85,7 +85,7 @@ final class MatchdayRepository extends AbstractRepository implements MatchdaySto
      */
     public function delete(int $id): void
     {
-        $this->transactional('Spieltag löschen', function () use ($id): void {
+        $this->transactional('delete_matchday', function () use ($id): void {
             $this->perform('DELETE FROM matchday WHERE id = :id', ['id' => $id]);
         });
     }

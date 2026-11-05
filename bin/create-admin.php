@@ -16,6 +16,7 @@ declare(strict_types=1);
  * the process list).
  */
 
+use Bowlingliga\I18n\Translator;
 use Bowlingliga\Persistence\AdminAccountRepository;
 use Bowlingliga\Persistence\Database;
 use Bowlingliga\Security\AccountException;
@@ -32,49 +33,49 @@ if (PHP_SAPI !== 'cli') {
 $username = $argv[1] ?? '';
 $onlyIfEmpty  = in_array('--only-if-empty', $argv, true);
 if ($username === '' || str_starts_with($username, '--')) {
-    fwrite(STDERR, "Aufruf: php bin/create-admin.php <benutzername> [--only-if-empty]\n");
+    fwrite(STDERR, "Usage: php bin/create-admin.php <username> [--only-if-empty]\n");
     exit(2);
 }
 
 $configurationFile = getenv('BOWLINGLIGA_CONFIG') ?: dirname(__DIR__) . '/config/database.php';
 if (! is_file($configurationFile)) {
-    fwrite(STDERR, "Konfiguration fehlt: {$configurationFile}\n");
+    fwrite(STDERR, "Configuration missing: {$configurationFile}\n");
     exit(1);
 }
 $config = require $configurationFile;
 
 $accounts = new AdminAccountRepository(new Database($config));
 if ($onlyIfEmpty && $accounts->countItems() > 0) {
-    echo "Es gibt bereits ein Adminkonto – nichts angelegt.\n";
+    echo "There is an admin account already – nothing created.\n";
     exit(0);
 }
 
 $password = getenv('BOWLINGLIGA_ADMIN_PASSWORD');
 if (! is_string($password) || $password === '') {
-    $password = readPassword('Passwort für ' . $username . ': ');
-    if ($password !== readPassword('Passwort wiederholen: ')) {
-        fwrite(STDERR, "Die Passwörter stimmen nicht überein.\n");
+    $password = readPassword('Password for ' . $username . ': ');
+    if ($password !== readPassword('Repeat the password: ')) {
+        fwrite(STDERR, "The passwords do not match.\n");
         exit(1);
     }
 }
 
 if (mb_strlen($password) < AccountManagement::PASSWORD_MIN) {
-    fwrite(STDERR, sprintf("Das Passwort muss mindestens %d Zeichen lang sein.\n", AccountManagement::PASSWORD_MIN));
+    fwrite(STDERR, sprintf("The password must be at least %d characters long.\n", AccountManagement::PASSWORD_MIN));
     exit(1);
 }
 
-// Former key name `totp_key` still accepted (configurations from before the English conversion).
+// The former key name `totp_schluessel` is still accepted.
 $key = base64_decode((string) ($config['totp_key'] ?? $config['totp_schluessel'] ?? ''), true) ?: '';
 $management = new AccountManagement($accounts, new PasswordHasher(), new TotpSecretEncryption($key));
 
 try {
     $management->createAccount($username, $password);
 } catch (AccountException $e) {
-    fwrite(STDERR, $e->getMessage() . "\n");
+    fwrite(STDERR, (new Translator('en'))->error($e) . "\n");
     exit(1);
 }
 
-echo "Adminkonto \"{$username}\" angelegt. Zwei-Faktor-Anmeldung danach unter „Mein Konto“ einrichten.\n";
+echo "Admin account \"{$username}\" created. Set up the two-factor login afterwards under \"My account\".\n";
 
 /**
  * Reads a password from standard input without echo (on a terminal).

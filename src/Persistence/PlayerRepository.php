@@ -20,7 +20,7 @@ final class PlayerRepository extends AbstractRepository implements \Bowlingliga\
      */
     public function create(string $name, string $gender): int
     {
-        return $this->transactional('Spieler anlegen', function ($pdo) use ($name, $gender): int {
+        return $this->transactional('create_player', function ($pdo) use ($name, $gender): int {
             $this->perform(
                 'INSERT INTO player (name, gender) VALUES (:name, :gender)',
                 ['name' => $name, 'gender' => $gender]
@@ -37,7 +37,7 @@ final class PlayerRepository extends AbstractRepository implements \Bowlingliga\
      */
     public function update(int $id, string $name, string $gender): void
     {
-        $this->transactional('Spieler aktualisieren', function () use ($id, $name, $gender): void {
+        $this->transactional('update_player', function () use ($id, $name, $gender): void {
             $this->perform(
                 'UPDATE player SET name = :name, gender = :gender WHERE id = :id',
                 ['id' => $id, 'name' => $name, 'gender' => $gender]
@@ -50,7 +50,7 @@ final class PlayerRepository extends AbstractRepository implements \Bowlingliga\
      */
     public function delete(int $id): void
     {
-        $this->transactional('Spieler löschen', function () use ($id): void {
+        $this->transactional('delete_player', function () use ($id): void {
             $this->perform('DELETE FROM player WHERE id = :id', ['id' => $id]);
         });
     }

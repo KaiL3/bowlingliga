@@ -62,7 +62,7 @@ final class CacheRepository extends AbstractRepository implements CacheStore
     {
         $table = $category->table();
 
-        $this->transactional('Cache-Eintrag schreiben', function () use ($table, $entry): void {
+        $this->transactional('write_cache_entry', function () use ($table, $entry): void {
             $this->perform(
                 "INSERT INTO {$table}
                     (cache_key, season_id, from_matchday_number, payload, raw_hash, computed_at)
@@ -88,7 +88,7 @@ final class CacheRepository extends AbstractRepository implements CacheStore
 
     public function invalidate(CacheInvalidation $invalidation): void
     {
-        $this->transactional('Cache invalidieren', function () use ($invalidation): void {
+        $this->transactional('invalidate_cache', function () use ($invalidation): void {
             foreach (CacheCategory::cases() as $category) {
                 $this->invalidateCategory($category, $invalidation);
             }
@@ -99,7 +99,7 @@ final class CacheRepository extends AbstractRepository implements CacheStore
     {
         $table = $category->table();
 
-        $this->transactional('Cache-Kategorie leeren', function () use ($table): void {
+        $this->transactional('empty_cache_category', function () use ($table): void {
             $this->perform("DELETE FROM {$table}");
         });
     }

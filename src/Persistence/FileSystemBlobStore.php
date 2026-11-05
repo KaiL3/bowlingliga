@@ -67,13 +67,13 @@ final class FileSystemBlobStore implements BlobStore
 
         $folder = dirname($path);
         if (! is_dir($folder) && ! @mkdir($folder, 0750, true) && ! is_dir($folder)) {
-            throw new RuntimeException("Das Verzeichnis {$folder} für die Spielzettel konnte nicht angelegt werden.");
+            throw new RuntimeException("The directory {$folder} for the score sheets could not be created.");
         }
 
         $temporary = $folder . '/.tmp-' . bin2hex(random_bytes(8));
         $handle = @fopen($temporary, 'xb');
         if ($handle === false) {
-            throw new RuntimeException("Im Verzeichnis {$folder} kann keine Datei angelegt werden.");
+            throw new RuntimeException("No file can be created in the directory {$folder}.");
         }
 
         $written = fwrite($handle, $content);
@@ -82,7 +82,7 @@ final class FileSystemBlobStore implements BlobStore
 
         if ($written !== strlen($content) || ! $flushed || ! @rename($temporary, $path)) {
             @unlink($temporary);
-            throw new RuntimeException("Die Datei des Spielzettels konnte nicht vollständig gespeichert werden ({$path}).");
+            throw new RuntimeException("The file of the score sheet could not be stored completely ({$path}).");
         }
         @chmod($path, 0640);
 
@@ -110,7 +110,7 @@ final class FileSystemBlobStore implements BlobStore
     {
         $path = $this->path($hash);
         if (is_file($path) && ! @unlink($path) && is_file($path)) {
-            throw new RuntimeException("Die Datei {$path} konnte nicht gelöscht werden.");
+            throw new RuntimeException("The file {$path} could not be deleted.");
         }
     }
 
@@ -134,7 +134,7 @@ final class FileSystemBlobStore implements BlobStore
     private function path(string $hash): string
     {
         if (preg_match(self::HASH_PATTERN, $hash) !== 1) {
-            throw new RuntimeException('Ungültiger Hash eines Spielzettels.');
+            throw new RuntimeException('Invalid hash of a score sheet.');
         }
 
         return $this->objectsDirectory() . '/' . substr($hash, 0, 2) . '/' . substr($hash, 2);

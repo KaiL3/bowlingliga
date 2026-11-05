@@ -21,7 +21,7 @@ if (PHP_SAPI !== 'cli') {
 
 $configurationFile = getenv('BOWLINGLIGA_CONFIG') ?: dirname(__DIR__) . '/config/database.php';
 if (! is_file($configurationFile)) {
-    fwrite(STDERR, "Konfiguration fehlt: {$configurationFile}\n");
+    fwrite(STDERR, "Configuration missing: {$configurationFile}\n");
     exit(1);
 }
 
@@ -29,5 +29,5 @@ $pdo = (new Database(require $configurationFile))->pdo();
 $fresh = (new MigrationRunner($pdo, dirname(__DIR__) . '/db/migrations'))->run();
 
 echo $fresh === []
-    ? "Datenbank ist aktuell, keine neuen Migrationen.\n"
-    : 'Eingespielt: ' . implode(', ', $fresh) . "\n";
+    ? "The database is up to date, no new migrations.\n"
+    : 'Applied: ' . implode(', ', $fresh) . "\n";

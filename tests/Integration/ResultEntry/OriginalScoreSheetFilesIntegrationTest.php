@@ -149,13 +149,13 @@ final class OriginalScoreSheetFilesIntegrationTest extends TestCase
 
         [$code, $output] = $this->checkScript(['--clean']);
         self::assertSame(0, $code, $output);
-        self::assertStringContainsString('Nicht mehr benötigte Dateien gelöscht: 1', $output);
+        self::assertStringContainsString('Files no longer needed deleted: 1', $output);
         self::assertFalse($this->files->exists($orphan));
 
         $this->files->delete(hash('sha256', self::PHOTO));
         [$code, $output] = $this->checkScript([]);
         self::assertSame(1, $code, $output);
-        self::assertStringContainsString('Datei fehlt', $output);
+        self::assertStringContainsString('File missing', $output);
     }
 
     /**

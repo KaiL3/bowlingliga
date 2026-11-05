@@ -40,11 +40,11 @@ final class SeasonLength
         public readonly string $source,
     ) {
         if ($matchdayCount < 1) {
-            throw new \InvalidArgumentException('Die Anzahl der Spieltage einer Saison muss mindestens 1 betragen, gegeben: ' . $matchdayCount);
+            throw new \InvalidArgumentException('The number of matchdays of a season must be at least 1, given: ' . $matchdayCount);
         }
 
         if ($source !== self::SOURCE_MATCHDAY_COUNT && $source !== self::SOURCE_END_DATE) {
-            throw new \InvalidArgumentException('Unbekannte Herkunft der Saisonlänge: ' . $source);
+            throw new \InvalidArgumentException('Unknown source of the season length: ' . $source);
         }
     }
 

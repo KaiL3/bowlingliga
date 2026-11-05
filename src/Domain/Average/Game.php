@@ -45,7 +45,7 @@ final class Game
     ) {
         if ($netResult < 0 || $netResult > 300) {
             throw new \InvalidArgumentException(
-                'Das Netto-Ergebnis eines Einzelspiels muss im Bereich 0 bis 300 liegen, gegeben: ' . $netResult
+                'The net result of a single game must be between 0 and 300, given: ' . $netResult
             );
         }
     }

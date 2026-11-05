@@ -49,7 +49,7 @@ final class PointsService
     public function teamGrossGame(Lineup $lineup, int $game): int
     {
         if ($game < 1 || $game > self::GAME_COUNT) {
-            throw new InvalidArgumentException('Einzelspiel muss zwischen 1 und ' . self::GAME_COUNT . ' liegen.');
+            throw new InvalidArgumentException('The single game must be between 1 and ' . self::GAME_COUNT . '.');
         }
 
         $sum = 0;
@@ -138,7 +138,7 @@ final class PointsService
     public function bonusPoints(int $grossTotal): int
     {
         if ($grossTotal < 0) {
-            throw new InvalidArgumentException('Das Brutto-Gesamtergebnis darf nicht negativ sein.');
+            throw new InvalidArgumentException('The gross total must not be negative.');
         }
 
         if ($grossTotal <= self::BONUS_POINTS_LOWER_THRESHOLD) {

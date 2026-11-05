@@ -48,7 +48,7 @@ final class DatabaseConnectionSmokeTest extends TestCase
             self::fail('No DatabaseConnectionException was thrown.');
         } catch (DatabaseConnectionException $exception) {
             self::assertStringContainsStringIgnoringCase(
-                'Datenbankverbindung',
+                'database connection',
                 $exception->getMessage()
             );
         }

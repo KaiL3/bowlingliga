@@ -64,13 +64,13 @@ final class GameResultInput
     ) {
         if ($netResult < 0 || $netResult > 300) {
             throw new \InvalidArgumentException(
-                'Das Netto-Ergebnis eines Einzelspiels muss im Bereich 0 bis 300 liegen, gegeben: ' . $netResult
+                'The net result of a single game must be between 0 and 300, given: ' . $netResult
             );
         }
 
         if ($handicap < 0) {
             throw new \InvalidArgumentException(
-                'Das Handicap eines Spielers darf nicht negativ sein, gegeben: ' . $handicap
+                'The handicap of a player must not be negative, given: ' . $handicap
             );
         }
     }

@@ -28,7 +28,7 @@ final class RosterRepository extends AbstractRepository implements RosterStore, 
      */
     public function create(int $teamSeasonId, int $playerId): int
     {
-        return $this->transactional('Kader-Zuordnung anlegen', function ($pdo) use ($teamSeasonId, $playerId): int {
+        return $this->transactional('create_roster_entry', function ($pdo) use ($teamSeasonId, $playerId): int {
             $this->perform(
                 'INSERT INTO roster (team_season_id, player_id) VALUES (:team_season_id, :player_id)',
                 ['team_season_id' => $teamSeasonId, 'player_id' => $playerId]
@@ -64,7 +64,7 @@ final class RosterRepository extends AbstractRepository implements RosterStore, 
      */
     public function delete(int $id): void
     {
-        $this->transactional('Kader-Zuordnung löschen', function () use ($id): void {
+        $this->transactional('delete_roster_entry', function () use ($id): void {
             $this->perform('DELETE FROM roster WHERE id = :id', ['id' => $id]);
         });
     }

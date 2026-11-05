@@ -69,8 +69,8 @@ final class HtmlSanitizer
     {
         if (! $this->isAvailable()) {
             throw new HtmlSanitizerUnavailableException(
-                'HTML Purifier ist nicht verfügbar; die HTML-Bereinigung kann '
-                . 'nicht durchgeführt werden.'
+                'HTML Purifier is not available; the HTML cleaning cannot '
+                . 'be done.'
             );
         }
 

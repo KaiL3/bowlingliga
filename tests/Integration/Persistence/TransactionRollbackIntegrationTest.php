@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Bowlingliga\Tests\Integration\Persistence;
 
+use Bowlingliga\Domain\Message;
 use Bowlingliga\Persistence\AbstractRepository;
 use Bowlingliga\Persistence\Database;
 use Bowlingliga\Persistence\RepositoryException;
@@ -122,8 +123,10 @@ final class TransactionRollbackIntegrationTest extends TestCase
             $repository->writeTwoAndFail('Erste Zeile', 'Zweite Zeile');
             self::fail('No RepositoryException was thrown (R4.3).');
         } catch (RepositoryException $exception) {
-            // R4.3: the error message names the operation.
-            self::assertStringContainsString('writeTwoAndFail', $exception->getMessage());
+            // R4.3: the error message names the operation (catalog key of its name).
+            $operation = $exception->message()->params['operation'];
+            self::assertInstanceOf(Message::class, $operation);
+            self::assertSame('operation.writeTwoAndFail', $operation->key);
         }
 
         // R4.3: complete rollback – neither of the two rows of the

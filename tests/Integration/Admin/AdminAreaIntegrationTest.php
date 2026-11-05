@@ -791,6 +791,24 @@ final class AdminAreaIntegrationTest extends TestCase
     }
 
     /**
+     * R6: the template of the import file is offered for download, in the
+     * visitor's language, and only to logged-in admins.
+     */
+    public function testImportTemplateDownload(): void
+    {
+        [$status] = $this->get('/admin/master-data/import-template');
+        self::assertSame(401, $status, 'Without login no template.');
+
+        $this->logIn();
+        [$status, $csv, $header] = $this->get('/admin/master-data/import-template');
+
+        self::assertSame(200, $status);
+        self::assertStringContainsString('Content-Type: text/csv; charset=utf-8', $header);
+        self::assertStringContainsString('Content-Disposition: attachment; filename="spieler-import.csv"', $header);
+        self::assertStringStartsWith("\xEF\xBB\xBFTeam;Name;Geschlecht;Vorjahr Schnitt;Vorjahr Spiele\r\n", $csv);
+    }
+
+    /**
      * Player import: the uploaded CSV is shown as a preview without saving,
      * the confirmation imports teams and players; an invalid token is refused.
      */

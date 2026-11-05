@@ -31,7 +31,7 @@ final class Fixture
     ) {
         if ($home->id === $away->id) {
             throw new \InvalidArgumentException(
-                'Eine Teampaarung muss zwei unterschiedliche Teams verbinden, gegeben zweimal: ' . $home->id
+                'A fixture must join two different teams, given twice: ' . $home->id
             );
         }
     }

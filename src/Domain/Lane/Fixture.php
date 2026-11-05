@@ -40,7 +40,7 @@ final class Fixture
         public readonly bool $awayIsGhost = false
     ) {
         if ($homeTeamId === $awayTeamId) {
-            throw new InvalidArgumentException('Eine Teampaarung muss aus zwei verschiedenen Teams bestehen.');
+            throw new InvalidArgumentException('A fixture must consist of two different teams.');
         }
     }
 

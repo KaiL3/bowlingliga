@@ -25,7 +25,7 @@ final class SeasonRepository extends AbstractRepository implements
         string $endDate,
         ?int $matchdayCount = null
     ): int {
-        return $this->transactional('Saison anlegen', function ($pdo) use ($name, $startDate, $endDate, $matchdayCount): int {
+        return $this->transactional('create_season', function ($pdo) use ($name, $startDate, $endDate, $matchdayCount): int {
             $this->perform(
                 'INSERT INTO season (name, start_date, end_date, matchday_count)
                  VALUES (:name, :start_date, :end_date, :matchday_count)',
@@ -51,7 +51,7 @@ final class SeasonRepository extends AbstractRepository implements
         string $endDate,
         ?int $matchdayCount = null
     ): void {
-        $this->transactional('Saison aktualisieren', function () use ($id, $name, $startDate, $endDate, $matchdayCount): void {
+        $this->transactional('update_season', function () use ($id, $name, $startDate, $endDate, $matchdayCount): void {
             $this->perform(
                 'UPDATE season
                  SET name = :name, start_date = :start_date, end_date = :end_date, matchday_count = :matchday_count
@@ -69,7 +69,7 @@ final class SeasonRepository extends AbstractRepository implements
 
     public function setScoreSheetLanguage(int $id, ?string $language): void
     {
-        $this->transactional('Sprache der Spielzettel setzen', function () use ($id, $language): void {
+        $this->transactional('set_score_sheet_language', function () use ($id, $language): void {
             $this->perform('UPDATE season SET score_sheet_language = :language WHERE id = :id', ['id' => $id, 'language' => $language]);
         });
     }
@@ -79,7 +79,7 @@ final class SeasonRepository extends AbstractRepository implements
      */
     public function delete(int $id): void
     {
-        $this->transactional('Saison löschen', function () use ($id): void {
+        $this->transactional('delete_season', function () use ($id): void {
             $this->perform('DELETE FROM season WHERE id = :id', ['id' => $id]);
         });
     }

@@ -418,7 +418,7 @@ $router->publicWithId('/score-sheet', static function (int $id) use ($t, $scoreS
     // The record exists but its file is missing from the score sheet directory:
     // raw data is lost, which must not look like "not found" (R35).
     if ($dataRecord['file'] === null) {
-        error_log("Original-Spielzettel {$id}: Datei {$dataRecord['content_hash']} fehlt im Spielzettel-Verzeichnis.");
+        error_log("Original score sheet {$id}: file {$dataRecord['content_hash']} is missing in the score sheet directory.");
         http_response_code(500);
         header('Content-Type: text/plain; charset=utf-8');
         echo $t('public.score_sheet_file_missing');
@@ -498,7 +498,8 @@ $masterDataController = new MasterDataController(
 $previousSeasonContext = new PreviousSeasonContextRepository($database);
 $playerImportController = new PlayerImportController(
     new PlayerImport(
-        new PlayerCsvParser(),
+        // Column names and gender values of all languages (R6).
+        new PlayerCsvParser(\Bowlingliga\I18n\CatalogImportVocabulary::all()),
         new PlayerImportRepository($database),
         $previousSeasonContext,
         $playerManagement,
@@ -921,6 +922,18 @@ $router->admin('/master-data', static function () use (
         'admin.area.master_data.title',
         $masterDataController->overview($csrf->fieldHtml(), $adminSeasonId(), null, null, $tab, $importArea)
     );
+});
+
+// Template of the import file in the visitor's language (R6).
+$router->admin('/master-data/import-template', static function () use ($ensureAdminAccess, $playerImportController): void {
+    if (! $ensureAdminAccess()) {
+        return;
+    }
+
+    $template = $playerImportController->template();
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="' . str_replace('"', '', $template['file']) . '"');
+    echo $template['content'];
 });
 
 // Player import: preview of the uploaded file (nothing is saved yet), then the

@@ -51,7 +51,11 @@ final class CatalogTest extends TestCase
         foreach (Translator::catalog(Languages::DEFAULT) as $key => $text) {
             foreach (Languages::codes() as $language) {
                 $translated = Translator::catalog($language)[$key] ?? '';
-                self::assertNotSame('', trim($translated), "$language: $key is empty");
+                self::assertArrayHasKey($key, Translator::catalog($language), "$language: $key is missing");
+                // An alias list of the import may be empty: a language need not have synonyms.
+                if (! str_ends_with($key, '.aliases')) {
+                    self::assertNotSame('', trim($translated), "$language: $key is empty");
+                }
                 if ($key === 'date.pattern') {
                     // The Formatter offers every part of a date; each language picks its own.
                     self::assertSame([], array_diff($placeholders($translated), ['d', 'dd', 'mm', 'month', 'yyyy']), "$language: $key");

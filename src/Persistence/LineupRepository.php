@@ -34,7 +34,7 @@ final class LineupRepository extends AbstractRepository implements LineupStore
         int $sheetRow,
         ?int $playerId
     ): int {
-        return $this->transactional('Aufstellung anlegen', function ($pdo) use ($fixtureId, $teamSeasonId, $sheetRow, $playerId): int {
+        return $this->transactional('create_lineup', function ($pdo) use ($fixtureId, $teamSeasonId, $sheetRow, $playerId): int {
             $this->perform(
                 'INSERT INTO lineup (fixture_id, team_season_id, sheet_row, player_id)
                  VALUES (:fixture_id, :team_season_id, :sheet_row, :player_id)',
@@ -55,7 +55,7 @@ final class LineupRepository extends AbstractRepository implements LineupStore
      */
     public function setPlayer(int $id, ?int $playerId): void
     {
-        $this->transactional('Aufstellung-Spieler setzen', function () use ($id, $playerId): void {
+        $this->transactional('set_lineup_player', function () use ($id, $playerId): void {
             $this->perform(
                 'UPDATE lineup SET player_id = :player_id WHERE id = :id',
                 ['id' => $id, 'player_id' => $playerId]
@@ -68,7 +68,7 @@ final class LineupRepository extends AbstractRepository implements LineupStore
      */
     public function delete(int $id): void
     {
-        $this->transactional('Aufstellung löschen', function () use ($id): void {
+        $this->transactional('delete_lineup', function () use ($id): void {
             $this->perform('DELETE FROM lineup WHERE id = :id', ['id' => $id]);
         });
     }
@@ -116,7 +116,7 @@ final class LineupRepository extends AbstractRepository implements LineupStore
         int $teamSeasonId,
         FilledLineup $lineup
     ): void {
-        $this->transactional('Aufstellung speichern', function () use ($fixtureId, $teamSeasonId, $lineup): void {
+        $this->transactional('save_lineup', function () use ($fixtureId, $teamSeasonId, $lineup): void {
             $this->perform(
                 'DELETE FROM lineup
                  WHERE fixture_id = :fixture_id AND team_season_id = :team_season_id',

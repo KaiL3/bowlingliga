@@ -28,7 +28,7 @@ final class PreviousSeasonRecordRepository extends AbstractRepository implements
      */
     public function save(int $seasonId, int $playerId, int $numberOfGames, int $netPinsTotal): void
     {
-        $this->transactional('Vorsaison-Bestandsdaten speichern', function () use ($seasonId, $playerId, $numberOfGames, $netPinsTotal): void {
+        $this->transactional('save_previous_season_record', function () use ($seasonId, $playerId, $numberOfGames, $netPinsTotal): void {
             $this->perform(
                 'INSERT INTO previous_season_record (season_id, player_id, game_count, net_pins_total)
                  VALUES (:season_id, :player_id, :game_count, :net_pins_total)
@@ -50,7 +50,7 @@ final class PreviousSeasonRecordRepository extends AbstractRepository implements
      */
     public function delete(int $seasonId, int $playerId): void
     {
-        $this->transactional('Vorsaison-Bestandsdaten löschen', function () use ($seasonId, $playerId): void {
+        $this->transactional('delete_previous_season_record', function () use ($seasonId, $playerId): void {
             $this->perform(
                 'DELETE FROM previous_season_record WHERE season_id = :season_id AND player_id = :player_id',
                 ['season_id' => $seasonId, 'player_id' => $playerId]

@@ -19,7 +19,7 @@ final class RulesRepository extends AbstractRepository implements RulesStore
 {
     public function save(string $text): void
     {
-        $this->transactional('Spielregeln speichern', function () use ($text): void {
+        $this->transactional('save_rules', function () use ($text): void {
             $present = $this->findOne('SELECT id FROM rules ORDER BY id LIMIT 1');
 
             if ($present === null) {

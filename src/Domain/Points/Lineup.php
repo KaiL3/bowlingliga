@@ -45,7 +45,7 @@ final class Lineup
     {
         if (count($positions) !== self::POSITION_COUNT) {
             throw new InvalidArgumentException(
-                'Eine Aufstellung muss genau ' . self::POSITION_COUNT . ' Positionen umfassen.'
+                'A lineup must have exactly ' . self::POSITION_COUNT . ' Positionen umfassen.'
             );
         }
 
@@ -54,14 +54,14 @@ final class Lineup
         foreach ($positions as $games) {
             if (!is_array($games) || count($games) !== self::GAME_COUNT) {
                 throw new InvalidArgumentException(
-                    'Jede Position muss genau ' . self::GAME_COUNT . ' Brutto-Werte (Einzelspiele 1–3) enthalten.'
+                    'Every position must have exactly ' . self::GAME_COUNT . ' gross values (single games 1–3).'
                 );
             }
 
             $gameIndex = 0;
             foreach ($games as $gross) {
                 if (!is_int($gross)) {
-                    throw new InvalidArgumentException('Brutto-Werte müssen ganzzahlig sein.');
+                    throw new InvalidArgumentException('Gross values must be whole numbers.');
                 }
                 $normalised[$positionIndex][$gameIndex] = $gross;
                 $gameIndex++;
@@ -91,10 +91,10 @@ final class Lineup
     public function grossOfPosition(int $position, int $game): int
     {
         if ($position < 1 || $position > self::POSITION_COUNT) {
-            throw new InvalidArgumentException('Position muss zwischen 1 und ' . self::POSITION_COUNT . ' liegen.');
+            throw new InvalidArgumentException('The position must be between 1 and ' . self::POSITION_COUNT . '.');
         }
         if ($game < 1 || $game > self::GAME_COUNT) {
-            throw new InvalidArgumentException('Einzelspiel muss zwischen 1 und ' . self::GAME_COUNT . ' liegen.');
+            throw new InvalidArgumentException('The single game must be between 1 and ' . self::GAME_COUNT . '.');
         }
 
         return $this->positions[$position - 1][$game - 1];

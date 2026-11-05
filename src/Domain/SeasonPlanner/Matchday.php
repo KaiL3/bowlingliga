@@ -50,11 +50,11 @@ final class Matchday
         public readonly string $type,
     ) {
         if ($number < 1) {
-            throw new \InvalidArgumentException('Die Nummer eines Spieltags muss mindestens 1 betragen, gegeben: ' . $number);
+            throw new \InvalidArgumentException('The number of a matchday must be at least 1, given: ' . $number);
         }
 
         if (! in_array($type, self::TYPES, true)) {
-            throw new \InvalidArgumentException('Unbekannter Spieltag-Typ: ' . $type);
+            throw new \InvalidArgumentException('Unknown matchday type: ' . $type);
         }
 
         $this->checkNoTeamDuplicated($fixtures);
@@ -113,7 +113,7 @@ final class Matchday
             foreach ([$fixture->home->id, $fixture->away->id] as $teamId) {
                 if (isset($seen[$teamId])) {
                     throw new \InvalidArgumentException(
-                        'Ein Team darf an einem Spieltag nicht mehrfach eingeplant sein, betroffen: ' . $teamId
+                        'A team must not be scheduled more than once on a matchday, concerned: ' . $teamId
                     );
                 }
 

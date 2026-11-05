@@ -59,7 +59,7 @@ final class PositiondayResult
     public static function notReady(Message $note): self
     {
         if ($note === '') {
-            throw new \InvalidArgumentException('Ein Ergebnis "nicht bereit" muss einen Hinweis enthalten.');
+            throw new \InvalidArgumentException('A "not ready" result must contain a notice.');
         }
 
         return new self([], $note);

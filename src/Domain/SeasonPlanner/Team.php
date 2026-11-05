@@ -37,11 +37,11 @@ final class Team
         public readonly bool $isGhostTeam = false,
     ) {
         if ($id === '') {
-            throw new \InvalidArgumentException('Die Kennung eines Teams darf nicht leer sein.');
+            throw new \InvalidArgumentException('The id of a team must not be empty.');
         }
 
         if ($name === '') {
-            throw new \InvalidArgumentException('Der Name eines Teams darf nicht leer sein.');
+            throw new \InvalidArgumentException('The name of a team must not be empty.');
         }
     }
 

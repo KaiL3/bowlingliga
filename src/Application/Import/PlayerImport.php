@@ -86,7 +86,7 @@ final class PlayerImport
         if ($hasRecords) {
             $blocked = $this->previousSeasonBlocked($seasonId);
             if ($blocked !== null) {
-                $errors[] = new Message('import.error.previous_blocked', ['reason' => $blocked]);
+                $errors[] = new Message('import.error.previous_blocked', ['reason' => $blocked] + PlayerCsvParser::previousColumns());
             }
         }
 
