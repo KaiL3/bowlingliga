@@ -47,6 +47,9 @@ final class TeamEntryFixture
     public TeamEntryController $controller;
     public string $now = '2026-09-02 20:00:00';
 
+    /** @var list<string> Lines the controller wrote to the server log. */
+    public array $logged = [];
+
     public function __construct(string $language = 'de')
     {
         $this->store = new InMemoryTeamEntryStore();
@@ -124,7 +127,15 @@ final class TeamEntryFixture
         };
 
         $translator = new Translator($language);
-        $this->controller = new TeamEntryController($this->entry, $stats, new TeamEntryView($translator), t: $translator);
+        $this->controller = new TeamEntryController(
+            $this->entry,
+            $stats,
+            new TeamEntryView($translator),
+            t: $translator,
+            log: function (string $line): void {
+                $this->logged[] = $line;
+            },
+        );
     }
 
     public function code(string $side): string

@@ -15,22 +15,11 @@ use PHPUnit\Framework\TestCase;
 final class TeamEntryControllerTest extends TestCase
 {
     private TeamEntryFixture $fixture;
-    private string $errorLog;
-    private string|false $previousErrorLog;
 
     protected function setUp(): void
     {
+        // The fixture collects the log lines of the controller (TeamEntryFixture::$logged).
         $this->fixture = new TeamEntryFixture();
-
-        // The controller logs database errors; keep the test output clean.
-        $this->errorLog = (string) tempnam(sys_get_temp_dir(), 'team-entry-log');
-        $this->previousErrorLog = ini_set('error_log', $this->errorLog);
-    }
-
-    protected function tearDown(): void
-    {
-        ini_set('error_log', $this->previousErrorLog === false ? '' : $this->previousErrorLog);
-        @unlink($this->errorLog);
     }
 
     public function testWeiterSavesTheGameChecksItAndGoesOn(): void
@@ -92,7 +81,8 @@ final class TeamEntryControllerTest extends TestCase
         self::assertSame('Die Eingabe konnte gerade nicht gespeichert werden. Bitte noch einmal versuchen.', $result['error']);
         self::assertNull($result['notice']);
         self::assertSame(TeamEntryController::STEP_OVERVIEW, $result['step']);
-        self::assertStringContainsString('uq_team_entry_game', (string) file_get_contents($this->errorLog), 'The details go to the log.');
+        self::assertCount(1, $this->fixture->logged);
+        self::assertStringContainsString('uq_team_entry_game', $this->fixture->logged[0], 'The details go to the log.');
     }
 
     public function testDomainErrorKeepsItsMessage(): void

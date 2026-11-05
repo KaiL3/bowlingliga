@@ -6,6 +6,7 @@ namespace Bowlingliga\Tests\Unit\Security;
 
 use Bowlingliga\Security\ValidationException;
 use Bowlingliga\Security\Validator;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -54,9 +55,7 @@ final class ValidatorTest extends TestCase
         self::assertSame($name, $this->validator->checkName($name));
     }
 
-    /**
-     * @dataProvider validGenders
-     */
+    #[DataProvider('validGenders')]
     public function testValidGenderIsNormalised(string $input, string $expected): void
     {
         self::assertSame($expected, $this->validator->checkGender($input));
@@ -85,9 +84,7 @@ final class ValidatorTest extends TestCase
         }
     }
 
-    /**
-     * @dataProvider validNetValues
-     */
+    #[DataProvider('validNetValues')]
     public function testValidNetIsAccepted(int $net): void
     {
         self::assertSame($net, $this->validator->checkNet($net));
@@ -101,9 +98,7 @@ final class ValidatorTest extends TestCase
         return ['untere Grenze' => [0], 'middle' => [150], 'obere Grenze' => [300]];
     }
 
-    /**
-     * @dataProvider invalidNetValues
-     */
+    #[DataProvider('invalidNetValues')]
     public function testInvalidNetIsRejected(int $net): void
     {
         $this->expectException(ValidationException::class);
@@ -124,9 +119,7 @@ final class ValidatorTest extends TestCase
         self::assertSame(8, $this->validator->checkLaneCount(8));
     }
 
-    /**
-     * @dataProvider invalidLaneCounts
-     */
+    #[DataProvider('invalidLaneCounts')]
     public function testInvalidLaneCountIsRejected(int $laneCount): void
     {
         $this->expectException(ValidationException::class);
@@ -172,9 +165,7 @@ final class ValidatorTest extends TestCase
     // Vorsaison-Bestandsdaten (Task 22.3; R29.4, R29.6, R29.7)
     // -------------------------------------------------------------------------
 
-    /**
-     * @dataProvider validPreviousSeasonRecords
-     */
+    #[DataProvider('validPreviousSeasonRecords')]
     public function testValidPreviousSeasonRecordDataIsAccepted(int $numberOfGames, int $netPinsTotal): void
     {
         $this->validator->checkPreviousSeasonRecord($numberOfGames, $netPinsTotal);

@@ -8,6 +8,7 @@ use Bowlingliga\Domain\SeasonPlanner\Matchday;
 use Bowlingliga\Domain\SeasonPlanner\SeasonLength;
 use Bowlingliga\Domain\SeasonPlanner\SeasonPlanner;
 use Bowlingliga\Domain\SeasonPlanner\Team;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -28,10 +29,9 @@ final class PositiondayIntervalTest extends TestCase
     }
 
     /**
-     * @dataProvider intervals
-     *
      * @param list<int> $expected
      */
+    #[DataProvider('intervals')]
     public function testPositiondaysFollowTheInterval(?int $interval, array $expected): void
     {
         $teams = [new Team('1', 'Adler'), new Team('2', 'Falken'), new Team('3', 'Eulen'), new Team('4', 'Spatzen')];

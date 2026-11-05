@@ -52,6 +52,12 @@ final class TeamEntryController
 
     private readonly Formatter $format;
 
+    /** @var \Closure(string): void Writes a line to the server log. */
+    private readonly \Closure $log;
+
+    /**
+     * @param (\Closure(string): void)|null $log Server log; default error_log().
+     */
     public function __construct(
         private readonly TeamResultEntry $entry,
         private readonly PlayerStatsReader $stats,
@@ -59,8 +65,12 @@ final class TeamEntryController
         private readonly ScoreSheetCalculator $calculator = new ScoreSheetCalculator(),
         private readonly QrCode $qrCode = new QrCode(),
         private readonly Translator $t = new Translator(),
+        ?\Closure $log = null,
     ) {
         $this->format = new Formatter($t);
+        $this->log = $log ?? static function (string $line): void {
+            error_log($line);
+        };
     }
 
     /** Text of a notice from the redirect, null for an unknown one. */
@@ -136,7 +146,7 @@ final class TeamEntryController
         } catch (\PDOException $e) {
             // The page needs no login: database details (SQLSTATE, table and key
             // names) belong in the log, not on the screen.
-            error_log('Teamerfassung, Aktion ' . $action . ': ' . $e->getMessage());
+            ($this->log)('Team entry, action ' . $action . ': ' . $e->getMessage());
 
             return ['code' => $code, 'step' => $this->errorStep($method, $game), 'notice' => null, 'error' => $this->t->t(self::DATABASE_ERROR)];
         } catch (TeamEntryException $e) {
