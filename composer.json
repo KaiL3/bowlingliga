@@ -4,7 +4,7 @@
     "type": "project",
     "license": "GPL-2.0-or-later",
     "require": {
-        "php": ">=8.1",
+        "php": ">=8.3",
         "ext-pdo": "*",
         "ext-sodium": "*",
         "chillerlan/php-qrcode": "^5.0",
@@ -32,7 +32,7 @@
     "config": {
         "sort-packages": true,
         "platform": {
-            "php": "8.1.0"
+            "php": "8.3.0"
         },
         "allow-plugins": {
             "*": false

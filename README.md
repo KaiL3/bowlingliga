@@ -66,7 +66,7 @@ The screenshots show the fictional league of `bin/seed-demo.php`.
 
 ## Quick start
 
-Requirements: PHP ≥ 8.1 with `pdo_mysql`, `sodium`, `gd`, `mbstring`, `zip`,
+Requirements: PHP ≥ 8.3 with `pdo_mysql`, `sodium`, `gd`, `mbstring`, `zip`,
 Composer and a local MariaDB 10.11 or newer (MySQL is not supported: the
 migrations use MariaDB syntax).
 
@@ -90,7 +90,7 @@ generate the `totp_key`.
 
 ## Installation on a server
 
-`deploy/install.sh` sets up a complete instance on Debian 12 or 13 (nginx,
+`deploy/install.sh` sets up a complete instance on Debian 13, or Debian 12 with a newer PHP (nginx,
 PHP-FPM, MariaDB, Let's Encrypt), `deploy/update.sh` updates it. Several
 leagues can run on one server. See [docs/operations.md](docs/operations.md).
 
@@ -115,7 +115,7 @@ php vendor/bin/phpunit --testsuite Unit  # fast, no database needed
 ```
 
 Unit, property-based (eris) and integration tests cover the domain rules;
-GitHub Actions runs the complete suite with PHP 8.1, 8.3 and 8.5 for every pull
+GitHub Actions runs the complete suite with PHP 8.3, 8.4 and 8.5 for every pull
 request. Details in [docs/development.md](docs/development.md).
 
 ## Contributing

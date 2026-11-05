@@ -24,7 +24,7 @@ development sessions, without having to reread the whole code base.
 
 ## Key facts at a glance
 
-- **Stack:** PHP ≥ 8.1, MariaDB with InnoDB (MySQL is not supported: the
+- **Stack:** PHP ≥ 8.3, MariaDB with InnoDB (MySQL is not supported: the
   migrations use MariaDB syntax), no framework.
   Own router, composition root in [public/index.php](../public/index.php).
   Libraries: mPDF (printing), HTML Purifier (CMS), otphp (2FA), php-qrcode

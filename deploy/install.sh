@@ -2,6 +2,8 @@
 #
 # Installation and update of the bowling league website on Debian 12/13
 # (nginx, PHP-FPM, MariaDB, Let's Encrypt or an existing certificate).
+# Requires PHP 8.3 or newer: Debian 13 ships 8.4; on Debian 12 (PHP 8.2)
+# install a newer PHP from a third-party source first, e.g. packages.sury.org.
 #
 # Procedure: copy the project folder to the server, then run inside it
 #     sudo bash deploy/install.sh
@@ -157,6 +159,15 @@ fi
 if [[ -z ${PHP_VERSION:-} ]] && command -v php >/dev/null; then
     PHP_VERSION="$(php -r 'echo PHP_MAJOR_VERSION . "." . PHP_MINOR_VERSION;')"
 fi
+# Stop before installing anything if the PHP version would be too old: the
+# one already present (or requested), otherwise the distribution's (Debian 12:
+# 8.2).
+if [[ -n ${PHP_VERSION:-} ]]; then
+    [[ "$(printf '%s\n' 8.3 "$PHP_VERSION" | sort -V | head -n1)" == 8.3 ]] \
+        || fail "PHP $PHP_VERSION is too old, at least 8.3 is required."
+elif [[ "$(cut -d. -f1 /etc/debian_version)" == 12 ]]; then
+    fail "Debian 12 ships PHP 8.2, at least 8.3 is required. Install a newer PHP first (e.g. from packages.sury.org) or use Debian 13."
+fi
 for extension in fpm cli mysql mbstring gd xml zip; do
     PACKAGES+=("php${PHP_VERSION:-}-$extension")
 done
@@ -178,8 +189,8 @@ PHP_VERSION="${PHP_VERSION:-$(php -r 'echo PHP_MAJOR_VERSION . "." . PHP_MINOR_V
 # Always call exactly this version, even if "php" points to another one
 PHP="php$PHP_VERSION"
 command -v "$PHP" >/dev/null || fail "$PHP not found."
-"$PHP" -r 'exit(version_compare(PHP_VERSION, "8.1.0", ">=") ? 0 : 1);' \
-    || fail "PHP $PHP_VERSION is too old, at least 8.1 is required."
+"$PHP" -r 'exit(version_compare(PHP_VERSION, "8.3.0", ">=") ? 0 : 1);' \
+    || fail "PHP $PHP_VERSION is too old, at least 8.3 is required."
 "$PHP" -r 'exit(extension_loaded("sodium") ? 0 : 1);' \
     || fail "The PHP extension sodium is missing."
 FPM_SERVICE="php${PHP_VERSION}-fpm"

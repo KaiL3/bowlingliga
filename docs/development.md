@@ -4,7 +4,7 @@
 
 | Component | Version / note |
 |---|---|
-| PHP | ≥ 8.1 (developed with 8.5) with the extensions `pdo_mysql`, `sodium`, `gd`, `fileinfo`, `zip`, `curl` |
+| PHP | ≥ 8.3 (developed with 8.5) with the extensions `pdo_mysql`, `sodium`, `gd`, `fileinfo`, `zip`, `curl` |
 | Composer | 2.x |
 | MariaDB | 10.11 or newer (Debian 12; CI tests 11.4), local, on `127.0.0.1:3306` by default. MySQL is not supported: the migrations use MariaDB syntax |
 | Firefox | optional, for screenshots (skill `visual-check`) |
@@ -70,7 +70,7 @@ integration tests are skipped – start it first.
 
 **Continuous integration:** [.github/workflows/tests.yml](../.github/workflows/tests.yml)
 runs the complete suite on GitHub for every push to `main` and every pull
-request, with PHP 8.1, 8.3 and 8.5 against a MariaDB service. It calls
+request, with PHP 8.3, 8.4 and 8.5 against a MariaDB service. It calls
 PHPUnit with `--fail-on-all-issues`, so a skipped test, a deprecation or a
 notice fails the run as well. Locally the same check is
 `php vendor/bin/phpunit --fail-on-all-issues --display-all-issues`.
@@ -98,8 +98,9 @@ for Composer packages, GitHub Actions and the gitleaks version, configured in
 - minor and patch updates of the development tools and the CI tools are
   merged automatically once the tests are green; runtime packages (mPDF,
   HTML Purifier, …) and major updates are reviewed by hand,
-- `config.platform.php` in `composer.json` is 8.1.0, so packages are always
-  resolved for the lowest supported PHP version,
+- `config.platform.php` in `composer.json` is 8.3.0, so packages are always
+  resolved for the lowest supported PHP version; PHPUnit stays below 13
+  (needs PHP 8.4) – lift this together with the PHP minimum,
 - not updated: the PHP constraint and the MariaDB version of the CI (both
   deliberate choices).
 

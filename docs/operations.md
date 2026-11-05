@@ -2,9 +2,9 @@
 
 Installation and update are done by two scripts:
 [deploy/install.sh](../deploy/install.sh) and
-[deploy/update.sh](../deploy/update.sh). They are tested on Debian 12
-(PHP 8.2) and Debian 13 (PHP 8.4) with nginx, PHP-FPM, MariaDB and
-Let's Encrypt.
+[deploy/update.sh](../deploy/update.sh). They are tested on Debian 13 (PHP 8.4) and on
+Debian 12 with a newer PHP from a third-party source, with nginx, PHP-FPM,
+MariaDB and Let's Encrypt.
 
 ## Requirements
 
@@ -16,9 +16,11 @@ The scripts set up exactly this stack and nothing else:
 - **MariaDB on the same server** (installed if missing; a running server is
   shared with other applications). The scripts work as MariaDB root via the
   Unix socket (`sudo mariadb` without password) or `/root/.my.cnf`.
-- **PHP ≥ 8.1** with the extensions fpm, cli, mysql, mbstring, gd, xml, zip and
+- **PHP ≥ 8.3** with the extensions fpm, cli, mysql, mbstring, gd, xml, zip and
   sodium (installed for the PHP version already present, otherwise the
-  distribution's).
+  distribution's). Debian 13 ships 8.4; Debian 12 ships 8.2, so install a
+  newer PHP there first (e.g. from packages.sury.org) – the script stops
+  before installing anything otherwise.
 - A **domain** whose DNS record points to the server, and ports 80/443 (or
   your own HTTPS ports) reachable – otherwise no certificate can be issued.
 

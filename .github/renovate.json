@@ -27,6 +27,12 @@
       "automerge": true
     },
     {
+      "description": "PHPUnit 13 needs PHP 8.4; lift together with the lowest supported PHP version (composer.json).",
+      "matchManagers": ["composer"],
+      "matchDepNames": ["phpunit/phpunit"],
+      "allowedVersions": "<13"
+    },
+    {
       "description": "The MariaDB version of the CI is a deliberate choice (supported LTS line), not an update.",
       "matchDepNames": ["mariadb"],
       "enabled": false
