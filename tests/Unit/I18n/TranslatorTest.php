@@ -7,6 +7,7 @@ namespace Bowlingliga\Tests\Unit\I18n;
 use Bowlingliga\I18n\Formatter;
 use Bowlingliga\I18n\LanguageNegotiator;
 use Bowlingliga\I18n\Translator;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -43,7 +44,7 @@ final class TranslatorTest extends TestCase
         yield 'invalid default'         => [null, null, 'xx', 'de'];
     }
 
-    /** @dataProvider requests */
+    #[DataProvider('requests')]
     public function testLanguageOfARequest(mixed $cookie, mixed $header, string $default, string $expected): void
     {
         self::assertSame($expected, LanguageNegotiator::choose($cookie, $header, $default));

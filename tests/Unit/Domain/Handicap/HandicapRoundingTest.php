@@ -6,6 +6,7 @@ namespace Bowlingliga\Tests\Unit\Domain\Handicap;
 
 use Bowlingliga\Domain\Handicap\HandicapFormula;
 use Bowlingliga\Domain\Handicap\HandicapModule;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -36,9 +37,7 @@ final class HandicapRoundingTest extends TestCase
         yield '181,876 → 14,4992' => [181.876, 14];
     }
 
-    /**
-     * @dataProvider averages
-     */
+    #[DataProvider('averages')]
     public function testFormulaUsesTheExactAverage(float $average, int $expected): void
     {
         $result = (new HandicapModule())->calculateHandicap($average, 200, HandicapFormula::standard(), 64);

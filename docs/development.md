@@ -117,6 +117,10 @@ for Composer packages, GitHub Actions and the gitleaks version, configured in
 - Domain errors as their own `…Exception` with a user-facing message;
   the controller translates them into an `ActionResult`.
 - Views escape every output; forms contain `$csrf->fieldHtml()`.
+- Tests use PHPUnit attributes such as `#[DataProvider('name')]` with a static
+  provider; docblock annotations (`@dataProvider`) are ignored by PHPUnit 12.
+  PHPUnit captures `error_log()` during a test, so code that logs gets the log
+  function injected (example: `TeamEntryController`, parameter `log`).
 - New schema changes: add a new numbered migration and update
   `applySchema()`/`dropSchema()` in the integration tests. Locally, after an
   update with new migrations, run `php bin/migrate.php` once (against the
