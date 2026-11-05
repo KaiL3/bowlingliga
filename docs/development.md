@@ -74,6 +74,34 @@ request, with PHP 8.1, 8.3 and 8.5 against a MariaDB service. It calls
 PHPUnit with `--fail-on-all-issues`, so a skipped test, a deprecation or a
 notice fails the run as well. Locally the same check is
 `php vendor/bin/phpunit --fail-on-all-issues --display-all-issues`.
+Before installing, `composer validate --strict` checks that `composer.lock`
+matches `composer.json`; after a change to `composer.json` run
+`composer update --lock` (or `composer update <package>`).
+
+**Secret scan:** the job "Secret scan" of the same workflow runs
+[gitleaks](https://github.com/gitleaks/gitleaks) over the whole history.
+[.gitleaks.toml](../.gitleaks.toml) uses the default rules and only relaxes
+the heuristic rule for generic keys under `tests/` (made-up passwords). Run
+it locally with `gitleaks git . --config .gitleaks.toml --redact`. On
+GitHub, secret scanning with push protection is switched on in the
+repository settings as well.
+
+### Dependency updates
+
+[Renovate](https://docs.renovatebot.com/) (GitHub app) opens pull requests
+for Composer packages, GitHub Actions and the gitleaks version, configured in
+[.github/renovate.json](../.github/renovate.json):
+
+- weekly on Monday morning, a version must be at least 7 days old; the
+  lock file is refreshed once a month; open updates are listed in the
+  "Dependency Dashboard" issue,
+- minor and patch updates of the development tools and the CI tools are
+  merged automatically once the tests are green; runtime packages (mPDF,
+  HTML Purifier, …) and major updates are reviewed by hand,
+- `config.platform.php` in `composer.json` is 8.1.0, so packages are always
+  resolved for the lowest supported PHP version,
+- not updated: the PHP constraint and the MariaDB version of the CI (both
+  deliberate choices).
 
 ## Conventions
 

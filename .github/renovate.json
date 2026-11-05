@@ -1,0 +1,51 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Dependency updates as pull requests, tested by the CI (docs/development.md#dependency-updates).",
+  "extends": ["config:recommended", ":dependencyDashboard"],
+  "timezone": "Europe/Berlin",
+  "schedule": ["before 6am on monday"],
+  "minimumReleaseAge": "7 days",
+  "labels": ["dependencies"],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 6am on the first day of the month"]
+  },
+  "packageRules": [
+    {
+      "description": "Development tools in one pull request, merged automatically when the tests are green.",
+      "matchManagers": ["composer"],
+      "matchDepTypes": ["require-dev"],
+      "groupName": "development dependencies",
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true
+    },
+    {
+      "description": "GitHub Actions and gitleaks: minor and patch updates merged automatically when the tests are green.",
+      "matchManagers": ["github-actions", "custom.regex"],
+      "groupName": "CI tools",
+      "matchUpdateTypes": ["minor", "patch", "digest"],
+      "automerge": true
+    },
+    {
+      "description": "The MariaDB version of the CI is a deliberate choice (supported LTS line), not an update.",
+      "matchDepNames": ["mariadb"],
+      "enabled": false
+    },
+    {
+      "description": "The PHP constraint states the lowest supported version and is changed by hand.",
+      "matchManagers": ["composer"],
+      "matchDepNames": ["php"],
+      "enabled": false
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Version of gitleaks in the secret scan job.",
+      "managerFilePatterns": ["/^\\.github/workflows/[^/]+\\.ya?ml$/"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>[^\\s]+)\\s+[A-Z_]+_VERSION: (?<currentValue>[^\\s]+)"
+      ]
+    }
+  ]
+}

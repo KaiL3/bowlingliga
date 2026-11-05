@@ -80,6 +80,8 @@ A rule without a number in brackets belongs to the section as a whole.
   not work with the local Tesseract. The OCR classes (`src/Ocr`,
   `Domain/Ocr`) stay in the code but are not wired; results are entered in
   the virtual score sheet ([R30](#r30--result-entry-overview-and-virtual-score-sheet)).
+  The Tesseract wrapper `thiagoalessio/tesseract_ocr` is only suggested in
+  `composer.json`; re-enabling OCR means `composer require` it again.
 - Implementation and storage details: [architecture.md](architecture.md#score-sheet-files).
 
 ## R4 – Persistence

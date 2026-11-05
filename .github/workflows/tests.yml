@@ -1,7 +1,7 @@
 # Runs the complete test suite (unit, property and integration tests) against
 # a MariaDB service for every push to main and every pull request. Like the
 # local rule: green means no failures, no skipped tests, no deprecations or
-# notices.
+# notices. A second job scans the whole history for secrets (gitleaks).
 name: Tests
 
 on:
@@ -64,6 +64,9 @@ jobs:
           key: composer-${{ runner.os }}-php${{ matrix.php }}-${{ hashFiles('composer.lock') }}
           restore-keys: composer-${{ runner.os }}-php${{ matrix.php }}-
 
+      - name: Validate composer.json and composer.lock
+        run: composer validate --strict --no-interaction
+
       - name: Install dependencies
         run: composer install --no-interaction --no-progress --prefer-dist
 
@@ -74,3 +77,30 @@ jobs:
           BOWLINGLIGA_TEST_DB_USER: root
           BOWLINGLIGA_TEST_DB_PASSWORD: ''
         run: vendor/bin/phpunit --fail-on-all-issues --display-all-issues
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      # renovate: datasource=github-releases depName=gitleaks/gitleaks
+      GITLEAKS_VERSION: 8.30.1
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The whole history, not only the last commit.
+          fetch-depth: 0
+
+      - name: Install gitleaks
+        run: |
+          base="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfL -o "$archive" "$base/$archive"
+          curl -sSfL -o checksums.txt "$base/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          grep " $archive\$" checksums.txt | sha256sum --check --strict
+          tar -xzf "$archive" gitleaks
+          rm "$archive" checksums.txt
+
+      - name: Scan the history
+        run: ./gitleaks git . --config .gitleaks.toml --redact --no-banner --exit-code 1

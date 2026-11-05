@@ -1,0 +1,13 @@
+# Configuration of the secret scan (gitleaks, job "Secret scan" in
+# .github/workflows/tests.yml). The default rules apply; only the heuristic
+# rule for generic keys is relaxed for the test suite, which uses made-up
+# passwords such as "Geheim-Passwort-35.7". Specific detectors (GitHub
+# tokens, AWS keys, private keys, …) stay active in the tests as well.
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Made-up passwords of the test suite"
+targetRules = ["generic-api-key"]
+paths = ['''^tests/''']

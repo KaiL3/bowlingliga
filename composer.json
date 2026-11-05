@@ -10,8 +10,10 @@
         "chillerlan/php-qrcode": "^5.0",
         "ezyang/htmlpurifier": "^4.17",
         "mpdf/mpdf": "^8.2",
-        "spomky-labs/otphp": "^11.2",
-        "thiagoalessio/tesseract_ocr": "^2.13"
+        "spomky-labs/otphp": "^11.2"
+    },
+    "suggest": {
+        "thiagoalessio/tesseract_ocr": "^2.13 – only for the deferred OCR of score sheets (src/Ocr), not wired"
     },
     "require-dev": {
         "giorgiosironi/eris": "^1.0",
@@ -29,6 +31,9 @@
     },
     "config": {
         "sort-packages": true,
+        "platform": {
+            "php": "8.1.0"
+        },
         "allow-plugins": {
             "*": false
         }

@@ -28,8 +28,8 @@ development sessions, without having to reread the whole code base.
   migrations use MariaDB syntax), no framework.
   Own router, composition root in [public/index.php](../public/index.php).
   Libraries: mPDF (printing), HTML Purifier (CMS), otphp (2FA), php-qrcode
-  (QR code of the 2FA setup, rendered locally as SVG), Tesseract wrapper
-  (OCR, currently not wired). Tests: PHPUnit 10 + eris.
+  (QR code of the 2FA setup, rendered locally as SVG); the Tesseract
+  wrapper for the deferred OCR is only suggested, not installed. Tests: PHPUnit 10 + eris.
 - **Architecture:** Ports & Adapters. `Domain` = pure calculation logic,
   `Application` = use cases with port interfaces, `Persistence` = PDO
   adapters, `Presentation` = controllers/views (HTML as PHP strings).
