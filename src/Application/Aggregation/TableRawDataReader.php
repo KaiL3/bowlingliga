@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Bowlingliga\Application\Aggregation;
 
+use Bowlingliga\Domain\Points\PointsRules;
+
 /**
  * Read port for the raw data of the table aggregation (R16, R15.3, R24.3).
  *
@@ -21,6 +23,17 @@ namespace Bowlingliga\Application\Aggregation;
  */
 interface TableRawDataReader
 {
+    /**
+     * Points rules of a season (R17.1, R17.11); defaults without a stored
+     * configuration.
+     */
+    public function pointsRulesForSeason(int $seasonId): PointsRules;
+
+    /**
+     * Points rules of the season the matchday belongs to (R17.11).
+     */
+    public function pointsRulesForMatchday(int $matchdayId): PointsRules;
+
     /**
      * Returns the played fixtures of all played matchdays of a season (R16.6,
      * R24.3).

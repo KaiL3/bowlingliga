@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Bowlingliga\Domain\Printing;
 
+use Bowlingliga\Domain\Points\BonusPointsScale;
+
 /**
  * Pure calculation service for generating the print-optimised HTML of a
  * printed score sheet in the format of the league's paper form (R19, R32.3).
@@ -220,7 +222,7 @@ final class PrintScoreSheetService
         return $this->renderHeaderWithEntryCode($header, $team, $lane, $isAway)
             . $this->renderRosterTable($team, $rowCount)
             . $this->renderFooter()
-            . $this->renderLegend($isAway);
+            . $this->renderLegend($header->bonus, $isAway);
     }
 
     /**
@@ -387,20 +389,28 @@ final class PrintScoreSheetService
     }
 
     /**
-     * Renders half of the bonus points scale: under the home team the levels
-     * up to 2300 pins (with heading), under the away team the levels from 2301
-     * pins – as in the form.
+     * Renders half of the bonus points scale of the season (R17.11): under
+     * the home team the lower half of the levels (with heading), under the
+     * away team the upper half – as in the form; with the default scale
+     * 1–3 and 4–6 points. Without bonus points there is no legend.
      */
-    private function renderLegend(bool $isAway): string
+    private function renderLegend(BonusPointsScale $scale, bool $isAway): string
     {
-        $range = fn (int $from, int $to): string => $this->text('print.legend.range', ['from' => $from, 'to' => $to]);
-        $points = fn (int $points): string => $this->text($points === 1 ? 'print.legend.point' : 'print.legend.points', ['points' => $points]);
-        $levels = $isAway
-            ? [[$range(2301, 2400), $points(4)], [$range(2401, 2500), $points(5)], [$this->text('print.legend.over', ['pins' => 2501]), $points(6)]]
-            : [[$this->text('print.legend.up_to', ['pins' => 2100]), $points(1)], [$range(2101, 2200), $points(2)], [$range(2201, 2300), $points(3)]];
+        $levels = $scale->levels();
+        if ($levels === []) {
+            return '';
+        }
+        $half = intdiv(count($levels) + 1, 2);
+        $levels = $isAway ? array_slice($levels, $half) : array_slice($levels, 0, $half);
 
         $rows = '';
-        foreach ($levels as [$pins, $points]) {
+        foreach ($levels as $level) {
+            $pins = match (true) {
+                $level['from'] === null => $this->text('print.legend.up_to', ['pins' => $level['to']]),
+                $level['to'] === null   => $this->text('print.legend.over', ['pins' => $level['from']]),
+                default                 => $this->text('print.legend.range', ['from' => $level['from'], 'to' => $level['to']]),
+            };
+            $points = $this->text($level['points'] === 1 ? 'print.legend.point' : 'print.legend.points', ['points' => $level['points']]);
             $rows .= sprintf('<tr><td class="legend-cell" style="width:38mm">%s</td><td class="legend-cell">%s</td></tr>', $this->escape($pins), $this->escape($points));
         }
 

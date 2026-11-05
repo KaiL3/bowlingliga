@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Bowlingliga\Application\Aggregation;
 
 use Bowlingliga\Domain\Points\Lineup as PointsLineup;
+use Bowlingliga\Domain\Points\PointsRules;
 use Bowlingliga\Domain\Points\PointsService;
 use Bowlingliga\Domain\Table\Table;
 use Bowlingliga\Domain\Table\TableService;
@@ -50,11 +51,11 @@ final class TableAggregator
         $fixtures = $this->reader->findFixturesForSeason($seasonId);
         $teams = $this->reader->findTeamsForSeason($seasonId);
 
-        return $this->tables->leagueTable($this->buildStatistics($fixtures, $teams));
+        return $this->tables->leagueTable($this->buildStatistics($fixtures, $teams, $this->reader->pointsRulesForSeason($seasonId)));
     }
 
     /**
-     * Baut die Tagestabelle eines Spieltags (R15.3).
+     * Builds the day table of a matchday (R15.3).
      */
     public function matchdayTable(int $matchdayId): Table
     {
@@ -62,7 +63,16 @@ final class TableAggregator
 
         // For the matchday table only the teams involved on this matchday
         // are considered; teams without a game on this day do not appear.
-        return $this->tables->leagueTable($this->buildStatistics($fixtures, []));
+        return $this->tables->leagueTable($this->buildStatistics($fixtures, [], $this->reader->pointsRulesForMatchday($matchdayId)));
+    }
+
+    /**
+     * Points rules of the season the matchday belongs to (R17.11), e.g. for
+     * the points of a single fixture.
+     */
+    public function pointsRulesForMatchday(int $matchdayId): PointsRules
+    {
+        return $this->reader->pointsRulesForMatchday($matchdayId);
     }
 
     /**
@@ -72,10 +82,11 @@ final class TableAggregator
      *
      * @param list<FixtureRawData> $fixtures
      * @param array<int, string>   $presetTeams Team season id → team name (R16.7)
+     * @param PointsRules          $rules       Points rules of the season (R17.11)
      *
      * @return list<TeamStatistics>
      */
-    private function buildStatistics(array $fixtures, array $presetTeams): array
+    private function buildStatistics(array $fixtures, array $presetTeams, PointsRules $rules): array
     {
         /** @var array<string, array{name: string, points: int, netPins: int, grossPins: int, games: int, ghosts: bool}> $accumulator */
         $accumulator = [];
@@ -88,8 +99,8 @@ final class TableAggregator
         }
 
         foreach ($fixtures as $fixture) {
-            $this->processTeam($accumulator, $fixture->home, $fixture->away);
-            $this->processTeam($accumulator, $fixture->away, $fixture->home);
+            $this->processTeam($accumulator, $fixture->home, $fixture->away, $rules);
+            $this->processTeam($accumulator, $fixture->away, $fixture->home, $rules);
         }
 
         $statistics = [];
@@ -116,7 +127,7 @@ final class TableAggregator
      *
      * @param array<string, array{name: string, points: int, pinsNetto: int, pinsBrutto: int, games: int, ghosts: bool}> $accumulator
      */
-    private function processTeam(array &$accumulator, FixtureTeamRawData $team, FixtureTeamRawData $opponent): void
+    private function processTeam(array &$accumulator, FixtureTeamRawData $team, FixtureTeamRawData $opponent, PointsRules $rules): void
     {
         $teamId = $team->isGhostTeam ? self::GHOST_TEAM_ID : (string) $team->teamSeasonId;
 
@@ -129,6 +140,8 @@ final class TableAggregator
         $points = $this->points->totalPoints(
             $this->buildLineup($team),
             $this->buildLineup($opponent),
+            $rules->base,
+            $rules->bonus,
         );
 
         $netPins = 0;

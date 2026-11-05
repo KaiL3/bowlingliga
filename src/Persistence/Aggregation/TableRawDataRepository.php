@@ -8,6 +8,8 @@ use Bowlingliga\Application\Aggregation\FixtureRawData;
 use Bowlingliga\Application\Aggregation\FixtureTeamRawData;
 use Bowlingliga\Application\Aggregation\SheetRowResults;
 use Bowlingliga\Application\Aggregation\TableRawDataReader;
+use Bowlingliga\Application\SeasonConfiguration;
+use Bowlingliga\Domain\Points\PointsRules;
 use Bowlingliga\Persistence\AbstractRepository;
 
 /**
@@ -32,6 +34,24 @@ use Bowlingliga\Persistence\AbstractRepository;
  */
 final class TableRawDataRepository extends AbstractRepository implements TableRawDataReader
 {
+    public function pointsRulesForSeason(int $seasonId): PointsRules
+    {
+        return SeasonConfiguration::pointsRulesFromRow($this->findOne(
+            'SELECT win_points, draw_points, loss_points, bonus_threshold, bonus_step, bonus_maximum
+             FROM season_config WHERE season_id = :season',
+            ['season' => $seasonId]
+        ));
+    }
+
+    public function pointsRulesForMatchday(int $matchdayId): PointsRules
+    {
+        return SeasonConfiguration::pointsRulesFromRow($this->findOne(
+            'SELECT c.win_points, c.draw_points, c.loss_points, c.bonus_threshold, c.bonus_step, c.bonus_maximum
+             FROM matchday md JOIN season_config c ON c.season_id = md.season_id WHERE md.id = :matchday',
+            ['matchday' => $matchdayId]
+        ));
+    }
+
     public function findFixturesForSeason(int $seasonId): array
     {
         return $this->loadFixtures('md.season_id = :value', $seasonId);

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Bowlingliga\Tests\Unit\Application;
 
 use Bowlingliga\Application\SeasonConfigStore;
+use Bowlingliga\Domain\Points\PointsRules;
 
 /**
  * In-memory fake of the season config persistence port for the use case
@@ -26,7 +27,9 @@ final class InMemorySeasonConfigRepository implements SeasonConfigStore
         int $ghostScore = \Bowlingliga\Application\SeasonConfiguration::DEFAULT_GHOST_SCORE,
         int $previousSeasonMatchdays = \Bowlingliga\Application\SeasonConfiguration::DEFAULT_PREVIOUS_SEASON_MATCHDAYS,
         int $positiondayInterval = \Bowlingliga\Application\SeasonConfiguration::DEFAULT_POSITIONDAY_INTERVAL,
+        ?PointsRules $points = null,
     ): void {
+        $points ??= PointsRules::standard();
         $this->config[$seasonId] = [
             'season_id'            => $seasonId,
             'lane_count'           => $laneCount,
@@ -38,6 +41,12 @@ final class InMemorySeasonConfigRepository implements SeasonConfigStore
             'ghost_score'              => $ghostScore,
             'previous_season_matchdays' => $previousSeasonMatchdays,
             'positionday_interval'     => $positiondayInterval,
+            'win_points'               => $points->base->win,
+            'draw_points'              => $points->base->draw,
+            'loss_points'              => $points->base->loss,
+            'bonus_threshold'          => $points->bonus->threshold,
+            'bonus_step'               => $points->bonus->step,
+            'bonus_maximum'            => $points->bonus->maximum,
         ];
     }
 

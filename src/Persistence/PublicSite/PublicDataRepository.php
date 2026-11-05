@@ -7,6 +7,7 @@ namespace Bowlingliga\Persistence\PublicSite;
 use Bowlingliga\Application\Aggregation\HonoursAggregator;
 use Bowlingliga\Application\Aggregation\AverageListAggregator;
 use Bowlingliga\Application\Aggregation\TableAggregator;
+use Bowlingliga\Domain\Points\PointsRules;
 use Bowlingliga\Application\PublicSite\PublicDataReader;
 use Bowlingliga\Application\PublicSite\MatchdayDetail;
 use Bowlingliga\Application\PublicSite\MatchdayFixture;
@@ -130,9 +131,10 @@ final class PublicDataRepository implements PublicDataReader
 
         // Each fixture of the matchday is prepared as tab content
         // (R15.1): lane pair label, score sheets of both teams, both average lists.
+        $points = $this->tables->pointsRulesForMatchday($matchdayId);
         $fixtures = [];
         foreach ($fixturesRaw as $raw) {
-            $fixtures[] = $this->buildMatchdayFixture($raw, $matchdayId, $counter);
+            $fixtures[] = $this->buildMatchdayFixture($raw, $matchdayId, $counter, $points);
         }
 
         return new MatchdayDetail(
@@ -150,7 +152,7 @@ final class PublicDataRepository implements PublicDataReader
      *
      * @param array<string, mixed> $raw
      */
-    private function buildMatchdayFixture(array $raw, int $matchdayId, int $counter): MatchdayFixture
+    private function buildMatchdayFixture(array $raw, int $matchdayId, int $counter, PointsRules $points): MatchdayFixture
     {
         $fixtureId = (int) $raw['id'];
         $homeId        = $raw['home_team_season_id'] === null ? null : (int) $raw['home_team_season_id'];
@@ -171,6 +173,7 @@ final class PublicDataRepository implements PublicDataReader
             $this->averageLists->averageList($homeId ?? 0, $counter),
             $this->averageLists->averageList($awayId ?? 0, $counter),
             $this->originalScoreSheetId($fixtureId),
+            $points,
         );
     }
 

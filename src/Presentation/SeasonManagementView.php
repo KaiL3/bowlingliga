@@ -36,7 +36,7 @@ final class SeasonManagementView
 
     /**
      * @param array{id: int, name: string, start_date: string, end_date: string, score_sheet_language?: string} $season
-     * @param array{lane_count: int, entry_fee: string, blind_fee: string, max_handicap: int, handicap_formula: string|null, target_score: int, ghost_score: int, previous_season_matchdays: int, positionday_interval: int}|null $configuration
+     * @param array{lane_count: int, entry_fee: string, blind_fee: string, max_handicap: int, handicap_formula: string|null, target_score: int, ghost_score: int, previous_season_matchdays: int, positionday_interval: int, win_points?: int, draw_points?: int, loss_points?: int, bonus_threshold?: int, bonus_step?: int, bonus_maximum?: int}|null $configuration
      * @param list<array{id: int, number: int, date: string, ready: bool, locked: bool, pairings: list<string>}> $positiondays
      * @param array<string, mixed>|null $prefill
      * @param list<array{id: int, number: int, date: string, locked: bool, fixtures: list<array{home: int, away: int}>}> $lotDraws
@@ -123,7 +123,7 @@ final class SeasonManagementView
     }
 
     /**
-     * @param array{lane_count: int, entry_fee: string, blind_fee: string, max_handicap: int, handicap_formula: string|null, target_score: int, ghost_score: int, previous_season_matchdays: int, positionday_interval: int}|null $configuration
+     * @param array{lane_count: int, entry_fee: string, blind_fee: string, max_handicap: int, handicap_formula: string|null, target_score: int, ghost_score: int, previous_season_matchdays: int, positionday_interval: int, win_points?: int, draw_points?: int, loss_points?: int, bonus_threshold?: int, bonus_step?: int, bonus_maximum?: int}|null $configuration
      * @param array<string, mixed>|null $prefill
      */
     private function configuration(string $csrfField, int $seasonId, ?array $configuration, bool $hasStarted, ?array $prefill): string
@@ -135,6 +135,8 @@ final class SeasonManagementView
             'previous_season_matchdays' => SeasonConfiguration::DEFAULT_PREVIOUS_SEASON_MATCHDAYS,
             'positionday_interval' => SeasonConfiguration::DEFAULT_POSITIONDAY_INTERVAL,
         ];
+        // R17.11: points rules of the season, defaults for older rows.
+        $points = SeasonConfiguration::pointsRulesFromRow($configuration);
 
         $values = [
             'lane_count'           => (string) $configuration['lane_count'],
@@ -146,6 +148,12 @@ final class SeasonManagementView
             'ghost_score'              => (string) $configuration['ghost_score'],
             'previous_season_matchdays' => (string) $configuration['previous_season_matchdays'],
             'positionday_interval'     => (string) $configuration['positionday_interval'],
+            'win_points'               => (string) $points->base->win,
+            'draw_points'              => (string) $points->base->draw,
+            'loss_points'              => (string) $points->base->loss,
+            'bonus_threshold'          => (string) $points->bonus->threshold,
+            'bonus_step'               => (string) $points->bonus->step,
+            'bonus_maximum'            => (string) $points->bonus->maximum,
         ];
 
         if ($hasStarted) {
@@ -162,7 +170,8 @@ final class SeasonManagementView
                 . '<div><dt>' . $this->text('field.blind_fee') . '</dt><dd>%s €</dd></div>'
                 . '<div><dt>' . $this->text('season.target_score') . '</dt><dd>%s</dd></div><div><dt>' . $this->text('season.handicap') . '</dt><dd>%s</dd></div>'
                 . '<div><dt>' . $this->text('master_data.ghost_team') . '</dt><dd>%s</dd></div><div><dt>' . $this->text('season.previous_in_average') . '</dt><dd>%s</dd></div>'
-                . '<div><dt>' . $this->text('value.matchday_type.positionday') . '</dt><dd>%s</dd></div></dl></section>',
+                . '<div><dt>' . $this->text('value.matchday_type.positionday') . '</dt><dd>%s</dd></div>'
+                . '<div><dt>' . $this->text('season.game_points') . '</dt><dd>%s</dd></div><div><dt>' . $this->text('season.bonus_points') . '</dt><dd>%s</dd></div></dl></section>',
                 $this->e($values['lane_count']),
                 $this->e($values['entry_fee']),
                 $this->e($values['blind_fee']),
@@ -171,6 +180,10 @@ final class SeasonManagementView
                 $this->text('season.pins_per_game', ['pins' => $values['ghost_score']]),
                 $this->e($this->previousSeasonText((int) $values['previous_season_matchdays'])),
                 $this->e($this->positiondayText((int) $values['positionday_interval'])),
+                $this->text('season.game_points_value', ['win' => $values['win_points'], 'draw' => $values['draw_points'], 'loss' => $values['loss_points']]),
+                $points->bonus->maximum === 0
+                    ? $this->text('season.no_bonus_points')
+                    : $this->text('season.bonus_scale', ['threshold' => $values['bonus_threshold'], 'step' => $values['bonus_step'], 'maximum' => $values['bonus_maximum']]),
             );
         }
 
@@ -229,6 +242,32 @@ final class SeasonManagementView
                         <input type="number" id="config-positionday" name="positionday_interval" value="{$w['positionday_interval']}" min="0" max="99" inputmode="numeric" required aria-describedby="config-positionday-note">
                         <small id="config-positionday-note">{$this->text('season.positionday_hint')}</small>
                     </div>
+                    <h3 class="form__wide">{$this->text('season.points')}</h3>
+                    <div class="form__field">
+                        <label for="config-win">{$this->text('field.win_points')}</label>
+                        <input type="number" id="config-win" name="win_points" value="{$w['win_points']}" min="0" max="10" inputmode="numeric" required aria-describedby="config-points-note">
+                    </div>
+                    <div class="form__field">
+                        <label for="config-draw">{$this->text('field.draw_points')}</label>
+                        <input type="number" id="config-draw" name="draw_points" value="{$w['draw_points']}" min="0" max="10" inputmode="numeric" required aria-describedby="config-points-note">
+                    </div>
+                    <div class="form__field">
+                        <label for="config-loss">{$this->text('field.loss_points')}</label>
+                        <input type="number" id="config-loss" name="loss_points" value="{$w['loss_points']}" min="0" max="10" inputmode="numeric" required aria-describedby="config-points-note">
+                    </div>
+                    <div class="form__field">
+                        <label for="config-bonus-threshold">{$this->text('field.bonus_threshold')}</label>
+                        <input type="number" id="config-bonus-threshold" name="bonus_threshold" value="{$w['bonus_threshold']}" min="0" max="9999" inputmode="numeric" required aria-describedby="config-points-note">
+                    </div>
+                    <div class="form__field">
+                        <label for="config-bonus-step">{$this->text('field.bonus_step')}</label>
+                        <input type="number" id="config-bonus-step" name="bonus_step" value="{$w['bonus_step']}" min="1" max="1000" inputmode="numeric" required aria-describedby="config-points-note">
+                    </div>
+                    <div class="form__field">
+                        <label for="config-bonus-maximum">{$this->text('field.bonus_maximum')}</label>
+                        <input type="number" id="config-bonus-maximum" name="bonus_maximum" value="{$w['bonus_maximum']}" min="0" max="20" inputmode="numeric" required aria-describedby="config-points-note">
+                    </div>
+                    <p class="form__wide empty" id="config-points-note">{$this->text('season.points_hint')}</p>
                     <div class="form__actions"><button type="submit" class="button">{$this->text('season.save_configuration')}</button></div>
                 </form>
             </section>

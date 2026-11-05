@@ -5,8 +5,9 @@
  * gross = net + handicap, total net/gross per row over the games entered in
  * it, number of results per game (exactly 4: players are substituted between
  * games only), net/handicap/gross sum per game once it has 4 results, game
- * points (2/1/0) from comparing the gross of both teams, bonus points by the
- * gross scale and total points. On the first matchday without an average the
+ * points (default 2/1/0) from comparing the gross of both teams, bonus points
+ * by the gross scale and total points, both by the points rules of the season
+ * (data-points, data-bonus; R17.11). On the first matchday without an average the
  * handicap follows from the games of the evening. For blind games the sheet
  * value is checked against the reference "average − 10" (R27.6, R27.11).
  *
@@ -25,6 +26,14 @@
     var formula = sheet.dataset.factor
         ? { factor: parseFloat(sheet.dataset.factor), target: parseInt(sheet.dataset.target, 10), max: parseInt(sheet.dataset.max, 10) }
         : null;
+
+    function integers(text, fallback) {
+        var values = String(text || '').split(',').map(function (v) { return parseInt(v, 10); });
+        return values.length === fallback.length && values.every(function (v) { return !isNaN(v); }) ? values : fallback;
+    }
+
+    var gamePoints = integers(sheet.dataset.points, [2, 1, 0]);
+    var scale = integers(sheet.dataset.bonus, [2100, 100, 6]);
 
     function number(text) {
         var t = String(text).trim();
@@ -58,15 +67,10 @@
         return Math.min(Math.max(raw, 0), formula.max);
     }
 
-    /* Bonus points as in PointsService::bonusPoints (R17.6–R17.8). */
+    /* Bonus points as in BonusPointsScale::points (R17.6–R17.8, R17.11). */
     function bonus(gross) {
-        if (gross <= 2100) {
-            return 1;
-        }
-        if (gross >= 2501) {
-            return 6;
-        }
-        return Math.min(2 + Math.floor((gross - 2101) / 100), 6);
+        var points = gross <= scale[0] ? 1 : 2 + Math.floor((gross - scale[0] - 1) / scale[1]);
+        return Math.min(points, scale[2]);
     }
 
     function calculateTeam(team) {
@@ -168,8 +172,8 @@
                 if (a === null || b === null) {
                     return;
                 }
-                teams[0].games[nr].points = a > b ? 2 : (a === b ? 1 : 0);
-                teams[1].games[nr].points = b > a ? 2 : (a === b ? 1 : 0);
+                teams[0].games[nr].points = a > b ? gamePoints[0] : (a === b ? gamePoints[1] : gamePoints[2]);
+                teams[1].games[nr].points = b > a ? gamePoints[0] : (a === b ? gamePoints[1] : gamePoints[2]);
             });
         }
 

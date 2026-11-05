@@ -6,6 +6,7 @@ namespace Bowlingliga\Tests\Unit\Application\Aggregation;
 
 use Bowlingliga\Application\Aggregation\FixtureRawData;
 use Bowlingliga\Application\Aggregation\TableRawDataReader;
+use Bowlingliga\Domain\Points\PointsRules;
 
 /**
  * Fake of the {@see TableRawDataReader} port for the aggregator unit tests,
@@ -22,7 +23,18 @@ final class FixedTableRawDataReader implements TableRawDataReader
         private readonly array $seasonFixtures = [],
         private readonly array $matchdayFixtures = [],
         private readonly array $teams = [],
+        private readonly PointsRules $rules = new PointsRules(),
     ) {
+    }
+
+    public function pointsRulesForSeason(int $seasonId): PointsRules
+    {
+        return $this->rules;
+    }
+
+    public function pointsRulesForMatchday(int $matchdayId): PointsRules
+    {
+        return $this->rules;
     }
 
     public function findFixturesForSeason(int $seasonId): array

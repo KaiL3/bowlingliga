@@ -238,7 +238,7 @@ final class MatchdayTabsIntegrationTest extends TestCase
         $this->dropSchema();
 
         $root = dirname(__DIR__, 3);
-        foreach (['db/migrations/001_schema.sql'] as $file) {
+        foreach (['db/migrations/001_schema.sql', 'db/migrations/002_points_rules.sql'] as $file) {
             $this->pdo->exec((string) file_get_contents($root . '/' . $file));
         }
     }

@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace Bowlingliga\Persistence;
 
+use Bowlingliga\Domain\Points\PointsRules;
+
 /**
  * Raw data repository for the season configuration (table `season_config`,
  * R8, R12.1–5).
  *
  * Keeps the configurable raw data of a season: lane count, entry fee, blind
- * fee, maximum handicap, handicap formula and the global target score. There
+ * fee, maximum handicap, handicap formula, the global target score and the
+ * points rules (game points, bonus scale, R17.11). There
  * is a 1:1 relationship with the season (primary key `season_id`). Entry fee
  * and blind fee are stored as DECIMAL(8,2) and passed as string here, to keep
  * the exact decimal representation. Write operations transactional (R4.3),
@@ -35,7 +38,9 @@ final class SeasonConfigRepository extends AbstractRepository implements \Bowlin
         int $ghostScore = \Bowlingliga\Application\SeasonConfiguration::DEFAULT_GHOST_SCORE,
         int $previousSeasonMatchdays = \Bowlingliga\Application\SeasonConfiguration::DEFAULT_PREVIOUS_SEASON_MATCHDAYS,
         int $positiondayInterval = \Bowlingliga\Application\SeasonConfiguration::DEFAULT_POSITIONDAY_INTERVAL,
+        ?PointsRules $points = null,
     ): void {
+        $points ??= PointsRules::standard();
         $this->transactional('save_season_config', function () use (
             $seasonId,
             $laneCount,
@@ -46,15 +51,18 @@ final class SeasonConfigRepository extends AbstractRepository implements \Bowlin
             $targetScore,
             $ghostScore,
             $previousSeasonMatchdays,
-            $positiondayInterval
+            $positiondayInterval,
+            $points
         ): void {
             $this->perform(
                 'INSERT INTO season_config
                     (season_id, lane_count, entry_fee, blind_fee, max_handicap, handicap_formula, target_score,
-                     ghost_score, previous_season_matchdays, positionday_interval)
+                     ghost_score, previous_season_matchdays, positionday_interval,
+                     win_points, draw_points, loss_points, bonus_threshold, bonus_step, bonus_maximum)
                  VALUES
                     (:season_id, :lane_count, :entry_fee, :blind_fee, :max_handicap, :handicap_formula, :target_score,
-                     :ghost_score, :previous_season_matchdays, :positionday_interval)
+                     :ghost_score, :previous_season_matchdays, :positionday_interval,
+                     :win_points, :draw_points, :loss_points, :bonus_threshold, :bonus_step, :bonus_maximum)
                  ON DUPLICATE KEY UPDATE
                     lane_count = VALUES(lane_count),
                     entry_fee = VALUES(entry_fee),
@@ -64,7 +72,13 @@ final class SeasonConfigRepository extends AbstractRepository implements \Bowlin
                     target_score = VALUES(target_score),
                     ghost_score = VALUES(ghost_score),
                     previous_season_matchdays = VALUES(previous_season_matchdays),
-                    positionday_interval = VALUES(positionday_interval)',
+                    positionday_interval = VALUES(positionday_interval),
+                    win_points = VALUES(win_points),
+                    draw_points = VALUES(draw_points),
+                    loss_points = VALUES(loss_points),
+                    bonus_threshold = VALUES(bonus_threshold),
+                    bonus_step = VALUES(bonus_step),
+                    bonus_maximum = VALUES(bonus_maximum)',
                 [
                     'season_id'            => $seasonId,
                     'lane_count'           => $laneCount,
@@ -76,6 +90,12 @@ final class SeasonConfigRepository extends AbstractRepository implements \Bowlin
                     'ghost_score'              => $ghostScore,
                     'previous_season_matchdays' => $previousSeasonMatchdays,
                     'positionday_interval'     => $positiondayInterval,
+                    'win_points'               => $points->base->win,
+                    'draw_points'              => $points->base->draw,
+                    'loss_points'              => $points->base->loss,
+                    'bonus_threshold'          => $points->bonus->threshold,
+                    'bonus_step'               => $points->bonus->step,
+                    'bonus_maximum'            => $points->bonus->maximum,
                 ]
             );
         });
@@ -100,7 +120,8 @@ final class SeasonConfigRepository extends AbstractRepository implements \Bowlin
     {
         return $this->findOne(
             'SELECT season_id, lane_count, entry_fee, blind_fee, max_handicap, handicap_formula, target_score,
-                    ghost_score, previous_season_matchdays, positionday_interval
+                    ghost_score, previous_season_matchdays, positionday_interval,
+                    win_points, draw_points, loss_points, bonus_threshold, bonus_step, bonus_maximum
              FROM season_config WHERE season_id = :season_id',
             ['season_id' => $seasonId]
         );

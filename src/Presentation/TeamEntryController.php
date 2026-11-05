@@ -358,6 +358,7 @@ final class TeamEntryController
         $calculated = $this->calculator->calculate(
             ['own' => ['rows' => $ownTeam['calculator']], 'opponent' => ['rows' => $opponentTeam['calculator']]],
             $this->stats->formula($fixture['season_id']),
+            $this->stats->pointsRules($fixture['season_id']),
         );
 
         $step = $this->step($sheet, $requestedStep, $complete);

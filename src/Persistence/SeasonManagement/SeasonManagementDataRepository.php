@@ -54,6 +54,12 @@ final class SeasonManagementDataRepository extends AbstractRepository implements
             'ghost_score'              => (int) $config['ghost_score'],
             'previous_season_matchdays' => (int) $config['previous_season_matchdays'],
             'positionday_interval'     => (int) $config['positionday_interval'],
+            'win_points'                => (int) $config['win_points'],
+            'draw_points'               => (int) $config['draw_points'],
+            'loss_points'               => (int) $config['loss_points'],
+            'bonus_threshold'           => (int) $config['bonus_threshold'],
+            'bonus_step'                => (int) $config['bonus_step'],
+            'bonus_maximum'             => (int) $config['bonus_maximum'],
         ];
     }
 

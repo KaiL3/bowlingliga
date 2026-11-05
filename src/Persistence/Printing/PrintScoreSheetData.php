@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Bowlingliga\Persistence\Printing;
 
+use Bowlingliga\Application\SeasonConfiguration;
 use Bowlingliga\Application\Aggregation\AverageListAggregator;
 use Bowlingliga\Domain\AverageList\AverageList;
 use Bowlingliga\Domain\Printing\PrintScoreSheetHeader;
@@ -101,6 +102,7 @@ final class PrintScoreSheetData implements PrintScoreSheetDataSource
             $config !== null ? (float) $config['entry_fee'] : 0.0,
             $config !== null ? (float) $config['blind_fee'] : 0.0,
             (int) $matchday['matchday_number'],
+            SeasonConfiguration::pointsRulesFromRow($config)->bonus,
         );
     }
 
@@ -288,6 +290,7 @@ final class PrintScoreSheetData implements PrintScoreSheetDataSource
                 $config !== null ? (float) $config['entry_fee'] : 0.0,
                 $config !== null ? (float) $config['blind_fee'] : 0.0,
                 (int) $matchday['matchday_number'],
+                SeasonConfiguration::pointsRulesFromRow($config)->bonus,
             ),
             'teams' => array_map(fn (array $teamSeason): PrintScoreSheetTeam => $this->teamOnMatchday($teamSeason, $matchday), $teamSeasons),
         ];

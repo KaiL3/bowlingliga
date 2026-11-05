@@ -113,6 +113,15 @@ final class SeasonManagementController
                 $this->integer($input, 'ghost_score', 'field.ghost_pins'),
                 $this->integer($input, 'previous_season_matchdays', 'field.previous_matchdays'),
                 $this->integer($input, 'positionday_interval', 'field.positionday_interval'),
+                SeasonConfiguration::pointsRules(
+                    $this->validator,
+                    $this->integer($input, 'win_points', 'field.win_points'),
+                    $this->integer($input, 'draw_points', 'field.draw_points'),
+                    $this->integer($input, 'loss_points', 'field.loss_points'),
+                    $this->integer($input, 'bonus_threshold', 'field.bonus_threshold'),
+                    $this->integer($input, 'bonus_step', 'field.bonus_step'),
+                    $this->integer($input, 'bonus_maximum', 'field.bonus_maximum'),
+                ),
             );
 
             $this->seasonAdministration->updateConfiguration($this->integer($input, 'season_id'), $configuration);

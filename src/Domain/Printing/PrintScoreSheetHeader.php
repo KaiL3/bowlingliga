@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Bowlingliga\Domain\Printing;
 
+use Bowlingliga\Domain\Points\BonusPointsScale;
+
 /**
  * Header data of a printed score sheet (R19.1, R19.7, R32.3).
  *
@@ -29,6 +31,7 @@ final class PrintScoreSheetHeader
      * @param float    $entryFee       Entry fee of the season (R19.7)
      * @param float    $blindFee       Blind fee of the season (R19.7)
      * @param int|null $matchdayNumber Number of the matchday (matchday counter) or null
+     * @param BonusPointsScale $bonus  Bonus points scale of the season for the legend (R17.11)
      */
     public function __construct(
         public readonly string $date,
@@ -38,6 +41,7 @@ final class PrintScoreSheetHeader
         public readonly float $entryFee,
         public readonly float $blindFee,
         public readonly ?int $matchdayNumber = null,
+        public readonly BonusPointsScale $bonus = new BonusPointsScale(),
     ) {
     }
 

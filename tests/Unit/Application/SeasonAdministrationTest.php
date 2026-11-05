@@ -7,6 +7,9 @@ namespace Bowlingliga\Tests\Unit\Application;
 use Bowlingliga\Application\SeasonConfiguration;
 use Bowlingliga\Application\SeasonAdministration;
 use Bowlingliga\Application\SeasonAdministrationException;
+use Bowlingliga\Domain\Points\BasePointsConfiguration;
+use Bowlingliga\Domain\Points\BonusPointsScale;
+use Bowlingliga\Domain\Points\PointsRules;
 use Bowlingliga\Security\ValidationException;
 use Bowlingliga\Security\Validator;
 use Bowlingliga\Security\AccessDeniedException;
@@ -174,7 +177,10 @@ final class SeasonAdministrationTest extends TestCase
     {
         // Previous season with configuration and two teams.
         $this->seasons->stash(1, 'Vorsaison', '2025-09-01', '2026-05-31');
-        $this->config->save(1, 6, '30.00', '7.50', 50, 'standard', 185, 175, 3, 8);
+        $this->config->save(1, 6, '30.00', '7.50', 50, 'standard', 185, 175, 3, 8, new PointsRules(
+            new BasePointsConfiguration(3, 1, 0),
+            new BonusPointsScale(2000, 50, 8),
+        ));
         $t1 = $this->teams->create();
         $t2 = $this->teams->create();
         $this->teamSeasons->create($t1, 1, 'Die Pins');
@@ -193,6 +199,11 @@ final class SeasonAdministrationTest extends TestCase
         self::assertSame(175, $config['ghost_score'], 'Ghost score from the previous season.');
         self::assertSame(3, $config['previous_season_matchdays'], 'Previous season limit from the previous season.');
         self::assertSame(8, $config['positionday_interval'], 'Positionday interval from the previous season.');
+        // R17.11: points rules inherited from the previous season.
+        self::assertSame([3, 1, 0, 2000, 50, 8], [
+            $config['win_points'], $config['draw_points'], $config['loss_points'],
+            $config['bonus_threshold'], $config['bonus_step'], $config['bonus_maximum'],
+        ]);
 
         // R8.7: teams copied including team names (new assignments for the new season).
         $applied = $this->teamSeasons->findAllForSeason($newId);

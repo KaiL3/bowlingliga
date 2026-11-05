@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Bowlingliga\Presentation;
 
+use Bowlingliga\Domain\Points\PointsRules;
+
 /**
  * Read port for a player's key figures in the virtual score sheet (task
  * 35.3): average (AVG), number of games (G) and handicap (HDC) as of the state
@@ -36,4 +38,9 @@ interface PlayerStatsReader
      * @return array{factor: float, target_score: int, max: int}|null
      */
     public function formula(int $seasonId): ?array;
+
+    /**
+     * Points rules of the season: game points and bonus scale (R17.11).
+     */
+    public function pointsRules(int $seasonId): PointsRules;
 }

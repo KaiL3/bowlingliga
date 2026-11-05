@@ -116,6 +116,11 @@ final class TeamEntryFixture
             {
                 return null;
             }
+
+            public function pointsRules(int $seasonId): \Bowlingliga\Domain\Points\PointsRules
+            {
+                return new \Bowlingliga\Domain\Points\PointsRules();
+            }
         };
 
         $translator = new Translator($language);

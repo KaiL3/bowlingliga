@@ -115,6 +115,26 @@ final class ScoreSheetCalculatorTest extends TestCase
         self::assertSame(4, $e['home']['total']);
     }
 
+    /**
+     * R17.11: game points and bonus scale of the season.
+     */
+    public function testPointsRulesOfTheSeason(): void
+    {
+        $rules = new \Bowlingliga\Domain\Points\PointsRules(
+            new \Bowlingliga\Domain\Points\BasePointsConfiguration(3, 1, 0),
+            new \Bowlingliga\Domain\Points\BonusPointsScale(2300, 50, 3),
+        );
+
+        $e = (new ScoreSheetCalculator())->calculate(self::paperSheet(), null, $rules);
+
+        // Home gross 2397: 2 + intdiv(96, 50) = 3; away 2309: 2.
+        self::assertSame([3, 0, 3], array_column($e['home']['games'], 'points'));
+        self::assertSame(3, $e['home']['bonus']);
+        self::assertSame(9, $e['home']['total']);
+        self::assertSame(2, $e['away']['bonus']);
+        self::assertSame(3 + 2, $e['away']['total']);
+    }
+
     public function testFirstMatchdayHandicapFromTheGamesOfTheEvening(): void
     {
         $pages = self::paperSheet();

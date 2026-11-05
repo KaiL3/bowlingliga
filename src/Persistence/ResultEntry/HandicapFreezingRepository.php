@@ -18,6 +18,7 @@ use Bowlingliga\Domain\Handicap\HandicapChainRecalculation;
 use Bowlingliga\Domain\Handicap\HandicapChainMatchday;
 use Bowlingliga\Domain\Handicap\HandicapChainPreview;
 use Bowlingliga\Domain\Handicap\HandicapModule;
+use Bowlingliga\Domain\Points\PointsRules;
 use Bowlingliga\Persistence\AbstractRepository;
 use Bowlingliga\Persistence\Database;
 use Bowlingliga\Persistence\FrozenHandicapRepository;
@@ -206,6 +207,15 @@ final class HandicapFreezingRepository extends AbstractRepository implements Han
             'target_score' => $config['target_score'],
             'max'      => $config['max_handicap'],
         ];
+    }
+
+    public function pointsRules(int $seasonId): PointsRules
+    {
+        return SeasonConfiguration::pointsRulesFromRow($this->findOne(
+            'SELECT win_points, draw_points, loss_points, bonus_threshold, bonus_step, bonus_maximum
+             FROM season_config WHERE season_id = :id',
+            ['id' => $seasonId]
+        ));
     }
 
     /**

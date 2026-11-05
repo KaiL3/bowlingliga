@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Bowlingliga\Tests\Unit\Domain\Printing;
 
+use Bowlingliga\Domain\Points\BonusPointsScale;
 use Bowlingliga\Domain\Printing\PrintScoreSheetException;
 use Bowlingliga\Domain\Printing\PrintScoreSheetHeader;
 use Bowlingliga\Domain\Printing\PrintScoreSheetPlayer;
@@ -162,6 +163,25 @@ final class PrintScoreSheetServiceTest extends TestCase
         self::assertStringContainsString('Unterschrift Gegner', $html);
         self::assertStringContainsString('BonusPunkteWertung', $html);
         self::assertStringContainsString('über 2501 Pins', $html);
+    }
+
+    /**
+     * R17.11: the legend follows the bonus scale of the season, lower half
+     * under the home team, upper half under the away team.
+     */
+    public function testLegendFollowsTheBonusScaleOfTheSeason(): void
+    {
+        $header = new PrintScoreSheetHeader('2026-01-15', PrintScoreSheetHeader::TYPE_REGULAR, 1, 2, 5.0, 2.5, 5, new BonusPointsScale(2000, 50, 4));
+
+        $html = $this->service->generateHtml($header, $this->team(), $this->team());
+
+        self::assertStringContainsString('2001 - 2050 Pins', $html);
+        self::assertStringContainsString('über 2101 Pins', $html);
+        self::assertStringNotContainsString('2501', $html);
+        self::assertLessThan(strpos($html, '2051 - 2100'), strpos($html, '2001 - 2050'));
+
+        $none = new PrintScoreSheetHeader('2026-01-15', PrintScoreSheetHeader::TYPE_REGULAR, 1, 2, 5.0, 2.5, 5, new BonusPointsScale(2100, 100, 0));
+        self::assertStringNotContainsString('<div class="legend">', $this->service->generateHtml($none, $this->team(), $this->team()), 'Without bonus points no legend.');
     }
 
     public function testMatchdayGeneratesOnePagePerFixture(): void

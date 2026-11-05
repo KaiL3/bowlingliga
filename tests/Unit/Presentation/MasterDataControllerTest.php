@@ -419,6 +419,7 @@ final class NullSeasonConfigStore implements SeasonConfigStore
         int $ghostScore = \Bowlingliga\Application\SeasonConfiguration::DEFAULT_GHOST_SCORE,
         int $previousSeasonMatchdays = \Bowlingliga\Application\SeasonConfiguration::DEFAULT_PREVIOUS_SEASON_MATCHDAYS,
         int $positiondayInterval = \Bowlingliga\Application\SeasonConfiguration::DEFAULT_POSITIONDAY_INTERVAL,
+        ?\Bowlingliga\Domain\Points\PointsRules $points = null,
     ): void {
     }
 

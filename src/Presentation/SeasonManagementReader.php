@@ -20,7 +20,7 @@ interface SeasonManagementReader
     public function season(int $seasonId): ?array;
 
     /**
-     * @return array{lane_count: int, entry_fee: string, blind_fee: string, max_handicap: int, handicap_formula: string|null, target_score: int, ghost_score: int, previous_season_matchdays: int, positionday_interval: int}|null
+     * @return array{lane_count: int, entry_fee: string, blind_fee: string, max_handicap: int, handicap_formula: string|null, target_score: int, ghost_score: int, previous_season_matchdays: int, positionday_interval: int, win_points: int, draw_points: int, loss_points: int, bonus_threshold: int, bonus_step: int, bonus_maximum: int}|null
      */
     public function configuration(int $seasonId): ?array;
 

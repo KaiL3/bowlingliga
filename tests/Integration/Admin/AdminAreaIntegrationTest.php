@@ -634,7 +634,10 @@ final class AdminAreaIntegrationTest extends TestCase
             'season_id' => (string) $seasonId, 'lane_count' => '2', 'entry_fee' => '7,50',
             'blind_fee' => '2,50', 'max_handicap' => '64', 'handicap_factor' => '0,8', 'target_score' => '190',
             'ghost_score' => '185', 'previous_season_matchdays' => '4', 'positionday_interval' => '10',
+            'win_points' => '3', 'draw_points' => '1', 'loss_points' => '0',
+            'bonus_threshold' => '2100', 'bonus_step' => '100', 'bonus_maximum' => '6',
         ], 'Die Konfiguration der Saison wurde gespeichert.');
+        self::assertSame(3, $this->numeral('SELECT win_points FROM season_config WHERE season_id = ?', [$seasonId]), 'R17.11');
         self::assertSame('7.50', $this->text('SELECT entry_fee FROM season_config WHERE season_id = ?', [$seasonId]));
         self::assertSame(185, $this->numeral('SELECT ghost_score FROM season_config WHERE season_id = ?', [$seasonId]));
         self::assertSame(4, $this->numeral('SELECT previous_season_matchdays FROM season_config WHERE season_id = ?', [$seasonId]));
@@ -1209,6 +1212,7 @@ final class AdminAreaIntegrationTest extends TestCase
         $root = dirname(__DIR__, 3);
         foreach ([
             'db/migrations/001_schema.sql',
+            'db/migrations/002_points_rules.sql',
         ] as $file) {
             $this->pdo->exec((string) file_get_contents($root . '/' . $file));
         }

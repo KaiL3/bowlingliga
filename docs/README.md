@@ -1,6 +1,6 @@
 # Developer documentation
 
-Status: 2026-11-05 · 817 tests green · rules in domain-logic.md · new design (public and admin area), admin area "Saison", printing per matchday
+Status: 2026-11-05 · 831 tests green · rules in domain-logic.md · new design (public and admin area), admin area "Saison", printing per matchday
 
 This documentation describes the architecture, data model, domain logic and
 development status of the bowling league website. It is meant for everyone

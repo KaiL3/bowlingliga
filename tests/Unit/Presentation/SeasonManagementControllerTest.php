@@ -110,6 +110,13 @@ final class SeasonManagementControllerTest extends TestCase
             ['previous_season_matchdays' => '100'],
             ['positionday_interval' => '-1'],
             ['positionday_interval' => '100'],
+            ['win_points' => '11'],
+            ['draw_points' => '3'],
+            ['loss_points' => '2'],
+            ['bonus_threshold' => '10000'],
+            ['bonus_step' => '0'],
+            ['bonus_maximum' => '21'],
+            ['bonus_maximum' => ''],
         ] as $error) {
             $result = $this->controller->updateConfiguration($this->configInput(2, $error));
             self::assertFalse($result->successful, json_encode($error));
@@ -131,6 +138,8 @@ final class SeasonManagementControllerTest extends TestCase
         self::assertStringContainsString('<dd>190 Pins je Spiel</dd>', $html);
         self::assertStringContainsString('<dd>bis Spieltag 5 (HDC bis Spieltag 6)</dd>', $html);
         self::assertStringContainsString('<dt>Positionday</dt><dd>jeder 10. Spieltag</dd>', $html);
+        self::assertStringContainsString('<dt>Spielpunkte</dt><dd>Sieg 2, Unentschieden 1, Niederlage 0</dd>', $html);
+        self::assertStringContainsString('<dt>Bonuspunkte</dt><dd>bis 2100 Pins 1, darüber je 100 Pins einer mehr, höchstens 6</dd>', $html);
     }
 
     public function testMasterDataIsChangeableEvenAfterSeasonStart(): void
@@ -154,6 +163,27 @@ final class SeasonManagementControllerTest extends TestCase
         self::assertStringContainsString('name="ghost_score" value="190"', $html);
         self::assertStringContainsString('name="previous_season_matchdays" value="5"', $html);
         self::assertStringContainsString('name="positionday_interval" value="10"', $html);
+        self::assertStringContainsString('name="win_points" value="2"', $html);
+        self::assertStringContainsString('name="bonus_threshold" value="2100"', $html);
+        self::assertStringContainsString('name="bonus_maximum" value="6"', $html);
+    }
+
+    /**
+     * R17.11: game points and bonus scale are saved per season.
+     */
+    public function testPointsRulesAreSaved(): void
+    {
+        $result = $this->controller->updateConfiguration($this->configInput(2, [
+            'win_points' => '3', 'draw_points' => '1', 'loss_points' => '0',
+            'bonus_threshold' => '2000', 'bonus_step' => '50', 'bonus_maximum' => '0',
+        ]));
+
+        self::assertTrue($result->successful, $result->message);
+        $config = $this->config->find(2);
+        self::assertSame([3, 1, 0, 2000, 50, 0], [
+            $config['win_points'], $config['draw_points'], $config['loss_points'],
+            $config['bonus_threshold'], $config['bonus_step'], $config['bonus_maximum'],
+        ]);
     }
 
     public function testGhostScoreAndPreviousSeasonSettingAreSaved(): void
@@ -269,6 +299,12 @@ final class SeasonManagementControllerTest extends TestCase
             'ghost_score' => '190',
             'previous_season_matchdays' => '5',
             'positionday_interval' => '10',
+            'win_points' => '2',
+            'draw_points' => '1',
+            'loss_points' => '0',
+            'bonus_threshold' => '2100',
+            'bonus_step' => '100',
+            'bonus_maximum' => '6',
         ];
     }
 }
@@ -305,6 +341,12 @@ final class FixedSeasonManagementReader implements SeasonManagementReader
             'handicap_formula' => $k['handicap_formula'], 'target_score' => (int) $k['target_score'],
             'ghost_score' => (int) $k['ghost_score'], 'previous_season_matchdays' => (int) $k['previous_season_matchdays'],
             'positionday_interval' => (int) $k['positionday_interval'],
+            'win_points' => (int) $k['win_points'],
+            'draw_points' => (int) $k['draw_points'],
+            'loss_points' => (int) $k['loss_points'],
+            'bonus_threshold' => (int) $k['bonus_threshold'],
+            'bonus_step' => (int) $k['bonus_step'],
+            'bonus_maximum' => (int) $k['bonus_maximum'],
         ];
     }
 

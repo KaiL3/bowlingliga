@@ -21,17 +21,6 @@ final class PointsService
 {
     private const GAME_COUNT = 3;
 
-    /** Gross threshold up to which exactly 1 bonus point is awarded (R17.6). */
-    private const BONUS_POINTS_LOWER_THRESHOLD = 2100;
-
-    /** Gross threshold from which 2 bonus points plus the scale apply (R17.7). */
-    private const BONUS_POINTS_SCALE_START = 2101;
-
-    /** Gross threshold from which the cap of 6 bonus points applies (R17.8). */
-    private const BONUS_POINTS_CAP_THRESHOLD = 2501;
-
-    /** Maximum number of bonus points (R17.8). */
-    private const BONUS_POINTS_MAXIMUM = 6;
 
     /**
      * Team gross of a game: sum of the gross results of all 4 positions
@@ -124,44 +113,25 @@ final class PointsService
     }
 
     /**
-     * Bonus points according to the scale rule of the gross total.
+     * Bonus points according to the scale of the season (R17.6–R17.8,
+     * R17.11); default up to 2100 → 1, then one more per full 100 pins, at
+     * most 6.
      *
-     * R17.6: gross total ≤ 2100 → exactly 1 bonus point.
-     * R17.7: from 2101 → 2 bonus points, then one more bonus point
-     * for every further full 100 pins.
-     * R17.8: from 2501 → at most 6 bonus points (cap).
-     *
-     * @param int $grossTotal Gross total of the evening (R17.5).
+     * @param int                   $grossTotal Gross total of the evening (R17.5).
+     * @param BonusPointsScale|null $scale      Scale of the season; default 2100/100/6.
      *
      * @throws InvalidArgumentException for a negative gross total.
      */
-    public function bonusPoints(int $grossTotal): int
+    public function bonusPoints(int $grossTotal, ?BonusPointsScale $scale = null): int
     {
-        if ($grossTotal < 0) {
-            throw new InvalidArgumentException('The gross total must not be negative.');
-        }
-
-        if ($grossTotal <= self::BONUS_POINTS_LOWER_THRESHOLD) {
-            return 1;
-        }
-
-        if ($grossTotal >= self::BONUS_POINTS_CAP_THRESHOLD) {
-            return self::BONUS_POINTS_MAXIMUM;
-        }
-
-        // From 2101 pins: 2 bonus points plus one more for every full 100 pins
-        // above the scale start threshold (R17.7).
-        $further = intdiv($grossTotal - self::BONUS_POINTS_SCALE_START, 100);
-        $points = 2 + $further;
-
-        return min($points, self::BONUS_POINTS_MAXIMUM);
+        return ($scale ?? BonusPointsScale::standard())->points($grossTotal);
     }
 
     /**
      * A team's total points for a matchday = base points + bonus points.
      *
      * R17.9: points = sum of the base points of all 3 games and the
-     * bonus points; maximum = (win value × 3) + 6.
+     * bonus points; maximum = (win value × 3) + bonus maximum.
      * R21.6, R27.3: if a real team fields no real player at all, the
      * evening counts as lost and 0 points are awarded.
      * R20.3, R20.7: the same rules apply to the real team against
@@ -170,11 +140,13 @@ final class PointsService
      * @param Lineup                       $own      Lineup of the team to score.
      * @param Lineup                       $opponent Lineup of the opposing team.
      * @param BasePointsConfiguration|null $config   Point values; default 2/1/0 (R17.1).
+     * @param BonusPointsScale|null        $scale    Bonus scale; default 2100/100/6 (R17.11).
      */
     public function totalPoints(
         Lineup $own,
         Lineup $opponent,
-        ?BasePointsConfiguration $config = null
+        ?BasePointsConfiguration $config = null,
+        ?BonusPointsScale $scale = null,
     ): int {
         // R21.6, R27.3: without a real player 0 points (evening lost).
         if (!$own->hasRealPlayer()) {
@@ -184,14 +156,15 @@ final class PointsService
         $config ??= BasePointsConfiguration::standard();
 
         return $this->basePoints($own, $opponent, $config)
-            + $this->bonusPoints($this->grossTotal($own));
+            + $this->bonusPoints($this->grossTotal($own), $scale);
     }
 
     /**
-     * Highest possible total points of a matchday = (win value × 3) + 6 (R17.9).
+     * Highest possible total points of a matchday = (win value × 3) + bonus
+     * maximum (R17.9).
      */
-    public function maximumTotalPoints(?BasePointsConfiguration $config = null): int
+    public function maximumTotalPoints(?BasePointsConfiguration $config = null, ?BonusPointsScale $scale = null): int
     {
-        return $this->maximumBasePoints($config) + self::BONUS_POINTS_MAXIMUM;
+        return $this->maximumBasePoints($config) + ($scale ?? BonusPointsScale::standard())->maximum;
     }
 }

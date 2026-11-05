@@ -117,9 +117,11 @@ final class ResultEntryController
 
         // Derived values (gross, sums, points) as on the paper score sheet.
         $formula = $this->stats->formula($fixture['season_id']);
+        $points = $this->stats->pointsRules($fixture['season_id']);
         $calculated = $this->calculator->calculate(
             array_map(static fn (array $team): array => ['rows' => $team['rows']], $teams),
             $formula,
+            $points,
         );
 
         $rework = false;
@@ -141,6 +143,7 @@ final class ResultEntryController
             $rework,
             $message,
             $error,
+            $points,
         );
     }
 

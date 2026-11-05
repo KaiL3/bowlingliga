@@ -56,8 +56,8 @@ final class SeasonAdministration
      * Creates a season including its configuration and returns its id (R8.1,
      * R8.11, R8.13, R12.1–12.3).
      *
-     * If a previous season exists, entry fee, blind fee and maximum handicap
-     * are prefilled from it unless the caller passes different values, and its
+     * If a previous season exists, its configuration (fees, handicap, points
+     * rules, R17.11) is prefilled from it unless the caller passes different values, and its
      * teams are copied (R8.7, R8.15, R12.4). The caller can specify the
      * configuration explicitly; the prefill only applies to values not passed.
      *
@@ -95,6 +95,7 @@ final class SeasonAdministration
             $configuration->ghostScore,
             $configuration->previousSeasonMatchdays,
             $configuration->positiondayInterval,
+            $configuration->points,
         );
 
         // R8.7: copy the previous season's teams including team names; the
@@ -170,6 +171,7 @@ final class SeasonAdministration
             $configuration->ghostScore,
             $configuration->previousSeasonMatchdays,
             $configuration->positiondayInterval,
+            $configuration->points,
         );
     }
 
@@ -253,6 +255,7 @@ final class SeasonAdministration
                     (int) ($preconfig['ghost_score'] ?? SeasonConfiguration::DEFAULT_GHOST_SCORE),
                     (int) ($preconfig['previous_season_matchdays'] ?? SeasonConfiguration::DEFAULT_PREVIOUS_SEASON_MATCHDAYS),
                     (int) ($preconfig['positionday_interval'] ?? SeasonConfiguration::DEFAULT_POSITIONDAY_INTERVAL),
+                    SeasonConfiguration::pointsRulesFromRow($preconfig),
                 );
             }
         }

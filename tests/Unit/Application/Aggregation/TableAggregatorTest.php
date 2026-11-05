@@ -8,6 +8,9 @@ use Bowlingliga\Application\Aggregation\FixtureRawData;
 use Bowlingliga\Application\Aggregation\FixtureTeamRawData;
 use Bowlingliga\Application\Aggregation\SheetRowResults;
 use Bowlingliga\Application\Aggregation\TableAggregator;
+use Bowlingliga\Domain\Points\BasePointsConfiguration;
+use Bowlingliga\Domain\Points\BonusPointsScale;
+use Bowlingliga\Domain\Points\PointsRules;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -62,6 +65,30 @@ final class TableAggregatorTest extends TestCase
         self::assertSame(1800, $alpha->netPins);
         self::assertSame(1800, $alpha->grossPins, 'With HDC 0 net and gross agree.');
         self::assertSame(12, $alpha->numberOfGames, '4 Positionen * 3 Einzelspiele = 12.');
+    }
+
+    /**
+     * R17.11: the points rules of the season apply – here 3/1/0 and at most
+     * 2 bonus points from 1500 pins on.
+     */
+    public function testPointsRulesOfTheSeasonApply(): void
+    {
+        $home = $this->team(101, 'Alpha', [150, 150, 150], 0); // gross total 1800
+        $away = $this->team(102, 'Beta', [140, 140, 140], 0);  // gross total 1680
+        $rules = new PointsRules(new BasePointsConfiguration(3, 1, 0), new BonusPointsScale(1500, 200, 2));
+
+        $reader = new FixedTableRawDataReader(
+            seasonFixtures: [new FixtureRawData($home, $away)],
+            matchdayFixtures: [new FixtureRawData($home, $away)],
+            teams: [101 => 'Alpha', 102 => 'Beta'],
+            rules: $rules,
+        );
+        $aggregator = new TableAggregator($reader);
+
+        foreach ([$aggregator->leagueTable(1), $aggregator->matchdayTable(1)] as $table) {
+            self::assertSame(3 * 3 + 2, $table->rows[0]->points, 'Three wins of 3 plus 2 bonus points.');
+            self::assertSame(0 + 2, $table->rows[1]->points, 'Three losses plus 2 bonus points.');
+        }
     }
 
     public function testTeamWithoutGamesAppearsWithZeroValues(): void

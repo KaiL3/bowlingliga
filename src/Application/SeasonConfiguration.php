@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Bowlingliga\Application;
 
+use Bowlingliga\Domain\Points\BasePointsConfiguration;
+use Bowlingliga\Domain\Points\BonusPointsScale;
+use Bowlingliga\Domain\Points\PointsRules;
 use Bowlingliga\Security\Validator;
 
 /**
@@ -22,6 +25,9 @@ use Bowlingliga\Security\Validator;
  * - Matchday up to which (inclusive) the previous season counts towards the
  *   average, 0–99 (0 = never), default 5.
  * - Interval of the positiondays in matchdays, 0–99 (0 = none), default 10.
+ * - Points rules: game points for win/draw/loss 0–10 with win ≥ draw ≥ loss,
+ *   default 2/1/0, and the bonus points scale, default 2100/100/6 (R17.1,
+ *   R17.11).
  *
  * The object is immutable; invalid values already lead to a
  * {@see \Bowlingliga\Security\ValidationException} on creation.
@@ -46,6 +52,9 @@ final class SeasonConfiguration
     /** Upper bound for the matchday settings (previous season, positionday interval). */
     public const PREVIOUS_SEASON_MATCHDAYS_MAX = 99;
 
+    /** Upper bound for the game points of a single game. */
+    public const GAME_POINTS_MAX = 10;
+
     /**
      * @param int            $laneCount               Even integer ≥ 2 (R8.11).
      * @param numeric-string $entryFee                Amount ≥ 0.00, two decimals (R8.13).
@@ -56,6 +65,7 @@ final class SeasonConfiguration
      * @param int            $ghostScore              Pins per game of the ghost team, 0–300.
      * @param int            $previousSeasonMatchdays Last matchday with previous season, 0–99.
      * @param int            $positiondayInterval     Every n-th matchday is a positionday, 0 = none.
+     * @param PointsRules    $points                  Game points and bonus scale (R17.11).
      */
     private function __construct(
         public readonly int $laneCount,
@@ -67,6 +77,7 @@ final class SeasonConfiguration
         public readonly int $ghostScore,
         public readonly int $previousSeasonMatchdays,
         public readonly int $positiondayInterval,
+        public readonly PointsRules $points,
     ) {
     }
 
@@ -89,13 +100,14 @@ final class SeasonConfiguration
         int $ghostScore = self::DEFAULT_GHOST_SCORE,
         int $previousSeasonMatchdays = self::DEFAULT_PREVIOUS_SEASON_MATCHDAYS,
         int $positiondayInterval = self::DEFAULT_POSITIONDAY_INTERVAL,
+        ?PointsRules $points = null,
     ): self {
         $validator->checkLaneCount($laneCount);
         $entryFeeChecked = $validator->checkMoneyAmount($entryFee, 'field.entry_fee');
         $feeChecked   = $validator->checkMoneyAmount($blindFee, 'field.blind_fee');
-        $validator->checkRange0To300($maxHandicapValue, 'Maximal-Handicap');
-        $validator->checkRange0To300($targetScore, 'Zielwert');
-        $validator->checkRange0To300($ghostScore, 'Geisterteam-Pins');
+        $validator->checkRange0To300($maxHandicapValue, 'field.max_handicap');
+        $validator->checkRange0To300($targetScore, 'season.target_score');
+        $validator->checkRange0To300($ghostScore, 'field.ghost_pins');
         $validator->checkRange($previousSeasonMatchdays, 0, self::PREVIOUS_SEASON_MATCHDAYS_MAX, 'field.previous_matchdays');
         $validator->checkRange($positiondayInterval, 0, self::PREVIOUS_SEASON_MATCHDAYS_MAX, 'field.positionday_interval');
 
@@ -109,6 +121,57 @@ final class SeasonConfiguration
             $ghostScore,
             $previousSeasonMatchdays,
             $positiondayInterval,
+            $points ?? PointsRules::standard(),
+        );
+    }
+
+    /**
+     * Points rules from a stored configuration row (`season_config`); missing
+     * columns fall back to the defaults (R17.1, R17.11).
+     *
+     * @param array<string, mixed>|null $row
+     */
+    public static function pointsRulesFromRow(?array $row): PointsRules
+    {
+        $value = static fn (string $column, int $default): int => isset($row[$column]) ? (int) $row[$column] : $default;
+
+        return new PointsRules(
+            new BasePointsConfiguration($value('win_points', 2), $value('draw_points', 1), $value('loss_points', 0)),
+            new BonusPointsScale(
+                $value('bonus_threshold', BonusPointsScale::DEFAULT_THRESHOLD),
+                $value('bonus_step', BonusPointsScale::DEFAULT_STEP),
+                $value('bonus_maximum', BonusPointsScale::DEFAULT_MAXIMUM),
+            ),
+        );
+    }
+
+    /**
+     * Validated points rules from form values (R17.1, R17.11): game points
+     * 0–10 with win ≥ draw ≥ loss, bonus threshold 0–9999, pins per further
+     * bonus point 1–1000, bonus maximum 0–20.
+     *
+     * @throws \Bowlingliga\Security\ValidationException for a value outside its range
+     *         or game points in the wrong order.
+     */
+    public static function pointsRules(
+        Validator $validator,
+        int $win,
+        int $draw,
+        int $loss,
+        int $bonusThreshold,
+        int $bonusStep,
+        int $bonusMaximum,
+    ): PointsRules {
+        $validator->checkRange($win, 0, self::GAME_POINTS_MAX, 'field.win_points');
+        $validator->checkRange($draw, 0, $win, 'field.draw_points');
+        $validator->checkRange($loss, 0, $draw, 'field.loss_points');
+        $validator->checkRange($bonusThreshold, 0, BonusPointsScale::THRESHOLD_MAX, 'field.bonus_threshold');
+        $validator->checkRange($bonusStep, 1, BonusPointsScale::STEP_MAX, 'field.bonus_step');
+        $validator->checkRange($bonusMaximum, 0, BonusPointsScale::MAXIMUM_MAX, 'field.bonus_maximum');
+
+        return new PointsRules(
+            new BasePointsConfiguration($win, $draw, $loss),
+            new BonusPointsScale($bonusThreshold, $bonusStep, $bonusMaximum),
         );
     }
 

@@ -6,6 +6,7 @@ namespace Bowlingliga\Presentation;
 
 use Bowlingliga\Application\ResultEntry\OverviewEntry;
 use Bowlingliga\Domain\Handicap\HandicapChainPreview;
+use Bowlingliga\Domain\Points\PointsRules;
 use Bowlingliga\I18n\Formatter;
 use Bowlingliga\I18n\Translator;
 
@@ -188,6 +189,7 @@ final class ResultEntryView
      * @param array<string, array<string, mixed>> $calculated Derived values per side ({@see ScoreSheetCalculator})
      * @param array{factor: float, target_score: int, max: int}|null $formula Handicap formula for the live calculation
      * @param list<int>                           $originals  Ids of uploaded original score sheets
+     * @param PointsRules|null                    $points     Points rules of the season for the live calculation (R17.11)
      */
     public function renderScoreSheet(
         string $csrfField,
@@ -199,8 +201,10 @@ final class ResultEntryView
         bool $rework,
         ?string $message = null,
         ?string $error = null,
+        ?PointsRules $points = null,
     ): string {
         $tp = (int) $fixture['id'];
+        $points ??= PointsRules::standard();
 
         $meta = sprintf(
             '<p class="page-header__meta">%s%s %s</p>'
@@ -227,8 +231,14 @@ final class ResultEntryView
             $resultFields .= $this->renderResultTeam($page, $team, $calculated[$page]);
         }
         $resultFields = sprintf(
-            '<div class="sheet__teams js-score-sheet" data-ghost="%d" data-text-wrong-blind="%s" data-text-blind-player="%s" data-text-blind="%s"%s>%s</div>',
+            '<div class="sheet__teams js-score-sheet" data-ghost="%d" data-points="%d,%d,%d" data-bonus="%d,%d,%d" data-text-wrong-blind="%s" data-text-blind-player="%s" data-text-blind="%s"%s>%s</div>',
             (int) $fixture['ghost_score'],
+            $points->base->win,
+            $points->base->draw,
+            $points->base->loss,
+            $points->bonus->threshold,
+            $points->bonus->step,
+            $points->bonus->maximum,
             $this->text('results.wrong_blind'),
             $this->text('results.blind_player'),
             $this->text('common.blind'),

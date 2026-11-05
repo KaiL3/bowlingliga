@@ -156,6 +156,7 @@ A rule without a number in brackets belongs to the section as a whole.
   - ghost score ([R20](#r20--ghost-team)),
   - "Vorjahr im Schnitt bis Spieltag" ([R11](#r11--player-average)),
   - positionday interval ([R31](#r31--positionday)),
+  - game points and bonus points scale ([R17](#r17--points)),
   - team entry on/off ([R37](#r37--result-entry-by-the-teams)).
 - Every matchday has a type: regular, positionday or lot draw (R8.18); a lot
   draw is set by the admin before the season starts (R8.19).
@@ -316,15 +317,26 @@ A rule without a number in brackets belongs to the section as a whole.
 
 - **Game points** per single game: the team gross of the 4 positions
   (including blind positions and ghost players) is compared with the
-  opponent's; win/draw/loss give the configured base points, default 2/1/0
-  (R17.1–R17.3). Maximum per evening: 3 × win (R17.4).
+  opponent's; win/draw/loss give the configured game points, default 2/1/0,
+  each 0–10 with win ≥ draw ≥ loss (R17.1–R17.3). Maximum per evening: 3 × win (R17.4).
 - **Bonus points** by the team's gross of the evening (sum of the three
   games, R17.5): up to 2100 → 1 (R17.6); from 2101 → 2 plus one per further
   full 100 pins (R17.7), i.e. 2101–2200 → 2, … 2401–2500 → 5; from 2501 at
-  most 6 (R17.8).
-- **Total points** = game points + bonus points; maximum 3 × win + 6
-  (R17.9). The ghost team gets points by the same rules (R17.10).
-- Implementation: `Domain/Points/PointsService`; on the score sheet
+  most 6 (R17.8). These are the defaults of the scale: threshold for 1 point
+  (0–9999), pins per further point (1–1000) and maximum (0–20, 0 = no bonus
+  points) are configurable.
+- **Total points** = game points + bonus points; maximum 3 × win + bonus
+  maximum (R17.9). The ghost team gets points by the same rules (R17.10).
+- **Per season** (R17.11): game points and bonus scale belong to the season
+  configuration ([R8](#r8--seasons-matchdays-and-season-configuration)), a
+  new season takes them over from the previous one, and they can only be
+  changed before the season starts. Points are always computed with the
+  rules of the fixture's season – in the league and day table, on the
+  virtual and the public score sheet, in the team entry and in the bonus
+  legend of the printed score sheet (lower half of the levels under the home
+  team, upper half under the away team).
+- Implementation: `Domain/Points/PointsService`, `BonusPointsScale`,
+  `PointsRules`, `Application/SeasonConfiguration::pointsRules()`; on the score sheet
   `Presentation/ScoreSheetCalculator` and `public/assets/js/score-sheet.js`
   (always change both); standings `TableAggregator`.
 

@@ -426,7 +426,7 @@ final class PublicView
         $values = $this->calculator->calculate([
             'home' => ['rows' => $this->calculatorRows($fixture->home)],
             'away' => ['rows' => $this->calculatorRows($fixture->away)],
-        ], null);
+        ], null, $fixture->points);
 
         $home = $values['home'];
         $away = $values['away'];

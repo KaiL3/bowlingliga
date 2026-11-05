@@ -7,6 +7,7 @@ namespace Bowlingliga\Presentation;
 use Bowlingliga\Domain\Handicap\HandicapFormula;
 use Bowlingliga\Domain\Handicap\HandicapModule;
 use Bowlingliga\Domain\Points\BasePointsConfiguration;
+use Bowlingliga\Domain\Points\PointsRules;
 use Bowlingliga\Domain\Points\PointsService;
 
 /**
@@ -21,7 +22,7 @@ use Bowlingliga\Domain\Points\PointsService;
  *   entered, and in total once all three games are complete (R17.2),
  * - game points per game from the gross comparison (default 2/1/0,
  *   R17.3–R17.5), bonus points by the gross scale (R17.6–R17.8) and total
- *   points (R17.9).
+ *   points (R17.9), both by the points rules of the season (R17.11).
  *
  * On a player's first matchday without an average (R12.9) the handicap
  * follows from the average of the games they played themselves that evening.
@@ -47,18 +48,19 @@ final class ScoreSheetCalculator
     public function __construct(
         private readonly PointsService $points = new PointsService(),
         private readonly HandicapModule $handicaps = new HandicapModule(),
-        private readonly BasePointsConfiguration $basePoints = new BasePointsConfiguration(),
     ) {
     }
 
     /**
      * @param array<string, array{rows: array<int|string, array{hdc: int|null, first_value: bool, blind: bool, values: array<int, int|null>}>}> $pages
      * @param array{factor: float, target_score: int, max: int}|null $formula
+     * @param PointsRules|null $rules Points rules of the season; default 2/1/0 and 2100/100/6.
      *
      * @return array<string, array<string, mixed>>
      */
-    public function calculate(array $pages, ?array $formula): array
+    public function calculate(array $pages, ?array $formula, ?PointsRules $rules = null): array
     {
+        $rules ??= PointsRules::standard();
         $result = [];
         foreach ($pages as $page => $data) {
             $result[$page] = $this->calculateTeam($data['rows'], $formula);
@@ -74,8 +76,8 @@ final class ScoreSheetCalculator
                 if ($grossA === null || $grossB === null) {
                     continue;
                 }
-                $result[$a]['games'][$num]['points'] = $this->gamePoints($grossA, $grossB);
-                $result[$b]['games'][$num]['points'] = $this->gamePoints($grossB, $grossA);
+                $result[$a]['games'][$num]['points'] = $this->gamePoints($grossA, $grossB, $rules->base);
+                $result[$b]['games'][$num]['points'] = $this->gamePoints($grossB, $grossA, $rules->base);
             }
         }
 
@@ -84,7 +86,7 @@ final class ScoreSheetCalculator
             $gamePoints = count(array_filter($points, static fn (?int $p): bool => $p !== null)) === 3
                 ? array_sum($points)
                 : null;
-            $bonus = $team['gross_total'] !== null ? $this->points->bonusPoints($team['gross_total']) : null;
+            $bonus = $team['gross_total'] !== null ? $this->points->bonusPoints($team['gross_total'], $rules->bonus) : null;
 
             $result[$page]['game_points'] = $gamePoints;
             $result[$page]['bonus']       = $bonus;
@@ -186,12 +188,12 @@ final class ScoreSheetCalculator
         return $result->hasHandicap() ? $result->handicap() : null;
     }
 
-    private function gamePoints(int $own, int $opponent): int
+    private function gamePoints(int $own, int $opponent, BasePointsConfiguration $base): int
     {
         return match (true) {
-            $own > $opponent   => $this->basePoints->win,
-            $own === $opponent => $this->basePoints->draw,
-            default            => $this->basePoints->loss,
+            $own > $opponent   => $base->win,
+            $own === $opponent => $base->draw,
+            default            => $base->loss,
         };
     }
 }

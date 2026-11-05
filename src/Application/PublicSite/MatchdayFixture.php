@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Bowlingliga\Application\PublicSite;
 
 use Bowlingliga\Domain\AverageList\AverageList;
+use Bowlingliga\Domain\Points\PointsRules;
 
 /**
  * A fixture of a matchday for the public detail view (R15.1, R2.1, R22.1).
@@ -27,6 +28,7 @@ final class MatchdayFixture
      * @param AverageList        $averageListHome      Average list home (R2.1)
      * @param AverageList        $averageListAway      Average list away (R2.1)
      * @param int|null           $originalScoreSheetId Id of the original score sheet or null (R15.4)
+     * @param PointsRules        $points               Points rules of the season (R17.11)
      */
     public function __construct(
         public readonly int $fixtureId,
@@ -36,6 +38,7 @@ final class MatchdayFixture
         public readonly AverageList $averageListHome,
         public readonly AverageList $averageListAway,
         public readonly ?int $originalScoreSheetId,
+        public readonly PointsRules $points = new PointsRules(),
     ) {
     }
 

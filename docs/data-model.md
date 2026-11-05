@@ -16,7 +16,8 @@ to the `applySchema()` lists of the integration tests.
 
 ```
 season 1─1 season_config            (lane_count, entry_fee, blind_fee, max_handicap,
-  │                                  handicap_formula, target_score, ghost_score, …)
+  │                                  handicap_formula, target_score, ghost_score,
+  │                                  win/draw/loss_points, bonus_threshold/_step/_maximum, …)
   ├─n team_season ─n─1 team         (team_name per season, is_ghost_team)
   │     └─n roster ─n─1 player      (player: name, gender)
   ├─n lane_pair                     (lane_a, lane_b)
@@ -87,6 +88,10 @@ fixture 1─2 team_entry               (side home/away, code_version, submitted_
   `HDC = (Zielwert - Durchschnitt) * 0.8` (stored in German, as entered in the
   UI) or `standard`. With `NULL` there is no handicap. Parsed in
   `HandicapFreezingRepository::readFormula()`.
+- **`season_config.win_points`, `draw_points`, `loss_points`,
+  `bonus_threshold`, `bonus_step`, `bonus_maximum`** (migration 002): points
+  rules of the season (R17.11), defaults 2/1/0 and 2100/100/6; read via
+  `SeasonConfiguration::pointsRulesFromRow()`.
 
 ## Access without a mysql client
 
