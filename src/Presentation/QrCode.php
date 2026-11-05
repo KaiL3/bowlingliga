@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Bowlingliga\Presentation;
 
-use chillerlan\QRCode\Output\QROutputInterface;
+use chillerlan\QRCode\Output\QRMarkupSVG;
 use chillerlan\QRCode\QRCode as QrCodeLibrary;
 use chillerlan\QRCode\QROptions;
 
@@ -21,7 +21,7 @@ final class QrCode
     public function svg(string $content): string
     {
         $optionList = new QROptions([
-            'outputType'       => QROutputInterface::MARKUP_SVG,
+            'outputInterface'  => QRMarkupSVG::class,
             'outputBase64'     => false,
             'svgAddXmlHeader'  => false,
             'addQuietzone'     => true,
