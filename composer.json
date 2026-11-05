@@ -7,7 +7,7 @@
         "php": ">=8.3",
         "ext-pdo": "*",
         "ext-sodium": "*",
-        "chillerlan/php-qrcode": "^5.0",
+        "chillerlan/php-qrcode": "^6.0",
         "ezyang/htmlpurifier": "^4.17",
         "mpdf/mpdf": "^8.2",
         "spomky-labs/otphp": "^11.2"
