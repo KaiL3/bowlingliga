@@ -1,6 +1,6 @@
 # Bowlingliga – Bowling League Website
 
-Instructions for AI coding agents (and a quick start for humans). PHP ≥ 8.3
+Instructions for AI coding agents (and a quick start for humans). PHP ≥ 8.4
 without a framework, MariaDB with InnoDB, Ports & Adapters.
 Entry point and details: [docs/README.md](docs/README.md). Domain rules:
 [docs/domain-logic.md](docs/domain-logic.md) (authoritative, sections R1–R38

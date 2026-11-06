@@ -4,9 +4,9 @@
 
 | Component | Version / note |
 |---|---|
-| PHP | ≥ 8.3 (developed with 8.5) with the extensions `pdo_mysql`, `sodium`, `gd`, `fileinfo`, `zip`, `curl` |
+| PHP | ≥ 8.4 (developed with 8.5) with the extensions `pdo_mysql`, `sodium`, `gd`, `fileinfo`, `zip`, `curl` |
 | Composer | 2.x |
-| MariaDB | 10.11 or newer (Debian 12; CI tests 11.4), local, on `127.0.0.1:3306` by default. MySQL is not supported: the migrations use MariaDB syntax |
+| MariaDB | 10.11 or newer (Debian 12; CI tests 10.11 and the newest LTS 12.3), local, on `127.0.0.1:3306` by default. MySQL is not supported: the migrations use MariaDB syntax |
 | Firefox | optional, for screenshots (skill `visual-check`) |
 | Node.js | not needed; JavaScript is checked via Firefox headless (screenshot) |
 | Tesseract | not needed (OCR is deferred) |
@@ -70,13 +70,16 @@ integration tests are skipped – start it first.
 
 **Continuous integration:** [.github/workflows/tests.yml](../.github/workflows/tests.yml)
 runs the complete suite on GitHub for every push to `main` and every pull
-request, with PHP 8.3, 8.4 and 8.5 against a MariaDB service. It calls
+request and once a week, with PHP 8.4 and 8.5 against MariaDB 12.3 (newest
+LTS) and with PHP 8.4 against MariaDB 10.11 (lowest supported). It calls
 PHPUnit with `--fail-on-all-issues`, so a skipped test, a deprecation or a
 notice fails the run as well. Locally the same check is
 `php vendor/bin/phpunit --fail-on-all-issues --display-all-issues`.
 Before installing, `composer validate --strict` checks that `composer.lock`
 matches `composer.json`; after a change to `composer.json` run
-`composer update --lock` (or `composer update <package>`).
+`composer update --lock` (or `composer update <package>`). `composer audit`
+then fails the run if a locked package has a known security advisory; the
+weekly run catches advisories published between pull requests.
 
 **Secret scan:** the job "Secret scan" of the same workflow runs
 [gitleaks](https://github.com/gitleaks/gitleaks) over the whole history.
@@ -89,7 +92,8 @@ repository settings as well.
 ### Dependency updates
 
 [Renovate](https://docs.renovatebot.com/) (GitHub app) opens pull requests
-for Composer packages, GitHub Actions and the gitleaks version, configured in
+for Composer packages, GitHub Actions, the gitleaks version and the MariaDB
+version of the CI, configured in
 [.github/renovate.json](../.github/renovate.json):
 
 - weekly on Monday morning, a version must be at least 7 days old; the
@@ -98,11 +102,18 @@ for Composer packages, GitHub Actions and the gitleaks version, configured in
 - minor and patch updates of the development tools and the CI tools are
   merged automatically once the tests are green; runtime packages (mPDF,
   HTML Purifier, …) and major updates are reviewed by hand,
-- `config.platform.php` in `composer.json` is 8.3.0, so packages are always
-  resolved for the lowest supported PHP version; PHPUnit stays below 13
-  (needs PHP 8.4) – lift this together with the PHP minimum,
-- not updated: the PHP constraint and the MariaDB version of the CI (both
-  deliberate choices).
+- `config.platform.php` in `composer.json` is 8.4.0, so packages are always
+  resolved for the lowest supported PHP version,
+- MariaDB updates only appear as a checkbox in the Dependency Dashboard:
+  Renovate cannot tell an LTS line from a short-term release, so approve
+  only a new LTS (see [endoflife.date/mariadb](https://endoflife.date/mariadb));
+  closing a major update pull request instead would make Renovate ignore
+  that major version for good, including a later LTS of it,
+- not updated: the PHP constraint and MariaDB 10.11 of the CI (both state the
+  lowest supported version and are changed by hand).
+
+Supported versions: PHP as long as it gets active support from the PHP
+project (8.3 left it at the end of 2025), MariaDB from 10.11 (Debian 12).
 
 ## Conventions
 

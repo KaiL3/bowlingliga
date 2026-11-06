@@ -16,7 +16,7 @@ The scripts set up exactly this stack and nothing else:
 - **MariaDB on the same server** (installed if missing; a running server is
   shared with other applications). The scripts work as MariaDB root via the
   Unix socket (`sudo mariadb` without password) or `/root/.my.cnf`.
-- **PHP ≥ 8.3** with the extensions fpm, cli, mysql, mbstring, gd, xml, zip and
+- **PHP ≥ 8.4** with the extensions fpm, cli, mysql, mbstring, gd, xml, zip and
   sodium (installed for the PHP version already present, otherwise the
   distribution's). Debian 13 ships 8.4; Debian 12 ships 8.2, so install a
   newer PHP there first (e.g. from packages.sury.org) – the script stops
