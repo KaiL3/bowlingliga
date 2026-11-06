@@ -1,13 +1,17 @@
 # Runs the complete test suite (unit, property and integration tests) against
 # a MariaDB service for every push to main and every pull request. Like the
 # local rule: green means no failures, no skipped tests, no deprecations or
-# notices. A second job scans the whole history for secrets (gitleaks).
+# notices. Composer also checks the locked packages for known security
+# advisories. A second job scans the whole history for secrets (gitleaks).
+# The weekly run catches new advisories between pull requests.
 name: Tests
 
 on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    - cron: '0 5 * * 1'
 
 permissions:
   contents: read
@@ -18,19 +22,26 @@ concurrency:
 
 jobs:
   phpunit:
-    name: PHPUnit (PHP ${{ matrix.php }})
+    name: PHPUnit (PHP ${{ matrix.php }}, MariaDB ${{ matrix.mariadb }})
     runs-on: ubuntu-26.04
     timeout-minutes: 20
 
     strategy:
       fail-fast: false
       matrix:
-        # Lowest supported version (composer.json) and current ones.
-        php: ['8.3', '8.4', '8.5']
+        # Supported PHP versions (composer.json) against the newest MariaDB
+        # LTS, plus the lowest supported combination (MariaDB of Debian 12).
+        php: ['8.4', '8.5']
+        # renovate: datasource=docker depName=mariadb
+        mariadb: ['12.3']
+        include:
+          - php: '8.4'
+            # renovate: datasource=docker depName=mariadb
+            mariadb: '10.11'
 
     services:
       mariadb:
-        image: mariadb:11.4
+        image: mariadb:${{ matrix.mariadb }}
         env:
           # The integration tests connect as root without password and
           # rebuild the database bowlingliga_test themselves.
@@ -69,6 +80,9 @@ jobs:
 
       - name: Install dependencies
         run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Check for known security advisories
+        run: composer audit --no-interaction --locked
 
       - name: Run tests
         env:

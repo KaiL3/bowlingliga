@@ -33,8 +33,8 @@ that needs no programming: **adding a language**.
   php vendor/bin/phpunit --fail-on-all-issues --display-all-issues
   ```
 
-  GitHub runs the same check for every pull request (PHP 8.3, 8.4 and 8.5
-  with MariaDB, see `.github/workflows/tests.yml`).
+  GitHub runs the same check for every pull request (PHP 8.4 and 8.5 with
+  MariaDB 12.3, PHP 8.4 with MariaDB 10.11, see `.github/workflows/tests.yml`).
 
 - For changes to pages or the printed score sheet, look at the result
   (see [visual check](development.md#visual-check-via-screenshot-without-node)).

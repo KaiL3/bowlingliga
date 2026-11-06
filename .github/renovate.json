@@ -27,14 +27,15 @@
       "automerge": true
     },
     {
-      "description": "PHPUnit 13 needs PHP 8.4; lift together with the lowest supported PHP version (composer.json).",
-      "matchManagers": ["composer"],
-      "matchDepNames": ["phpunit/phpunit"],
-      "allowedVersions": "<13"
+      "description": "MariaDB of the CI: Renovate cannot tell LTS from short-term releases, so updates wait for approval in the Dependency Dashboard (approve only a new LTS line; closing a major pull request would ignore the whole major version).",
+      "matchDepNames": ["mariadb"],
+      "automerge": false,
+      "dependencyDashboardApproval": true
     },
     {
-      "description": "The MariaDB version of the CI is a deliberate choice (supported LTS line), not an update.",
+      "description": "MariaDB 10.11 is the lowest supported version (Debian 12) and stays until that promise changes.",
       "matchDepNames": ["mariadb"],
+      "matchCurrentValue": "10.11",
       "enabled": false
     },
     {
@@ -47,10 +48,11 @@
   "customManagers": [
     {
       "customType": "regex",
-      "description": "Version of gitleaks in the secret scan job.",
+      "description": "Version of gitleaks in the secret scan job and the MariaDB versions of the test matrix.",
       "managerFilePatterns": ["/^\\.github/workflows/[^/]+\\.ya?ml$/"],
       "matchStrings": [
-        "# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>[^\\s]+)\\s+[A-Z_]+_VERSION: (?<currentValue>[^\\s]+)"
+        "# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>[^\\s]+)\\s+[A-Z_]+_VERSION: (?<currentValue>[^\\s]+)",
+        "# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>[^\\s]+)\\s+[a-z_]+: \\[?'(?<currentValue>[^']+)'"
       ]
     }
   ]
