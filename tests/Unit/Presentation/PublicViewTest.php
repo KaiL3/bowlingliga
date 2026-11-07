@@ -155,6 +155,23 @@ final class PublicViewTest extends TestCase
         self::assertStringContainsString('—', $html, 'Without a handicap gross stays empty (R2.15).');
     }
 
+    /**
+     * R39.1: the names of the average lists lead to the player page in the
+     * season of the list.
+     */
+    public function testPlayerNamesInTheAverageListsLinkToThePlayerPage(): void
+    {
+        $detail = $this->buildDetail(originalScoreSheetId: null);
+        $withSeason = new MatchdayDetail($detail->matchdayId, $detail->number, $detail->date, $detail->fixtures, $detail->matchdayTable, 3);
+
+        self::assertStringContainsString('<a href="/player/1">Anna</a>', $this->view->renderMatchdayDetail($detail));
+        self::assertStringContainsString('<a href="/player/1?season=3">Anna</a>', $this->view->renderMatchdayDetail($withSeason));
+        self::assertStringContainsString('<a href="/player/2?season=3">Ben</a>', $this->view->renderMatchdayDetail($withSeason));
+
+        $team = new \Bowlingliga\Application\PublicSite\TeamAverageList(11, 4, 'Alpha', 1, '2026-01-15', $detail->fixtures[0]->averageListHome);
+        self::assertStringContainsString('<a href="/player/1?season=4">Anna</a>', $this->view->renderTeamAverageList($team));
+    }
+
     public function testEmptyAverageListShowsMessage(): void
     {
         $blank = $this->averageLists->averageList([]);

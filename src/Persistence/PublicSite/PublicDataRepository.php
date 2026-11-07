@@ -143,6 +143,7 @@ final class PublicDataRepository implements PublicDataReader
             (string) $matchday['date'],
             $fixtures,
             $this->tables->matchdayTable($matchdayId),
+            (int) $matchday['season_id'],
         );
     }
 

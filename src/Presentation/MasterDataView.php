@@ -137,7 +137,8 @@ final class MasterDataView
         $rows = '';
         foreach ($player as $s) {
             $rows .= $this->row(
-                $this->escape((string) $s['name']),
+                // The name leads to the player page (R39.1).
+                sprintf('<a href="/admin/master-data/player?id=%d">%s</a>', (int) $s['id'], $this->escape((string) $s['name'])),
                 $this->escape($this->labels->gender((string) $s['gender'])),
                 $this->deleteButton($csrfField, 'player-remove', 'player_id', (int) $s['id'], (string) $s['name']),
             );
@@ -473,7 +474,7 @@ final class MasterDataView
                 continue;
             }
             $members .= sprintf(
-                '<li class="chip%4$s">%1$s<form method="post" action="/admin/master-data/roster-remove">%2$s'
+                '<li class="chip%4$s"><a class="chip__link" href="/admin/master-data/player?id=%7$d">%1$s</a><form method="post" action="/admin/master-data/roster-remove">%2$s'
                 . '<input type="hidden" name="roster_id" value="%3$d">'
                 . '<button type="submit" class="chip__remove" aria-label="%5$s" title="%6$s">×</button></form></li>',
                 $this->escape((string) $entry['name']),
@@ -482,6 +483,7 @@ final class MasterDataView
                 $assigned[(int) $entry['player_id']] > 1 ? ' chip--warning' : '',
                 $this->text('master_data.remove_from_roster_label', ['name' => (string) $entry['name']]),
                 $this->text('master_data.remove_from_roster'),
+                (int) $entry['player_id'],
             );
         }
 

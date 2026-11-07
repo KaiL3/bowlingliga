@@ -16,7 +16,7 @@ A rule without a number in brackets belongs to the section as a whole.
 
 | Area | Sections |
 |---|---|
-| Public pages | [R1](#r1--results-of-a-fixture) · [R2](#r2--average-list-of-a-team) · [R14](#r14--season-selection-and-matchday-list) · [R15](#r15--matchday-detail-view) · [R16](#r16--league-table-and-day-table) · [R28](#r28--navigation-and-season-choice) · [R33](#r33--home-page-posts) · [R34](#r34--rules-page) · [R36](#r36--mobile-use) |
+| Public pages | [R1](#r1--results-of-a-fixture) · [R2](#r2--average-list-of-a-team) · [R14](#r14--season-selection-and-matchday-list) · [R15](#r15--matchday-detail-view) · [R16](#r16--league-table-and-day-table) · [R28](#r28--navigation-and-season-choice) · [R33](#r33--home-page-posts) · [R34](#r34--rules-page) · [R36](#r36--mobile-use) · [R39](#r39--player-page) |
 | League data | [R6](#r6--players) · [R7](#r7--teams) · [R8](#r8--seasons-matchdays-and-season-configuration) · [R25](#r25--data-minimisation) · [R29](#r29--previous-season-records) · [R38](#r38--league-name) |
 | Season planning | [R9](#r9--season-planning) · [R18](#r18--lane-assignment) · [R31](#r31--positionday) · [R32](#r32--lot-draw) |
 | Scoring | [R11](#r11--player-average) · [R12](#r12--handicap) · [R13](#r13--honours) · [R17](#r17--points) · [R20](#r20--ghost-team) · [R21](#r21--roster-and-lineup) · [R24](#r24--played-matchday) · [R27](#r27--blind-players) |
@@ -751,3 +751,38 @@ A rule without a number in brackets belongs to the section as a whole.
   `Presentation/LeagueSettingsController`/`LeagueSettingsView`; the name is
   read once per request in `public/index.php` and passed to `Layout`,
   `PublicView`, `PrintScoreSheetService` and `AccountManagement`.
+
+## R39 – Player page
+
+- Every player has a page, public at `/player/{id}` and in the admin area at
+  `/admin/master-data/player?id={id}` with the same content. The names in the
+  average lists of the team page and the matchday detail view lead there in
+  the season of the list, the names in the admin player list and in the
+  rosters lead to the admin page (R39.1).
+- The page shows one season at a time: the chosen one (`?season=`), otherwise
+  the current one; if the player has neither played nor is on a roster
+  there, their latest season. With more than one season a selection switches
+  between them (R39.2).
+- **Handicap history:** the frozen handicap of every played matchday of the
+  season as steps; matchdays without a frozen handicap leave a gap (R39.3).
+- **Average history:** the player average after every played matchday
+  ([R11](#r11--player-average)), so up to the season setting "Vorjahr im
+  Schnitt bis Spieltag" including the previous season, plus the mean of the
+  games of the evening as dots. The history starts with the first matchday
+  on which the player has an average: the first matchday they played, or –
+  if a previous season record or previous season games count – already the
+  first matchday of the season with that value. Without either it starts
+  with their first game (R39.4). A table below lists matchday, date, HDC,
+  games, evening and average.
+- **Teams:** one row per season in which the player is on a roster or
+  played for a team (not the ghost team), newest first: season, team,
+  matchdays and games played, average after the last played matchday and the
+  last frozen handicap (R39.5). With legacy data the roster wins over the
+  lineup.
+- A matchday counts as played as soon as one of its fixtures is complete;
+  blind games and ghost team results do not count (R39.6, R11.1). The page
+  only reads raw data (R35) and stores nothing about the player (R25).
+- Implementation: `Domain/PlayerProfile/PlayerHistoryService`,
+  `Application/PlayerProfile/PlayerProfiles`, `PlayerProfileRepository`,
+  `Presentation/PlayerProfileView` with `SvgLineChart` (inline SVG without
+  script, colours from the stylesheet).

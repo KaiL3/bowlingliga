@@ -1474,6 +1474,97 @@ a.matchday-list__row:hover {
     text-decoration: none;
 }
 
+.season-picker__link[aria-current="page"] {
+    background: var(--nav-active-bg);
+    color: var(--nav-active-text);
+}
+
+/* Player page: charts as inline SVG, colours from the tokens */
+.chart-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr));
+    gap: 1.5rem;
+    margin: 0 0 1.5rem;
+}
+
+.chart-grid > .card {
+    margin: 0;
+}
+
+.chart {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+}
+
+.chart__grid {
+    stroke: var(--border);
+    stroke-width: 1;
+}
+
+.chart__tick {
+    fill: var(--text-2);
+    font-size: 13px;
+    font-family: var(--font);
+}
+
+/* The SVG shrinks on phones: larger ticks keep about 13px on screen. */
+@media (max-width: 39.99rem) {
+    .chart__tick {
+        font-size: 20px;
+    }
+}
+
+.chart__line {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 2.5;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
+
+.chart__point {
+    fill: var(--accent);
+}
+
+.chart__dot {
+    fill: var(--surface);
+    stroke: var(--text-2);
+    stroke-width: 1.5;
+}
+
+.chart__caption {
+    margin: 0.5rem 0 0;
+    color: var(--text-2);
+    font-size: 0.8125rem;
+}
+
+.chart__key {
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 0.25rem;
+}
+
+.chart__key--line {
+    width: 1rem;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--accent);
+}
+
+.chart__key--dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    margin-left: 0.5rem;
+    border-radius: 50%;
+    border: 1.5px solid var(--text-2);
+}
+
+.table tr.is-selected td {
+    font-weight: 700;
+}
+
 .honours {
     list-style: none;
     margin: 0;
@@ -1971,6 +2062,12 @@ button:hover,
     border-radius: 999px;
     background: var(--surface-2);
     font-weight: 600;
+}
+
+.chip__link {
+    color: inherit;
+    text-decoration-color: var(--border-strong);
+    text-underline-offset: 0.2em;
 }
 
 .chip form {
