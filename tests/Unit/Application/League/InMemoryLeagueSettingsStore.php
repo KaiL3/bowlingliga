@@ -13,7 +13,7 @@ final class InMemoryLeagueSettingsStore implements LeagueSettingsStore
 {
     public int $saves = 0;
 
-    public function __construct(public ?string $name = null)
+    public function __construct(public ?string $name = null, public bool $players = false)
     {
     }
 
@@ -22,9 +22,15 @@ final class InMemoryLeagueSettingsStore implements LeagueSettingsStore
         return $this->name;
     }
 
-    public function saveLeagueName(string $name): void
+    public function playersPublic(): bool
     {
-        $this->name = $name;
+        return $this->players;
+    }
+
+    public function save(string $name, bool $playersPublic): void
+    {
+        $this->name    = $name;
+        $this->players = $playersPublic;
         $this->saves++;
     }
 }

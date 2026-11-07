@@ -14,7 +14,7 @@ use PHPUnit\Framework\TestCase;
 /**
  * Unit test for {@see LeagueSettings}.
  *
- * Validates: R38.2, R38.3, R5.1
+ * Validates: R38.2, R38.3, R40.1, R5.1
  */
 final class LeagueSettingsTest extends TestCase
 {
@@ -37,19 +37,30 @@ final class LeagueSettingsTest extends TestCase
 
     public function testRenameStoresTheTrimmedName(): void
     {
-        self::assertSame('Bowlingliga Musterstadt', $this->settings->rename('  Bowlingliga Musterstadt '));
+        self::assertSame('Bowlingliga Musterstadt', $this->settings->save('  Bowlingliga Musterstadt ', false));
 
         self::assertSame('Bowlingliga Musterstadt', $this->store->name);
         self::assertSame('Bowlingliga Musterstadt', $this->settings->name());
     }
 
+    public function testPlayerDataIsNotPublicUntilSwitchedOn(): void
+    {
+        self::assertFalse($this->settings->playersPublic());
+
+        $this->settings->save('Bowlingliga', true);
+        self::assertTrue($this->settings->playersPublic());
+
+        $this->settings->save('Bowlingliga', false);
+        self::assertFalse($this->settings->playersPublic());
+    }
+
     public function testNameMustHaveOneToHundredCharacters(): void
     {
-        $this->settings->rename(str_repeat('x', 100));
+        $this->settings->save(str_repeat('x', 100), false);
 
         foreach (['   ', str_repeat('x', 101)] as $invalid) {
             try {
-                $this->settings->rename($invalid);
+                $this->settings->save($invalid, true);
                 self::fail('Invalid name accepted: "' . $invalid . '"');
             } catch (ValidationException) {
                 self::assertSame(1, $this->store->saves, 'Nothing is saved.');
@@ -63,7 +74,7 @@ final class LeagueSettingsTest extends TestCase
 
         $this->expectException(AccessDeniedException::class);
         try {
-            $this->settings->rename('Andere Liga');
+            $this->settings->save('Andere Liga', true);
         } finally {
             self::assertNull($this->store->name);
         }

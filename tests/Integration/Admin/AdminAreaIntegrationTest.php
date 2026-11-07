@@ -16,7 +16,7 @@ use Throwable;
  * End-to-end integration test of the admin area against a local
  * MySQL/MariaDB test database (task 35.7).
  *
- * Validates: R5.1, R28.8, R28.9, R28.10, R28.12, R28.16
+ * Validates: R5.1, R28.8, R28.9, R28.10, R28.12, R28.16, R40.1, R40.2, R40.3
  *
  * Starts the built-in PHP web server with the production front controller
  * `public/index.php`, which points to the test database via
@@ -499,6 +499,19 @@ final class AdminAreaIntegrationTest extends TestCase
         $this->post('/admin/logout', []);
 
         $this->pdo->exec("UPDATE fixture SET completion_status = 'complete' WHERE id = $tp");
+        self::assertSame(404, $this->get('/score-sheet/' . $sheet)[0], 'The original shows names: not public without public player data (R40.2).');
+        $player = $this->insert("INSERT INTO player (name, gender) VALUES ('Anna', 'female')");
+        [$status, $page] = $this->get('/player/' . $player);
+        self::assertSame(404, $status, 'No public player page either (R40.2).');
+        self::assertStringNotContainsString('Anna', $page);
+
+        $this->logIn();
+        self::assertSame(200, $this->get('/player/' . $player)[0], 'Logged-in admins see player data (R40.3).');
+        self::assertSame(200, $this->get('/score-sheet/' . $sheet)[0]);
+        $this->post('/admin/logout', []);
+
+        $this->pdo->exec('UPDATE league_setting SET players_public = 1');
+        self::assertSame(200, $this->get('/player/' . $player)[0], 'Public player data (R40.2).');
         [$status, $content, $header] = $this->get('/score-sheet/' . $sheet);
         self::assertSame(200, $status);
         self::assertSame('PNGDATEN', $content);
@@ -866,13 +879,15 @@ final class AdminAreaIntegrationTest extends TestCase
         self::assertSame(422, $status, 'Leerer Name (R38.3).');
         self::assertSame('Bowlingliga', $this->text('SELECT name FROM league_setting'));
 
-        [$status, , $header] = $this->post('/admin/league/save', ['name' => ' Pin & Spare Liga ', 'csrf_token' => $this->csrfToken($form)]);
+        self::assertStringNotContainsString('name="players_public" value="1" checked', $form, 'Player data is not public in a new installation (R40.1).');
+        [$status, , $header] = $this->post('/admin/league/save', ['name' => ' Pin & Spare Liga ', 'players_public' => '1', 'csrf_token' => $this->csrfToken($form)]);
         self::assertSame(303, $status);
         self::assertStringContainsString('Location: /admin/league?saved=1', $header);
         self::assertSame('Pin & Spare Liga', $this->text('SELECT name FROM league_setting'));
+        self::assertSame('1', $this->text('SELECT players_public FROM league_setting'), 'Saved together with the name (R40.1).');
 
         [, $html] = $this->get('/admin/league?saved=1');
-        self::assertStringContainsString('Der Name der Liga wurde gespeichert.', $html);
+        self::assertStringContainsString('Die Einstellungen der Liga wurden gespeichert.', $html);
         self::assertStringContainsString('<span>Pin &amp; Spare Liga</span>', $html, 'Header after the redirect (R38.4).');
 
         [, $home] = $this->get('/');
@@ -1213,6 +1228,7 @@ final class AdminAreaIntegrationTest extends TestCase
         foreach ([
             'db/migrations/001_schema.sql',
             'db/migrations/002_points_rules.sql',
+            'db/migrations/003_players_public.sql',
         ] as $file) {
             $this->pdo->exec((string) file_get_contents($root . '/' . $file));
         }

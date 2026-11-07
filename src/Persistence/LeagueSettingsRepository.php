@@ -8,11 +8,12 @@ use Bowlingliga\Application\League\LeagueSettingsStore;
 
 /**
  * Raw data repository for the settings of the installation (table
- * `league_setting`, R38).
+ * `league_setting`, R38, R40).
  *
  * The table has exactly one row (id = 1, ensured by a DB CHECK); migration
- * 016 creates it with the default name. Saving creates the row if it is
- * missing (R4.3: transactional, prepared statements).
+ * 001 creates it with the default name, migration 003 adds the player
+ * visibility. Saving creates the row if it is missing (R4.3: transactional,
+ * prepared statements).
  */
 final class LeagueSettingsRepository extends AbstractRepository implements LeagueSettingsStore
 {
@@ -23,12 +24,20 @@ final class LeagueSettingsRepository extends AbstractRepository implements Leagu
         return $row !== null ? (string) $row['name'] : null;
     }
 
-    public function saveLeagueName(string $name): void
+    public function playersPublic(): bool
     {
-        $this->transactional('save_league_name', function () use ($name): void {
+        $row = $this->findOne('SELECT players_public FROM league_setting WHERE id = 1');
+
+        return $row !== null && (int) $row['players_public'] === 1;
+    }
+
+    public function save(string $name, bool $playersPublic): void
+    {
+        $this->transactional('save_league_settings', function () use ($name, $playersPublic): void {
             $this->perform(
-                'INSERT INTO league_setting (id, name) VALUES (1, :name) ON DUPLICATE KEY UPDATE name = :changed',
-                ['name' => $name, 'changed' => $name]
+                'INSERT INTO league_setting (id, name, players_public) VALUES (1, :name, :public)'
+                . ' ON DUPLICATE KEY UPDATE name = :changed, players_public = :changed_public',
+                ['name' => $name, 'public' => (int) $playersPublic, 'changed' => $name, 'changed_public' => (int) $playersPublic]
             );
         });
     }

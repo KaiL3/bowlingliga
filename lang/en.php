@@ -113,6 +113,8 @@ return [
     'public.back_to_table'            => '← Back to the league table',
     'public.honours'                  => 'Honours',
     'public.honours_later'            => 'The honours are published once the season has ended.',
+    'public.honours_not_public'       => 'The honours name individual players and are therefore not public in this league.',
+    'public.players_not_public'       => 'The results of the individual players are not public in this league.',
     'public.honour.series_net'        => 'Highest series (net)',
     'public.honour.series_gross'      => 'Highest series (gross)',
     'public.honour.game_net'          => 'Highest game (net)',
@@ -462,7 +464,7 @@ return [
     'admin.area.rules.text'               => 'Maintain the text of the rules',
     'admin.area.league.short'             => 'League',
     'admin.area.league.title'             => 'League',
-    'admin.area.league.text'              => 'Name of the league',
+    'admin.area.league.text'              => 'Name of the league, public player data',
     'admin.area.account.title'            => 'My account',
     'admin.area.account.text'             => 'Two-factor login, change password',
     'value.gender.male'                   => 'male',
@@ -941,8 +943,10 @@ return [
     'print.language_hint' => 'Preselected with the season\'s language; applies to this print only.',
 
     // Admin area "League" (R38)
-    'league.saved'     => 'The league name was saved.',
+    'league.saved'     => 'The league settings were saved.',
     'league.name_note' => 'Appears in the page header, on the home page, on the score sheets and as issuer of the two-factor login. Authenticator apps set up before keep showing the old name.',
+    'league.players_public'      => 'Show player data publicly',
+    'league.players_public_note' => 'On: everyone sees player names, score sheets, average lists, honours and player pages. Off: without login only team values are visible – results with the team sums per game and the tables. Logged-in admins always see everything.',
 
     // Names of the database operations, shown in error.database_operation
     'operation.update_lock_state'                 => 'Update the lock state',
@@ -964,7 +968,7 @@ return [
     'operation.create_team'                       => 'Create the team',
     'operation.create_game_result'                => 'Create the game result',
     'operation.save_frozen_handicap'              => 'Save the frozen handicap',
-    'operation.save_league_name'                  => 'Save the league name',
+    'operation.save_league_settings'              => 'Save the league settings',
     'operation.save_positionday_fixtures'         => 'Save the positionday fixtures',
     'operation.create_season'                     => 'Create the season',
     'operation.save_game_results'                 => 'Save the game results',

@@ -8,6 +8,8 @@ migrations have run. All migrations are repeatable
 | Migration | Content |
 |---|---|
 | `001_schema.sql` | The complete schema: all raw data tables, the cache tables (`cache_*`, JSON payload + hash, can be discarded at any time) and the settings row `league_setting` with the league name "Bowlingliga" |
+| `002_points_rules.sql` | Points rules per season (game points, bonus points scale) in `season_config` |
+| `003_players_public.sql` | `league_setting.players_public` (R40): off for a new installation, on for one that already has seasons |
 
 Create new schema changes as `002_…sql`, `003_…sql` and so on, and add them
 to the `applySchema()` lists of the integration tests.
@@ -37,7 +39,7 @@ admin_account ─n login_attempt      (password_hash, totp_secret_encrypted,
                                      totp_last_time_step, locked_until, failed_attempts,
                                      session_version)
 home_page_post, rules, privacy_policy, legal_notice   (CMS)
-league_setting                       (name of the league, one row)
+league_setting                       (name of the league, players_public; one row)
 
 fixture 1─2 team_entry               (side home/away, code_version, submitted_at, confirmed_at,
   │                                    rejection_note, closed_at)

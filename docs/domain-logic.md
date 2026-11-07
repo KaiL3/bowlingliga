@@ -16,8 +16,8 @@ A rule without a number in brackets belongs to the section as a whole.
 
 | Area | Sections |
 |---|---|
-| Public pages | [R1](#r1--results-of-a-fixture) · [R2](#r2--average-list-of-a-team) · [R14](#r14--season-selection-and-matchday-list) · [R15](#r15--matchday-detail-view) · [R16](#r16--league-table-and-day-table) · [R28](#r28--navigation-and-season-choice) · [R33](#r33--home-page-posts) · [R34](#r34--rules-page) · [R36](#r36--mobile-use) · [R39](#r39--player-page) |
-| League data | [R6](#r6--players) · [R7](#r7--teams) · [R8](#r8--seasons-matchdays-and-season-configuration) · [R25](#r25--data-minimisation) · [R29](#r29--previous-season-records) · [R38](#r38--league-name) |
+| Public pages | [R1](#r1--results-of-a-fixture) · [R2](#r2--average-list-of-a-team) · [R14](#r14--season-selection-and-matchday-list) · [R15](#r15--matchday-detail-view) · [R16](#r16--league-table-and-day-table) · [R28](#r28--navigation-and-season-choice) · [R33](#r33--home-page-posts) · [R34](#r34--rules-page) · [R36](#r36--mobile-use) · [R39](#r39--player-page) · [R40](#r40--public-player-data) |
+| League data | [R6](#r6--players) · [R7](#r7--teams) · [R8](#r8--seasons-matchdays-and-season-configuration) · [R25](#r25--data-minimisation) · [R29](#r29--previous-season-records) · [R38](#r38--league-name) · [R40](#r40--public-player-data) |
 | Season planning | [R9](#r9--season-planning) · [R18](#r18--lane-assignment) · [R31](#r31--positionday) · [R32](#r32--lot-draw) |
 | Scoring | [R11](#r11--player-average) · [R12](#r12--handicap) · [R13](#r13--honours) · [R17](#r17--points) · [R20](#r20--ghost-team) · [R21](#r21--roster-and-lineup) · [R24](#r24--played-matchday) · [R27](#r27--blind-players) |
 | Result entry | [R3](#r3--original-score-sheets-ocr-deferred) · [R19](#r19--print-score-sheet) · [R22](#r22--manual-result-entry) · [R30](#r30--result-entry-overview-and-virtual-score-sheet) · [R37](#r37--result-entry-by-the-teams) · [R10](#r10--online-documentation-superseded) |
@@ -42,7 +42,8 @@ A rule without a number in brackets belongs to the section as a whole.
   each team (R1.1, R1.2); target: within 3 seconds.
 - A matchday without results is marked "ohne Ergebnisse" and shows no values
   (R1.3); an unknown matchday shows a message instead of values (R1.5).
-- Everything public is readable without login (R1.4).
+- Everything public is readable without login (R1.4); player data only if the
+  league makes it public ([R40](#r40--public-player-data)).
 - Implementation: `PublicController`, `PublicView`, `PublicDataReader`.
 
 ## R2 – Average list of a team
@@ -294,7 +295,8 @@ A rule without a number in brackets belongs to the section as a whole.
 ## R15 – Matchday detail view
 
 - A played matchday shows the average lists of its teams, the day table and
-  the original score sheets (R15.1), public and without login (R15.2).
+  the original score sheets (R15.1), public and without login (R15.2);
+  without public player data only the team values ([R40](#r40--public-player-data)).
 - The **day table** has the structure of the league table, limited to this
   matchday, with rank and total row (R15.3).
 - Without an original score sheet a note says so (R15.4); an unplayed
@@ -786,3 +788,30 @@ A rule without a number in brackets belongs to the section as a whole.
   `Application/PlayerProfile/PlayerProfiles`, `PlayerProfileRepository`,
   `Presentation/PlayerProfileView` with `SvgLineChart` (inline SVG without
   script, colours from the stylesheet).
+
+## R40 – Public player data
+
+- A league setting decides whether visitors without login see player names
+  and everything about players; it applies to the whole installation and is
+  changed in the admin area "Liga" (R40.1). A new installation starts with
+  "off"; migration 003 switches it on for an installation that already had
+  seasons, so that it keeps showing what it showed before. The demo data
+  (`bin/seed-demo.php`) switches it on.
+- **Off** (R40.2): public pages show team values only.
+  - Matchday detail view: per fixture the result with the team sums per game
+    and the points, and the day table; no score sheet, no original score
+    sheet, no average lists, a note instead.
+  - Team page: a note in place of the average list.
+  - Honours: a note, since every honour names a player.
+  - Player page (`/player/{id}`) and original score sheet (`/score-sheet/{id}`):
+    404.
+  - Unchanged: home page (results without players), matchday list, league
+    table.
+- Logged-in admins see the public pages in full (R40.3). Teams have no login;
+  they see their players only in their result entry
+  ([R37](#r37--result-entry-by-the-teams)), which the setting does not
+  affect. The check starts no session for visitors without a session cookie.
+- Implementation: column `league_setting.players_public`,
+  `LeagueSettings::playersPublic()`/`save()`, `LeagueSettingsView` (checkbox),
+  `$playersVisible` in `public/index.php`, `$withPlayers` of
+  `PublicController`/`PublicView`.
