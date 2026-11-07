@@ -51,8 +51,10 @@ A rule without a number in brackets belongs to the section as a whole.
 - The detail view of a played matchday shows an average list for both teams
   of each fixture, with the state up to and including this matchday (R2.1,
   R2.5).
-- Per player: gender (R2.7), HDC frozen for this matchday – empty if the
-  player has none (R2.8, R2.15) –, games played (R2.9), pins net and gross
+- Per player: gender (R2.7), HDC frozen for this matchday – for a player who
+  missed it the last one frozen before it in the season, since a missed
+  matchday does not change it; empty if the player has none (R2.8, R2.15) –;
+  the gross values are net + this HDC; games played (R2.9), pins net and gross
   (R2.10), average net and gross with two decimals (R2.2, R2.11), best series
   net and gross (R2.12), best single game net and gross (R2.13). Sorted by
   average net, descending (R2.3). A total row sums games and pins and gives
@@ -766,7 +768,9 @@ A rule without a number in brackets belongs to the section as a whole.
   there, their latest season. With more than one season a selection switches
   between them (R39.2).
 - **Handicap history:** the frozen handicap of every played matchday of the
-  season as steps; matchdays without a frozen handicap leave a gap (R39.3).
+  season as steps; on a matchday the player missed the line continues with
+  the last frozen handicap, since it does not change without games – the
+  value table shows no HDC there (R39.3).
 - **Average history:** the player average after every played matchday
   ([R11](#r11--player-average)), so up to the season setting "Vorjahr im
   Schnitt bis Spieltag" including the previous season, plus the mean of the

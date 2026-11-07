@@ -128,6 +128,34 @@ final class RawDataReaderIntegrationTest extends TestCase
     }
 
     /**
+     * R2.8: a player who missed the matchday keeps the last handicap frozen
+     * before it; a later frozen handicap does not leak into an earlier state.
+     */
+    public function testAMissedMatchdayKeepsTheLastFrozenHandicap(): void
+    {
+        $this->createSampleData();
+        // Matchday 2: only Anna plays (new HDC 18), Bernd misses it.
+        $this->insert('INSERT INTO matchday (id, season_id, matchday_number, date, is_played) VALUES (2, 1, 2, :d, 1)', ['d' => '2025-09-15']);
+        $this->insert('INSERT INTO fixture (id, matchday_id, home_team_season_id, away_team_season_id) VALUES (2, 2, 1, 2)', []);
+        $this->insert('INSERT INTO frozen_handicap (matchday_id, player_id, handicap) VALUES (2, 1, 18)', []);
+        $this->createPositionWithResult(1, 2, 1, 1, [160, 160, 160], false);
+        // Matchday 3: Bernd plays again with HDC 5.
+        $this->insert('INSERT INTO matchday (id, season_id, matchday_number, date, is_played) VALUES (3, 1, 3, :d, 1)', ['d' => '2025-09-22']);
+        $this->insert('INSERT INTO fixture (id, matchday_id, home_team_season_id, away_team_season_id) VALUES (3, 3, 1, 2)', []);
+        $this->insert('INSERT INTO frozen_handicap (matchday_id, player_id, handicap) VALUES (3, 2, 5)', []);
+        $this->createPositionWithResult(1, 3, 1, 2, [180, 180, 180], false);
+
+        $rows = [];
+        foreach ((new AverageListAggregator(new AverageListRawDataRepository($this->database)))->averageList(1, 2)->rows as $row) {
+            $rows[$row->playerName] = $row;
+        }
+
+        self::assertSame(18, $rows['Anna']->handicap);
+        self::assertSame(10, $rows['Bernd']->handicap, 'Bernd keeps the handicap of matchday 1.');
+        self::assertNotNull($rows['Bernd']->averageGross);
+    }
+
+    /**
      * R13.1: the honours aggregation returns a result; ghost team and blind
      * results are excluded by the pure honours module.
      */

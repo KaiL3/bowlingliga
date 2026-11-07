@@ -17,8 +17,9 @@ use Bowlingliga\Persistence\AbstractRepository;
  * Returns per player of a team (team season) the net games entered up to and
  * including the matchday counter in question, in game order, together with
  * the blind flag (R27.13) and the ghost team flag (R20.4), as well as the
- * frozen handicap assigned to the matchday in question (R2.8) or null for
- * "without handicap" (R2.15). Excluding games marked blind and ghost team
+ * handicap frozen for the matchday in question – for a player who missed it,
+ * the last one frozen before it in the season (R2.8) – or null for "without
+ * handicap" (R2.15). Excluding games marked blind and ghost team
  * games deliberately only happens in the pure
  * {@see \Bowlingliga\Application\Aggregation\AverageListAggregator}.
  *
@@ -43,13 +44,6 @@ final class AverageListRawDataRepository extends AbstractRepository implements A
 
         $seasonId       = (int) $teamSeason['season_id'];
         $isGhostTeam = (int) $teamSeason['is_ghost_team'] === 1;
-
-        // The matchday belonging to the counter (for the frozen handicap).
-        $matchday = $this->findOne(
-            'SELECT id FROM matchday WHERE season_id = :season AND matchday_number = :z',
-            ['season' => $seasonId, 'z' => $toMatchdayCounter]
-        );
-        $matchdayId = $matchday === null ? null : (int) $matchday['id'];
 
         // All real players lined up for this team up to the state in question.
         $player = $this->findAll(
@@ -76,7 +70,7 @@ final class AverageListRawDataRepository extends AbstractRepository implements A
                 (string) $row['name'],
                 $this->gender((string) $row['gender']),
                 $this->readGames($teamSeasonId, $playerId, $seasonId, $toMatchdayCounter, $isGhostTeam),
-                $matchdayId === null ? null : $this->frozenHandicap($matchdayId, $playerId),
+                $this->frozenHandicap($seasonId, $playerId, $toMatchdayCounter),
             );
         }
 
@@ -122,12 +116,20 @@ final class AverageListRawDataRepository extends AbstractRepository implements A
         return $games;
     }
 
-    private function frozenHandicap(int $matchdayId, int $playerId): ?int
+    /**
+     * The handicap frozen for the matchday in question; if the player missed
+     * it, the last one frozen before it in the season, since a missed matchday
+     * does not change the handicap (R2.8).
+     */
+    private function frozenHandicap(int $seasonId, int $playerId, int $toMatchdayCounter): ?int
     {
         $row = $this->findOne(
-            'SELECT handicap FROM frozen_handicap
-             WHERE matchday_id = :sp AND player_id = :player',
-            ['sp' => $matchdayId, 'player' => $playerId]
+            'SELECT fh.handicap FROM frozen_handicap fh
+             JOIN matchday md ON md.id = fh.matchday_id
+             WHERE fh.player_id = :player AND md.season_id = :season AND md.matchday_number <= :z
+             ORDER BY md.matchday_number DESC
+             LIMIT 1',
+            ['player' => $playerId, 'season' => $seasonId, 'z' => $toMatchdayCounter]
         );
 
         return $row === null ? null : (int) $row['handicap'];

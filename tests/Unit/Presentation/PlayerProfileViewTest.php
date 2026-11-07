@@ -111,6 +111,22 @@ final class PlayerProfileViewTest extends TestCase
         );
     }
 
+    public function testAMissedMatchdayContinuesTheHandicapLine(): void
+    {
+        $profile = $this->profile();
+        $missed  = new PlayerProfile(7, 'Anna', 'female', $profile->seasons, 2, new PlayerHistory([
+            new PlayerHistoryPoint(201, 1, '2026-09-02', 150.0, 150.0, 3, 20),
+            new PlayerHistoryPoint(202, 2, '2026-09-09', 150.0, null, 0, null),
+            new PlayerHistoryPoint(203, 3, '2026-09-16', 160.0, 170.0, 3, 16),
+        ]));
+
+        $html  = $this->render($missed);
+        $chart = substr($html, (int) strpos($html, '<svg'), (int) strpos($html, '</svg>') - (int) strpos($html, '<svg'));
+
+        self::assertSame(1, substr_count($chart, 'class="chart__line"'), 'One unbroken handicap line.');
+        self::assertStringContainsString('<td>—</td>', $html, 'The table shows no frozen HDC for the missed matchday.');
+    }
+
     public function testANoteExplainsThePreviousSeasonInTheAverage(): void
     {
         $profile = $this->profile();
