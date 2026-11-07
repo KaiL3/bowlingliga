@@ -26,6 +26,7 @@ final class MatchdayDetail
      * @param string                $date          Date (Y-m-d)
      * @param list<MatchdayFixture> $fixtures      Fixtures of the matchday (R15.1)
      * @param Table                 $matchdayTable matchday table for the whole matchday (R15.3)
+     * @param int|null              $seasonId      Season of the matchday (links to the player page, R39.1)
      */
     public function __construct(
         public readonly int $matchdayId,
@@ -33,6 +34,7 @@ final class MatchdayDetail
         public readonly string $date,
         public readonly array $fixtures,
         public readonly Table $matchdayTable,
+        public readonly ?int $seasonId = null,
     ) {
     }
 

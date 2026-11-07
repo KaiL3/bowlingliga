@@ -204,6 +204,9 @@ $layout     = new Layout(Appearance::fromCookies($_COOKIE), $translator, $league
 $navigation = new PublicNavigation($translator);
 $controller = new PublicController($dataReader, new PublicView(new \Bowlingliga\Presentation\ScoreSheetCalculator(), $translator, $leagueName), t: $translator);
 $cmsView    = new CmsView($translator);
+// Player page, public and in the admin area (R39).
+$playerProfiles    = new \Bowlingliga\Application\PlayerProfile\PlayerProfiles(new \Bowlingliga\Persistence\PlayerProfile\PlayerProfileRepository($database));
+$playerProfileView = new \Bowlingliga\Presentation\PlayerProfileView($translator);
 // Text of the catalog in the request's language (for page titles and short messages).
 $t = static fn (string $key, array $params = []): string => $translator->t($key, $params);
 
@@ -328,6 +331,24 @@ $router->publicWithId('/team', static function (int $teamSeasonId) use ($t, $pag
         $team !== null ? (string) $team['team_name'] : $t('common.team'),
         $controller->teamAverageList($teamSeasonId),
         $team !== null ? (int) $team['season_id'] : null,
+    );
+});
+
+// Player page with handicap and average history and teams (R39), linked from
+// the average lists; the season comes from `?season=`, otherwise the current one.
+$router->publicWithId('/player', static function (int $playerId) use ($t, $page, $playerProfiles, $playerProfileView, $chosenSeasonId, $defaultSeasonId): void {
+    $profile = $playerProfiles->profile($playerId, $chosenSeasonId(), $defaultSeasonId());
+    if ($profile === null) {
+        http_response_code(404);
+        echo $page($t('player.title'), '<p class="notice" role="status">' . htmlspecialchars($t('player.not_found')) . '</p>');
+
+        return;
+    }
+
+    echo $page(
+        $profile->name,
+        $playerProfileView->render($profile, static fn (int $seasonId): string => '/player/' . $playerId . '?season=' . $seasonId),
+        $profile->selectedSeasonId,
     );
 });
 
@@ -921,6 +942,29 @@ $router->admin('/master-data', static function () use (
     echo $adminPage(
         'admin.area.master_data.title',
         $masterDataController->overview($csrf->fieldHtml(), $adminSeasonId(), null, null, $tab, $importArea)
+    );
+});
+
+// Player page in the admin area (R39), linked from the player list and the
+// rosters; same content as the public page.
+$router->admin('/master-data/player', static function () use ($t, $ensureAdminAccess, $adminPage, $playerProfiles, $playerProfileView, $chosenSeasonId, $adminSeasonId): void {
+    if (! $ensureAdminAccess()) {
+        return;
+    }
+
+    $playerId = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
+    $profile  = is_int($playerId) && $playerId > 0 ? $playerProfiles->profile($playerId, $chosenSeasonId(), $adminSeasonId()) : null;
+    $back     = '<p><a class="more" href="/admin/master-data">' . htmlspecialchars($t('player.back_to_list')) . '</a></p>';
+    if ($profile === null) {
+        http_response_code(404);
+        echo $adminPage('player.title', '<p class="notice" role="status">' . htmlspecialchars($t('player.not_found')) . '</p>' . $back);
+
+        return;
+    }
+
+    echo $adminPage(
+        'player.title',
+        $playerProfileView->render($profile, static fn (int $seasonId): string => '/admin/master-data/player?id=' . $profile->playerId . '&season=' . $seasonId, $back),
     );
 });
 

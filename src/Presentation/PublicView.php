@@ -208,7 +208,7 @@ final class PublicView
         $panels = '';
         foreach ($detail->fixtures as $index => $fixture) {
             $tab .= $this->renderTab($fixture, $index);
-            $panels .= $this->renderTabContent($fixture, $index);
+            $panels .= $this->renderTabContent($fixture, $index, $detail->seasonId);
         }
 
         $tabs = <<<HTML
@@ -267,7 +267,7 @@ final class PublicView
             $this->escape($standing),
             $this->escape($team->teamLabel),
         )
-            . $this->renderAverageList($this->escape($team->teamLabel), $team->averageList, $this->text('public.average_list'), $blank)
+            . $this->renderAverageList($this->escape($team->teamLabel), $team->averageList, $this->text('public.average_list'), $blank, $team->seasonId)
             . sprintf('<p><a class="more" href="/table?season=%d">%s</a></p>', $team->seasonId, $this->text('public.back_to_table'));
     }
 
@@ -384,7 +384,7 @@ final class PublicView
      * Renders the content of a tab: result, digital score sheet of both teams,
      * link to the original score sheet and both average lists.
      */
-    private function renderTabContent(MatchdayFixture $fixture, int $index): string
+    private function renderTabContent(MatchdayFixture $fixture, int $index, ?int $seasonId = null): string
     {
         $homeName = $this->escape($fixture->home->teamName ?? '—');
         $awayName = $this->escape($fixture->away->teamName ?? '—');
@@ -408,8 +408,8 @@ final class PublicView
                 </div>
                 {$original}
                 <div class="grid grid--2">
-                    {$this->renderAverageList($homeName, $fixture->averageListHome)}
-                    {$this->renderAverageList($awayName, $fixture->averageListAway)}
+                    {$this->renderAverageList($homeName, $fixture->averageListHome, seasonId: $seasonId)}
+                    {$this->renderAverageList($awayName, $fixture->averageListAway, seasonId: $seasonId)}
                 </div>
             </section>
             HTML;
@@ -621,6 +621,7 @@ final class PublicView
         AverageList $averageList,
         ?string $title = null,
         ?string $blank = null,
+        ?int $seasonId = null,
     ): string {
         $title ??= $this->text('public.average_list_of', ['team' => $teamLabel], false);
         $blank ??= $this->t->t('public.no_averages_until');
@@ -639,7 +640,13 @@ final class PublicView
             $exactNet = $row->numberOfGames > 0 ? $row->netPins / $row->numberOfGames : 0.0;
             $rows .= sprintf(
                 '<tr><td class="text">%s</td><td class="only-wide">%s</td><td>%s</td><td>%d</td><td>%s</td><td>%s</td></tr>',
-                $this->escape($row->playerName),
+                // The name leads to the player page in the same season (R39.1).
+                sprintf(
+                    '<a href="/player/%d%s">%s</a>',
+                    (int) $row->playerId,
+                    $seasonId !== null ? '?season=' . $seasonId : '',
+                    $this->escape($row->playerName),
+                ),
                 $this->escape($gender),
                 $this->escape($hdc),
                 $row->numberOfGames,

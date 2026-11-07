@@ -13,6 +13,7 @@ names are English.
 | `/matchday/{id}` | Matchday detail: one tab per fixture (by lane pair), digital score sheet, average lists, matchday table, original score sheet | as above + `ScoreSheetDisplayRepository`, `tabs.js` |
 | `/table?season=` | League table; team names link to the team page | `TableAggregator` |
 | `/team/{id}` | Team page (team season id): current average list, state after the last played matchday; ghost team/unknown → message | `PublicDataReader::teamAverageList`, `AverageListAggregator` |
+| `/player/{id}?season=` | Player page (R39): key figures of the season, season selection, handicap and average history as inline SVG with the values per matchday, teams per season; linked from the names in the average lists; unknown player → 404 with message | `Application/PlayerProfile/PlayerProfiles`, `PlayerProfileRepository`, `PlayerProfileView`, `SvgLineChart` |
 | `/honours?season=` | Honours from the end date | `HonoursAggregator` |
 | `/rules` | CMS rules; with a readable HDC formula of the current season a second tab "Handicap-Tabelle" (HDC per whole average, jump link `#rules-panel-handicap`) | `CmsView`, `Domain/Handicap/HandicapTableService` |
 | `/score-sheet/{id}` | Uploaded original score sheet (image/PDF) from the score sheet directory; public only for a complete fixture, `ETag` = SHA-256, `304` on repetition, `500` if the file is missing | `OriginalScoreSheetRepository`, `FileSystemBlobStore` |
@@ -36,6 +37,7 @@ scrolls the active area into view).
 | `/admin/login/code` | GET/POST | Login step 2: code from the app (`totp`), `cancel=1`; only reachable while the time limit (5 min) after a successful password check is running | `AuthModule::confirmSecondFactor` |
 | `/admin` | GET | Overview with links | `AdminView` |
 | `/admin/master-data?tab=` | GET | Tabs players, seasons, teams (with roster), matchdays, admin accounts, import; after an action its tab stays selected | `MasterDataController` |
+| `/admin/master-data/player?id=&season=` | GET | Player page in the admin area, same content as `/player/{id}`; linked from the player list and the rosters; without `season` the admin's season | `PlayerProfiles`, `PlayerProfileView` |
 | `/admin/master-data/import-preview` | POST (upload) | Player import: check the CSV and show it as a preview, save nothing | `PlayerImportController`, `Application/Import/PlayerImport` |
 | `/admin/master-data/import-template` | GET | Download the template CSV of the player import in the current language (column names, separator, example rows) | `PlayerImportController::template`, `PlayerImportView::template` |
 | `/admin/master-data/import` | POST | Save the confirmed import in one transaction (teams, players, rosters, previous season records), then tab "Teams" | as above |

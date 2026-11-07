@@ -177,4 +177,10 @@ final class MasterDataViewTest extends TestCase
         self::assertStringContainsString('role="alert"', $html);
         self::assertStringContainsString('Der Benutzername ist bereits vergeben.', $html);
     }
+
+    /** R39.1: a player's name leads to their page in the admin area. */
+    public function testPlayerNamesLinkToThePlayerPage(): void
+    {
+        self::assertStringContainsString('<a href="/admin/master-data/player?id=1">Anna</a>', $this->render());
+    }
 }
