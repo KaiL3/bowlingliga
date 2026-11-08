@@ -17,7 +17,7 @@ use PHPUnit\Framework\TestCase;
  * Unit test for the admin area "Liga" ({@see LeagueSettingsController},
  * {@see LeagueSettingsView}).
  *
- * Validates: R38.3, R5.1, R22.5
+ * Validates: R38.3, R40.1, R5.1, R22.5
  */
 final class LeagueSettingsControllerTest extends TestCase
 {
@@ -49,7 +49,7 @@ final class LeagueSettingsControllerTest extends TestCase
 
     public function testConfirmationAfterTheRedirect(): void
     {
-        self::assertStringContainsString('Der Name der Liga wurde gespeichert.', $this->controller->edit(self::CSRF, saved: true));
+        self::assertStringContainsString('Die Einstellungen der Liga wurden gespeichert.', $this->controller->edit(self::CSRF, saved: true));
     }
 
     public function testSavingRedirectsBackToTheForm(): void
@@ -63,14 +63,31 @@ final class LeagueSettingsControllerTest extends TestCase
 
     public function testInvalidNameKeepsTheStoredOneAndPrefillsTheInput(): void
     {
-        $result = $this->controller->save(['name' => '']);
+        $result = $this->controller->save(['name' => '', 'players_public' => '1']);
 
         self::assertFalse($result->successful);
         self::assertStringContainsString('Name der Liga', $result->message);
         self::assertSame('Pin & Spare Liga', $this->store->name);
+        self::assertFalse($this->store->players, 'Nothing is saved.');
 
-        $html = $this->controller->edit(self::CSRF, false, '<b>neu</b>', $result->message);
+        $html = $this->controller->edit(self::CSRF, false, ['name' => '<b>neu</b>', 'players_public' => '1'], $result->message);
         self::assertStringContainsString('value="&lt;b&gt;neu&lt;/b&gt;"', $html);
+        self::assertStringContainsString('name="players_public" value="1" checked', $html, 'The submitted choice stays.');
+    }
+
+    public function testTheCheckboxShowsAndSavesThePlayerVisibility(): void
+    {
+        $html = $this->controller->edit(self::CSRF);
+        self::assertStringContainsString('Spielerdaten öffentlich zeigen', $html);
+        self::assertStringNotContainsString('value="1" checked', $html, 'Off by default.');
+
+        self::assertTrue($this->controller->save(['name' => 'Liga', 'players_public' => '1'])->successful);
+        self::assertTrue($this->store->players);
+        self::assertStringContainsString('name="players_public" value="1" checked', $this->controller->edit(self::CSRF));
+
+        // An unticked checkbox is not submitted.
+        $this->controller->save(['name' => 'Liga']);
+        self::assertFalse($this->store->players);
     }
 
     public function testWithoutLoginNothingIsSaved(): void

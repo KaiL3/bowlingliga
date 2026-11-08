@@ -201,14 +201,19 @@ final class PublicView
      * The tabs are fully usable without JavaScript (all panels visible); the
      * locally included script `/assets/js/tabs.js` hides the panels not
      * selected when JavaScript is active.
+     *
+     * Without public player data a tab only shows the result with the team
+     * sums per game (R40.2).
      */
-    public function renderMatchdayDetail(MatchdayDetail $detail): string
+    public function renderMatchdayDetail(MatchdayDetail $detail, bool $withPlayers = true): string
     {
         $tab = '';
         $panels = '';
         foreach ($detail->fixtures as $index => $fixture) {
             $tab .= $this->renderTab($fixture, $index);
-            $panels .= $this->renderTabContent($fixture, $index, $detail->seasonId);
+            $panels .= $withPlayers
+                ? $this->renderTabContent($fixture, $index, $detail->seasonId)
+                : $this->renderTeamTabContent($fixture, $index);
         }
 
         $tabs = <<<HTML
@@ -249,8 +254,9 @@ final class PublicView
      * Team page: a team's current average list, reachable via the team name
      * in the league and matchday table (R2).
      */
-    public function renderTeamAverageList(TeamAverageList $team): string
+    public function renderTeamAverageList(TeamAverageList $team, bool $withPlayers = true): string
     {
+        $backLink = sprintf('<p><a class="more" href="/table?season=%d">%s</a></p>', $team->seasonId, $this->text('public.back_to_table'));
         $standing = $team->standingMatchdayCounter !== null
             ? $this->t->t('public.standing_after', [
                 'number' => $team->standingMatchdayCounter,
@@ -262,24 +268,35 @@ final class PublicView
             ? $this->t->t('public.team_no_averages')
             : $this->t->t('public.no_matchday_played');
 
-        return sprintf(
+        $header = sprintf(
             '<div class="page-header"><p class="page-header__kicker">%s</p><h1>%s</h1></div>',
             $this->escape($standing),
             $this->escape($team->teamLabel),
-        )
+        );
+
+        if (! $withPlayers) {
+            // R40.2: the average list consists of players only.
+            return $header . $this->playersHiddenCard() . $backLink;
+        }
+
+        return $header
             . $this->renderAverageList($this->escape($team->teamLabel), $team->averageList, $this->text('public.average_list'), $blank, $team->seasonId)
-            . sprintf('<p><a class="more" href="/table?season=%d">%s</a></p>', $team->seasonId, $this->text('public.back_to_table'));
+            . $backLink;
     }
 
     /**
      * Renders a season's honours if they are publicly visible (R13.8, R13.10).
      *
      * Before the end date the honours are not shown to an anonymous visitor; a
-     * note appears instead (R13.8).
+     * note appears instead (R13.8). Without public player data a note
+     * replaces them as well, since every honour names a player (R40.2).
      */
-    public function renderHonours(Honours $honours): string
+    public function renderHonours(Honours $honours, bool $withPlayers = true): string
     {
         $title = '<h1>' . $this->text('public.honours') . '</h1>';
+        if (! $withPlayers) {
+            return $title . '<section class="card"><p class="empty">' . $this->text('public.honours_not_public') . '</p></section>';
+        }
         if (! $honours->isPubliclyVisible()) {
             // R13.8: no public display before the end date.
             return $title . '<section class="card"><p class="empty">' . $this->text('public.honours_later') . '</p></section>';
@@ -413,6 +430,27 @@ final class PublicView
                 </div>
             </section>
             HTML;
+    }
+
+    /**
+     * Content of a tab without public player data (R40.2): only the result
+     * with the team sums per game; no score sheet, no original score sheet,
+     * no average lists.
+     */
+    private function renderTeamTabContent(MatchdayFixture $fixture, int $index): string
+    {
+        return <<<HTML
+            <section class="tabs__panel" id="fixture-panel-{$index}" role="tabpanel" aria-labelledby="fixture-tab-{$index}">
+                {$this->renderResult($fixture, true)}
+                <p class="notice">{$this->text('public.players_not_public')}</p>
+            </section>
+            HTML;
+    }
+
+    /** Card in place of player data that is not public (R40.2). */
+    private function playersHiddenCard(): string
+    {
+        return '<section class="card"><p class="empty">' . $this->text('public.players_not_public') . '</p></section>';
     }
 
     /**

@@ -125,7 +125,14 @@ final class PlayerProfileView
             : '<p class="chart__caption">' . $this->text('player.previous_season_note', ['number' => $previousSeasonUntil]) . '</p>';
 
         $labels    = array_map(static fn (PlayerHistoryPoint $p): string => (string) $p->matchdayNumber, $points);
-        $handicaps = array_map(static fn (PlayerHistoryPoint $p): ?float => $p->handicap === null ? null : (float) $p->handicap, $points);
+        // A matchday the player missed keeps the last frozen handicap: it does
+        // not change without games, so the line continues (R39.3).
+        $handicaps = [];
+        $last      = null;
+        foreach ($points as $point) {
+            $last        = $point->handicap === null ? $last : (float) $point->handicap;
+            $handicaps[] = $last;
+        }
         $averages  = array_map(static fn (PlayerHistoryPoint $p): ?float => $p->average, $points);
         $evenings  = array_map(static fn (PlayerHistoryPoint $p): ?float => $p->dayAverage, $points);
 

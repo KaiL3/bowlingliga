@@ -172,6 +172,36 @@ final class PublicViewTest extends TestCase
         self::assertStringContainsString('<a href="/player/1?season=4">Anna</a>', $this->view->renderTeamAverageList($team));
     }
 
+    /**
+     * R40.2: without public player data a fixture only shows the team sums
+     * per game; the team page and the honours show a note.
+     */
+    public function testWithoutPublicPlayerDataOnlyTeamValuesAppear(): void
+    {
+        $detail = $this->buildDetail(originalScoreSheetId: 42);
+
+        $html = $this->view->renderMatchdayDetail($detail, false);
+
+        self::assertStringContainsString('Spiel 1', $html, 'Team sums per game.');
+        self::assertStringContainsString('Tagestabelle', $html);
+        self::assertStringContainsString('Die Ergebnisse der einzelnen Spieler sind in dieser Liga nicht öffentlich.', $html);
+        foreach (['Anna', 'Ben', 'Spieler 1', '/player/', '/score-sheet/42', 'sc-name'] as $hidden) {
+            self::assertStringNotContainsString($hidden, $html);
+        }
+
+        $team = new \Bowlingliga\Application\PublicSite\TeamAverageList(11, 4, 'Alpha', 1, '2026-01-15', $detail->fixtures[0]->averageListHome);
+        $teamPage = $this->view->renderTeamAverageList($team, false);
+        self::assertStringContainsString('<h1>Alpha</h1>', $teamPage);
+        self::assertStringContainsString('nicht öffentlich', $teamPage);
+        self::assertStringNotContainsString('Anna', $teamPage);
+        self::assertStringContainsString('/table?season=4', $teamPage);
+
+        $honours = new Honours([new CategoryResult(HonourCategory::HIGHEST_SERIES_NET, Gender::MALE, [new HonourPlace(1, [new HonourPlacement(5, 620, 'Max')])])], true);
+        $honoursPage = $this->view->renderHonours($honours, false);
+        self::assertStringContainsString('Die Ehrungen nennen einzelne Spieler', $honoursPage);
+        self::assertStringNotContainsString('Max', $honoursPage);
+    }
+
     public function testEmptyAverageListShowsMessage(): void
     {
         $blank = $this->averageLists->averageList([]);

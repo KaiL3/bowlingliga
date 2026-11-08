@@ -207,4 +207,9 @@ $sanitizer = new HtmlSanitizer();
 (new RulesManagement(new RulesRepository($database), $validator, $sanitizer, $access))->save($german
     ? "<h2>Spielregeln der Demo-Liga</h2>\n<p>Jedes Team spielt mit vier Spielern drei Spiele. Je Spiel gibt es Punkte für das höhere Brutto-Ergebnis, dazu Bonuspunkte für die Gesamtpins.</p>"
     : "<h2>Rules of the demo league</h2>\n<p>Every team plays three games with four players. Each game earns points for the higher gross score, plus bonus points for the total pins.</p>");
-echo "News post and rules added.\nDone. Create an admin account with: php bin/create-admin.php <username>\n";
+echo "News post and rules added.\n";
+
+// The demo league is fictional, so its players are public (R40.1).
+$demoSettings = new \Bowlingliga\Persistence\LeagueSettingsRepository($database);
+$demoSettings->save(\Bowlingliga\Application\League\LeagueSettings::nameFrom($demoSettings), true);
+echo "Player data made public.\nDone. Create an admin account with: php bin/create-admin.php <username>\n";

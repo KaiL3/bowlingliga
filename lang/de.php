@@ -114,6 +114,8 @@ return [
     'public.back_to_table'            => '← Zur Ligatabelle',
     'public.honours'                  => 'Ehrungen',
     'public.honours_later'            => 'Die Ehrungen werden erst nach Ablauf der Saison veröffentlicht.',
+    'public.honours_not_public'       => 'Die Ehrungen nennen einzelne Spieler und sind in dieser Liga deshalb nicht öffentlich.',
+    'public.players_not_public'       => 'Die Ergebnisse der einzelnen Spieler sind in dieser Liga nicht öffentlich.',
     'public.honour.series_net'        => 'Höchste Serie (Netto)',
     'public.honour.series_gross'      => 'Höchste Serie (Brutto)',
     'public.honour.game_net'          => 'Höchstes Spiel (Netto)',
@@ -463,7 +465,7 @@ return [
     'admin.area.rules.text'               => 'Text der Spielregeln pflegen',
     'admin.area.league.short'             => 'Liga',
     'admin.area.league.title'             => 'Liga',
-    'admin.area.league.text'              => 'Name der Liga',
+    'admin.area.league.text'              => 'Name der Liga, öffentliche Spielerdaten',
     'admin.area.account.title'            => 'Mein Konto',
     'admin.area.account.text'             => 'Zwei-Faktor-Anmeldung, Passwort ändern',
     'value.gender.male'                   => 'männlich',
@@ -942,8 +944,10 @@ return [
     'print.language_hint' => 'Vorbelegt mit der Sprache der Saison; gilt nur für diesen Druck.',
 
     // Admin area "Liga" (R38)
-    'league.saved'     => 'Der Name der Liga wurde gespeichert.',
+    'league.saved'     => 'Die Einstellungen der Liga wurden gespeichert.',
     'league.name_note' => 'Erscheint im Seitenkopf, auf der Startseite, auf den Spielzetteln und als Aussteller der Zwei-Faktor-Anmeldung. Bereits eingerichtete Authenticator-Apps zeigen weiter den alten Namen.',
+    'league.players_public'      => 'Spielerdaten öffentlich zeigen',
+    'league.players_public_note' => 'Ein: Alle sehen Spielernamen, Spielberichtsbogen, Schnittlisten, Ehrungen und Spielerseiten. Aus: Ohne Anmeldung sind nur Teamwerte sichtbar – Ergebnisse mit den Teamsummen je Spiel und die Tabellen. Angemeldete Admins sehen immer alles.',
 
     // Names of the database operations, shown in error.database_operation
     'operation.update_lock_state'                 => 'Sperrstatus aktualisieren',
@@ -965,7 +969,7 @@ return [
     'operation.create_team'                       => 'Team anlegen',
     'operation.create_game_result'                => 'Einzelspiel-Ergebnis anlegen',
     'operation.save_frozen_handicap'              => 'Eingefrorenes Handicap speichern',
-    'operation.save_league_name'                  => 'Liganamen speichern',
+    'operation.save_league_settings'              => 'Liga-Einstellungen speichern',
     'operation.save_positionday_fixtures'         => 'Positionday-Paarungen speichern',
     'operation.create_season'                     => 'Saison anlegen',
     'operation.save_game_results'                 => 'Einzelspiel-Ergebnisse speichern',

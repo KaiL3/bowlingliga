@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Bowlingliga\Application\League;
 
 /**
- * Port for the settings of the whole installation (R38).
+ * Port for the settings of the whole installation (R38, R40).
  *
  * Decouples {@see LeagueSettings} from the persistence technology; the
  * adapter is based on the single-row table `league_setting`, in tests an
@@ -19,7 +19,14 @@ interface LeagueSettingsStore
     public function leagueName(): ?string;
 
     /**
-     * Saves the (validated) league name; creates or updates the row.
+     * Whether player data is public without login (R40.1); false without a
+     * stored row.
      */
-    public function saveLeagueName(string $name): void;
+    public function playersPublic(): bool;
+
+    /**
+     * Saves the (validated) league name and the player visibility in one
+     * step; creates or updates the row.
+     */
+    public function save(string $name, bool $playersPublic): void;
 }

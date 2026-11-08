@@ -899,6 +899,7 @@ final class ResultEntryIntegrationTest extends TestCase
         foreach ([
             'db/migrations/001_schema.sql',
             'db/migrations/002_points_rules.sql',
+            'db/migrations/003_players_public.sql',
         ] as $file) {
             $this->pdo->exec((string) file_get_contents($root . '/' . $file));
         }

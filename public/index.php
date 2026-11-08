@@ -186,6 +186,42 @@ $rules   = new RulesRepository($database);
 $leagueStore = new LeagueSettingsRepository($database);
 $leagueName  = LeagueSettings::nameFrom($leagueStore);
 
+// --- Composition root: admin area access (auth) ----------------------------
+// The admin area is only reachable after a successful login
+// (R28.8). The domain wiring of the individual admin areas
+// follows below; here the access (login/logout), the
+// access protection (R28.9) and the admin area overview (R28.10) are provided.
+$session    = new PhpSessionStore();
+$adminView  = new AdminView($translator);
+$csrf       = new CsrfTokenHelper($session);
+$adminAccounts = new AdminAccountRepository($database);
+
+// The server-side key for the encrypted TOTP secret lives outside
+// the database (R23.9) and is provided via the configuration as a base64-encoded
+// 32 byte sequence (former key name `totp_key` still accepted).
+$totpKey = base64_decode((string) ($config['totp_key'] ?? $config['totp_schluessel'] ?? ''), true) ?: '';
+
+$auth = new AuthModule(
+    $adminAccounts,
+    new PasswordHasher(),
+    new TotpSecretEncryption($totpKey),
+    new TotpVerifier(),
+    $session,
+    new \Bowlingliga\Persistence\PdoTransaction($database),
+);
+
+/**
+ * Whether this request may see player data (R40.2, R40.3): always when the
+ * league makes it public, otherwise only for a logged-in admin. Without a
+ * session cookie no session is started, so anonymous visitors get none.
+ */
+$playersVisible = static function () use ($leagueStore, $auth): bool {
+    static $visible = null;
+
+    return $visible ??= $leagueStore->playersPublic()
+        || (isset($_COOKIE[session_name()]) && $auth->checkWriteAccess());
+};
+
 $dataReader = new PublicDataRepository(
     $seasons,
     $matchdays,
@@ -316,27 +352,35 @@ $router->public('/matchdays', static function () use ($t, $page, $controller, $c
 });
 
 // Detail view of a matchday (R15); the navigation keeps the matchday's season.
-$router->publicWithId('/matchday', static function (int $matchdayId) use ($t, $page, $controller, $matchdays): void {
+$router->publicWithId('/matchday', static function (int $matchdayId) use ($t, $page, $controller, $matchdays, $playersVisible): void {
     $matchday = $matchdays->find($matchdayId);
 
-    echo $page($t('public.matchday'), $controller->matchdayDetail($matchdayId), $matchday !== null ? (int) $matchday['season_id'] : null);
+    echo $page($t('public.matchday'), $controller->matchdayDetail($matchdayId, $playersVisible()), $matchday !== null ? (int) $matchday['season_id'] : null);
 });
 
 // Team page with the current average list, linked from the league table (R2).
 // The navigation keeps the team's season.
-$router->publicWithId('/team', static function (int $teamSeasonId) use ($t, $page, $controller, $teamSeasons): void {
+$router->publicWithId('/team', static function (int $teamSeasonId) use ($t, $page, $controller, $teamSeasons, $playersVisible): void {
     $team = $teamSeasons->find($teamSeasonId);
 
     echo $page(
         $team !== null ? (string) $team['team_name'] : $t('common.team'),
-        $controller->teamAverageList($teamSeasonId),
+        $controller->teamAverageList($teamSeasonId, $playersVisible()),
         $team !== null ? (int) $team['season_id'] : null,
     );
 });
 
 // Player page with handicap and average history and teams (R39), linked from
 // the average lists; the season comes from `?season=`, otherwise the current one.
-$router->publicWithId('/player', static function (int $playerId) use ($t, $page, $playerProfiles, $playerProfileView, $chosenSeasonId, $defaultSeasonId): void {
+$router->publicWithId('/player', static function (int $playerId) use ($t, $page, $playerProfiles, $playerProfileView, $chosenSeasonId, $defaultSeasonId, $playersVisible): void {
+    // R40.2: without public player data there is no public player page.
+    if (! $playersVisible()) {
+        http_response_code(404);
+        echo $page($t('player.title'), '<p class="notice" role="status">' . htmlspecialchars($t('public.players_not_public')) . '</p>');
+
+        return;
+    }
+
     $profile = $playerProfiles->profile($playerId, $chosenSeasonId(), $defaultSeasonId());
     if ($profile === null) {
         http_response_code(404);
@@ -365,7 +409,7 @@ $router->public('/table', static function () use ($t, $page, $controller, $curre
 });
 
 // Honours of the current or selected season (R13).
-$router->public('/honours', static function () use ($t, $page, $controller, $currentSeasonId): void {
+$router->public('/honours', static function () use ($t, $page, $controller, $currentSeasonId, $playersVisible): void {
     $seasonId = $currentSeasonId();
     if ($seasonId === null) {
         echo $page($t('nav.honours'), '<h1>' . htmlspecialchars($t('nav.honours')) . '</h1><p>' . htmlspecialchars($t('public.no_seasons')) . '</p>');
@@ -373,7 +417,7 @@ $router->public('/honours', static function () use ($t, $page, $controller, $cur
         return;
     }
 
-    echo $page($t('nav.honours'), $controller->honours($seasonId));
+    echo $page($t('nav.honours'), $controller->honours($seasonId, $playersVisible()));
 });
 
 // Spielregeln-Seite (R34.2, R34.6) with the handicap table of the current
@@ -396,37 +440,14 @@ $router->public('/rules', static function () use ($t, $page, $cmsView, $rules, $
     echo $page($t('nav.rules'), $cmsView->renderRules($rules->findText(), $handicapTable, $seasonName));
 });
 
-// --- Composition root: admin area access (auth) ----------------------------
-// The admin area is only reachable after a successful login
-// (R28.8). The domain wiring of the individual admin areas
-// follows below; here the access (login/logout), the
-// access protection (R28.9) and the admin area overview (R28.10) are provided.
-$session    = new PhpSessionStore();
-$adminView  = new AdminView($translator);
-$csrf       = new CsrfTokenHelper($session);
-$adminAccounts = new AdminAccountRepository($database);
-
-// The server-side key for the encrypted TOTP secret lives outside
-// the database (R23.9) and is provided via the configuration as a base64-encoded
-// 32 byte sequence (former key name `totp_key` still accepted).
-$totpKey = base64_decode((string) ($config['totp_key'] ?? $config['totp_schluessel'] ?? ''), true) ?: '';
-
-$auth = new AuthModule(
-    $adminAccounts,
-    new PasswordHasher(),
-    new TotpSecretEncryption($totpKey),
-    new TotpVerifier(),
-    $session,
-    new \Bowlingliga\Persistence\PdoTransaction($database),
-);
-
 // Delivery of the uploaded original score sheet (R3.16, R15.4).
 // Public only once the fixture is entered completely (before that only for
 // logged-in admins); otherwise 404, without revealing that it exists.
-$router->publicWithId('/score-sheet', static function (int $id) use ($t, $scoreSheet, $teamFixtures, $auth): void {
+$router->publicWithId('/score-sheet', static function (int $id) use ($t, $scoreSheet, $teamFixtures, $auth, $playersVisible): void {
     $dataRecord = $scoreSheet->find($id);
     $fixture   = $dataRecord !== null ? $teamFixtures->find((int) $dataRecord['fixture_id']) : null;
-    $visible  = $fixture !== null && ($fixture['completion_status'] === 'complete' || $auth->checkWriteAccess());
+    // The original shows the players' names: without public player data only for admins (R40.2).
+    $visible  = $fixture !== null && (($fixture['completion_status'] === 'complete' && $playersVisible()) || $auth->checkWriteAccess());
 
     if ($dataRecord === null || ! $visible) {
         http_response_code(404);
@@ -1425,11 +1446,11 @@ $router->admin('/league/save', static function () use (
         return;
     }
 
-    $inputName = (string) ($_POST['name'] ?? '');
+    $input = $_POST;
 
     if (! $csrf->isValid($_POST['csrf_token'] ?? null)) {
         http_response_code(400);
-        echo $adminPage('admin.area.league.title', $leagueSettingsController->edit($csrf->fieldHtml(), false, $inputName, $csrfExpired));
+        echo $adminPage('admin.area.league.title', $leagueSettingsController->edit($csrf->fieldHtml(), false, $input, $csrfExpired));
 
         return;
     }
@@ -1444,7 +1465,7 @@ $router->admin('/league/save', static function () use (
     }
 
     http_response_code(422);
-    echo $adminPage('admin.area.league.title', $leagueSettingsController->edit($csrf->fieldHtml(), false, $inputName, $result->message));
+    echo $adminPage('admin.area.league.title', $leagueSettingsController->edit($csrf->fieldHtml(), false, $input, $result->message));
 });
 
 // --- Season planning and lane assignment (task 35.2) ------------------------

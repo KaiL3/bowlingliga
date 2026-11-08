@@ -13,7 +13,9 @@ use Bowlingliga\Application\PublicSite\PublicDataReader;
  * encapsulates the visibility and error logic: the detail view of a matchday
  * is only shown for played matchdays (R15.5); if a matchday does not exist or
  * its data cannot be retrieved, the intended message appears (R1.5, R15.5).
- * All views are read-only and require no login (R1.4, R15.2).
+ * All views are read-only and require no login (R1.4, R15.2); without public
+ * player data (R40) the caller passes `$withPlayers = false` and only team
+ * values appear.
  *
  * The controller returns the fully rendered content (HTML fragment); embedding
  * it into the responsive page layout and delivering it is up to the caller via
@@ -84,7 +86,7 @@ final class PublicController
      * Renders the detail view of a matchday if it is played and retrievable
      * (R15.1); otherwise the matching message (R15.5, R1.5).
      */
-    public function matchdayDetail(int $matchdayId): string
+    public function matchdayDetail(int $matchdayId, bool $withPlayers = true): string
     {
         // R15.5: detail view only for played matchdays.
         if (! $this->reader->isMatchdayPlayed($matchdayId)) {
@@ -97,7 +99,7 @@ final class PublicController
             return $this->message('public.results_unavailable');
         }
 
-        return $this->view->renderMatchdayDetail($detail);
+        return $this->view->renderMatchdayDetail($detail, $withPlayers);
     }
 
     /**
@@ -118,28 +120,28 @@ final class PublicController
      * Renders the team page with the current average list (R2); unknown teams
      * and the ghost team get a message (R1.5).
      */
-    public function teamAverageList(int $teamSeasonId): string
+    public function teamAverageList(int $teamSeasonId, bool $withPlayers = true): string
     {
         $team = $this->reader->teamAverageList($teamSeasonId);
         if ($team === null) {
             return $this->message('public.team_not_found');
         }
 
-        return $this->view->renderTeamAverageList($team);
+        return $this->view->renderTeamAverageList($team, $withPlayers);
     }
 
     /**
      * Renders a season's honours (R13); the public visibility (after the end
      * date) is checked by the view (R13.8, R13.10).
      */
-    public function honours(int $seasonId): string
+    public function honours(int $seasonId, bool $withPlayers = true): string
     {
         $honours = $this->reader->honours($seasonId);
         if ($honours === null) {
             return $this->message('public.honours_unavailable');
         }
 
-        return $this->view->renderHonours($honours);
+        return $this->view->renderHonours($honours, $withPlayers);
     }
 
     /**
