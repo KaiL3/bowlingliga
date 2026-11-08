@@ -46,7 +46,7 @@ final class TeamEntryCodes
 
         $payload = pack('NCn', $fixtureId, self::SIDES[$side], $version);
 
-        return rtrim(strtr(base64_encode($payload . $this->mac($payload)), '+/', '-_'), '=');
+        return self::encode($payload . $this->mac($payload));
     }
 
     /**
@@ -62,6 +62,11 @@ final class TeamEntryCodes
         if ($raw === false || strlen($raw) !== 7 + self::MAC_BYTES) {
             return null;
         }
+        // The decoder ignores the unused low bits of the last character, so
+        // several spellings yield the same bytes; only the issued one counts.
+        if (self::encode($raw) !== $code) {
+            return null;
+        }
 
         $payload = substr($raw, 0, 7);
         if (! hash_equals($this->mac($payload), substr($raw, 7))) {
@@ -73,6 +78,11 @@ final class TeamEntryCodes
         $side = array_search($values['side'], self::SIDES, true);
 
         return $side === false ? null : ['fixture_id' => $values['fixture'], 'side' => $side, 'version' => $values['version']];
+    }
+
+    private static function encode(string $raw): string
+    {
+        return rtrim(strtr(base64_encode($raw), '+/', '-_'), '=');
     }
 
     private function mac(string $payload): string

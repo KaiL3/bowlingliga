@@ -687,8 +687,9 @@ A rule without a number in brackets belongs to the section as a whole.
   side, printed as QR code on its half of the print score sheet
   (`/entry?code=…`). It is valid on the matchday until 12:00 of the next
   day, cannot be guessed (96-bit HMAC derived from `totp_key`, nothing secret
-  stored, so it can be printed again) and is invalidated by "Neue Codes
-  erzeugen". The code replaces the login for this fixture only.
+  stored, so it can be printed again; only the exact issued spelling is
+  accepted) and is invalidated by "Neue Codes erzeugen". The code replaces
+  the login for this fixture only.
 - **Guided entry** (decision of 2026-10-25; before, each team entered the
   opponent's nets): steps game 1, 2, 3, overview, confirmation. Each team
   enters game by game its **own** lineup – "spielt", "fällt aus (blind)",

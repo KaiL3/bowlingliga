@@ -38,6 +38,24 @@ final class TeamEntryCodesTest extends TestCase
         self::assertNull($codes->read(str_repeat('A', 26)));
     }
 
+    public function testOnlyTheIssuedSpellingOfACodeIsAccepted(): void
+    {
+        $codes = new TeamEntryCodes('schluessel');
+        $code = $codes->create(12, 'home', 1);
+        $alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+
+        // The last character carries only two bits of the 19 bytes; the other
+        // spellings that decode to the same bytes must not count as the code.
+        $accepted = [];
+        foreach (str_split($alphabet) as $last) {
+            if ($codes->read(substr($code, 0, -1) . $last) !== null) {
+                $accepted[] = $last;
+            }
+        }
+
+        self::assertSame([substr($code, -1)], $accepted);
+    }
+
     public function testWithoutKeyNoCodesExist(): void
     {
         $codes = new TeamEntryCodes('');
