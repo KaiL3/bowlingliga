@@ -98,7 +98,7 @@ final class MatchdayRepository extends AbstractRepository implements MatchdaySto
     public function find(int $id): ?array
     {
         return $this->findOne(
-            'SELECT id, season_id, matchday_number, date, matchday_type, is_played
+            'SELECT id, season_id, matchday_number, date, matchday_type, is_played, is_cancelled
              FROM matchday WHERE id = :id',
             ['id' => $id]
         );
@@ -112,7 +112,7 @@ final class MatchdayRepository extends AbstractRepository implements MatchdaySto
     public function findAllForSeason(int $seasonId): array
     {
         return $this->findAll(
-            'SELECT id, season_id, matchday_number, date, matchday_type, is_played
+            'SELECT id, season_id, matchday_number, date, matchday_type, is_played, is_cancelled
              FROM matchday WHERE season_id = :season_id ORDER BY matchday_number',
             ['season_id' => $seasonId]
         );

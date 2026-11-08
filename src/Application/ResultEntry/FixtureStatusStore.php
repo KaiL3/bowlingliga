@@ -35,4 +35,7 @@ interface FixtureStatusStore
      * possible.
      */
     public function blockingMatchdayNumber(int $fixtureId): ?int;
+
+    /** Tells whether the matchday is cancelled; it takes no results (R8.20). */
+    public function isMatchdayCancelled(int $matchdayId): bool;
 }

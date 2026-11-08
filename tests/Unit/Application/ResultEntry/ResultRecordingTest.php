@@ -192,6 +192,23 @@ final class ResultRecordingTest extends TestCase
         self::assertSame('in_progress', $this->status->status[self::FIXTURE], 'A draft stays possible.');
     }
 
+    /** R8.20: a cancelled matchday takes no results, not even a draft. */
+    public function testACancelledMatchdayTakesNoResults(): void
+    {
+        $this->status->cancelled = [self::MATCHDAY];
+
+        foreach (['saveDraft', 'confirmAndSave'] as $method) {
+            try {
+                $this->management->{$method}($this->completeResults());
+                self::fail($method . ' must be rejected for a cancelled matchday.');
+            } catch (ResultEntryException $e) {
+                self::assertSame('error.result.matchday_cancelled', $e->message()->key);
+            }
+        }
+
+        self::assertArrayNotHasKey(self::FIXTURE, $this->results->saved);
+    }
+
     /** R30.20: correcting a fixture that is already complete is not blocked. */
     public function testACompleteFixtureCanStillBeCorrected(): void
     {

@@ -23,6 +23,7 @@ final class MatchdayListEntry
      * @param string|null $homeName   Team name home (or null if open)
      * @param string|null $awayName   Team name away (or null if open)
      * @param bool        $isPlayed   true if the matchday has been played (R14.4)
+     * @param bool        $isCancelled true if the matchday is cancelled (R8.20)
      */
     public function __construct(
         public readonly int $matchdayId,
@@ -31,6 +32,7 @@ final class MatchdayListEntry
         public readonly ?string $homeName,
         public readonly ?string $awayName,
         public readonly bool $isPlayed,
+        public readonly bool $isCancelled = false,
     ) {
     }
 

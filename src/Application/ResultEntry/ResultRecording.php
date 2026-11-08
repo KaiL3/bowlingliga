@@ -101,6 +101,7 @@ final class ResultRecording
         $this->check($results, false);
 
         $this->withinTransaction(function () use ($results): void {
+            $this->ensureNotCancelled($results->matchdayId);
             $wasPlayed = $this->status->areAllComplete($results->matchdayId);
 
             $this->saveLogged($results, 'draft_saved');
@@ -129,6 +130,8 @@ final class ResultRecording
         $this->check($results, true);
 
         $this->withinTransaction(function () use ($results): void {
+            $this->ensureNotCancelled($results->matchdayId);
+
             // Handicaps are frozen from the averages of the earlier matchdays,
             // so those must be complete first; a draft stays possible (R30.20).
             $blocking = $this->status->blockingMatchdayNumber($results->fixtureId);
@@ -460,6 +463,14 @@ final class ResultRecording
     {
         if (! $this->writeAccess->checkWriteAccess()) {
             throw new AccessDeniedException();
+        }
+    }
+
+    /** A cancelled matchday takes no results, not even a draft (R8.20). */
+    private function ensureNotCancelled(int $matchdayId): void
+    {
+        if ($this->status->isMatchdayCancelled($matchdayId)) {
+            throw ResultEntryException::matchdayCancelled();
         }
     }
 }

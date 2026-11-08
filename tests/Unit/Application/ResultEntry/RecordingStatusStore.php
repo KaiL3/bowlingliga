@@ -29,6 +29,14 @@ final class RecordingStatusStore implements FixtureStatusStore
             && array_filter($this->status, static fn (string $s): bool => $s !== 'complete') === [];
     }
 
+    /** @var list<int> cancelled matchdays (R8.20) */
+    public array $cancelled = [];
+
+    public function isMatchdayCancelled(int $matchdayId): bool
+    {
+        return in_array($matchdayId, $this->cancelled, true);
+    }
+
     public function blockingMatchdayNumber(int $fixtureId): ?int
     {
         return ($this->status[$fixtureId] ?? null) === 'complete' ? null : $this->incompleteEarlierMatchday;

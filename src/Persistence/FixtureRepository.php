@@ -132,6 +132,7 @@ final class FixtureRepository extends AbstractRepository implements FixtureStatu
      * First earlier matchday of the season that is not complete – without
      * fixtures, with a fixture not fixed yet or not entered completely – or
      * null; null as well if the fixture itself is already complete (R30.20).
+     * A cancelled matchday does not count (R8.20).
      */
     public function blockingMatchdayNumber(int $fixtureId): ?int
     {
@@ -141,6 +142,7 @@ final class FixtureRepository extends AbstractRepository implements FixtureStatu
              JOIN matchday md ON md.id = fx.matchday_id
              JOIN matchday earlier ON earlier.season_id = md.season_id
                                   AND earlier.matchday_number < md.matchday_number
+                                  AND earlier.is_cancelled = 0
              WHERE fx.id = :id AND fx.completion_status <> 'complete'
                AND (NOT EXISTS (SELECT 1 FROM fixture f WHERE f.matchday_id = earlier.id)
                     OR EXISTS (SELECT 1 FROM fixture f
@@ -152,6 +154,12 @@ final class FixtureRepository extends AbstractRepository implements FixtureStatu
         );
 
         return $row === null || $row['number'] === null ? null : (int) $row['number'];
+    }
+
+    /** Tells whether the matchday is cancelled (R8.20). */
+    public function isMatchdayCancelled(int $matchdayId): bool
+    {
+        return $this->findOne('SELECT 1 FROM matchday WHERE id = :id AND is_cancelled = 1', ['id' => $matchdayId]) !== null;
     }
 
     /**

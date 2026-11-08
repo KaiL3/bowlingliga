@@ -39,6 +39,12 @@ final class ResultEntryException extends \RuntimeException implements Translatab
         return new self(self::EARLIER_MATCHDAY_INCOMPLETE, ['number' => $number]);
     }
 
+    /** The matchday is cancelled and takes no results (R8.20). */
+    public static function matchdayCancelled(): self
+    {
+        return new self('error.result.matchday_cancelled');
+    }
+
     public function isEarlierMatchdayIncomplete(): bool
     {
         return $this->message()->key === self::EARLIER_MATCHDAY_INCOMPLETE;

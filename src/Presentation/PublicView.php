@@ -634,6 +634,19 @@ final class PublicView
             );
         }
 
+        if ($entry->isCancelled) {
+            // R8.20: cancelled, its fixtures are dropped.
+            return sprintf(
+                '<li class="matchday-list__entry matchday-list__entry--open matchday-list__entry--cancelled"><div class="matchday-list__row">'
+                . '<span class="matchday-list__number">%s</span>'
+                . '<span class="matchday-list__date">%s</span><span class="badge badge--cancelled">%s</span>'
+                . '</div></li>',
+                $number,
+                $date,
+                $this->text('public.cancelled'),
+            );
+        }
+
         // R14.5/R14.6: not played, not clickable, with tooltip; R1.3: "without results".
         return sprintf(
             '<li class="matchday-list__entry matchday-list__entry--open"><div class="matchday-list__row">'

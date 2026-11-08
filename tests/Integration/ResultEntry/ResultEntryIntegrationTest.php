@@ -12,6 +12,8 @@ use Bowlingliga\Application\ResultEntry\HandicapFreezing;
 use Bowlingliga\Application\ResultEntry\OriginalScoreSheetStorage;
 use Bowlingliga\Application\ResultEntry\ScoreSheetOverview;
 use Bowlingliga\Application\ResultEntry\VirtualScoreSheetService;
+use Bowlingliga\Application\Schedule\MatchdayRescheduling;
+use Bowlingliga\Application\Schedule\MatchdayScheduleException;
 use Bowlingliga\Cache\CacheManager;
 use Bowlingliga\Domain\Handicap\HandicapChainPreview;
 use Bowlingliga\Persistence\Aggregation\AverageListRawDataRepository;
@@ -25,6 +27,7 @@ use Bowlingliga\Persistence\ResultEntry\HandicapFreezingRepository;
 use Bowlingliga\Persistence\RosterRepository;
 use Bowlingliga\Persistence\OriginalScoreSheetRepository;
 use Bowlingliga\Persistence\PdoTransaction;
+use Bowlingliga\Persistence\Schedule\MatchdayScheduleRepository;
 use Bowlingliga\Persistence\ScoreSheetRepository;
 use Bowlingliga\Persistence\MatchdayRepository;
 use Bowlingliga\Persistence\FixtureRepository;
@@ -796,6 +799,79 @@ final class ResultEntryIntegrationTest extends TestCase
     }
 
     /**
+     * R8.20/R8.21: a cancelled matchday takes no results, does not block the
+     * later ones and is missing from the overview; postponing moves the
+     * matchday, the later ones and the season end.
+     */
+    public function testCancelledAndPostponedMatchdays(): void
+    {
+        $schedule = new MatchdayRescheduling(new MatchdayScheduleRepository($this->database), new SwitchableWriteAccess(true), new PdoTransaction($this->database));
+        $fixture1 = $this->ids['fx'];
+        $matchday1 = $this->numeral("SELECT matchday_id FROM fixture WHERE id = $fixture1");
+        $fixtures = [];
+        foreach ([2 => '2030-09-11', 3 => '2030-09-18'] as $number => $date) {
+            $matchday = $this->insert(
+                "INSERT INTO matchday (season_id, matchday_number, date, matchday_type, is_played)
+                 VALUES ({$this->ids['season']}, $number, '$date', 'regular', 0)"
+            );
+            $fixtures[$number] = $this->insert(
+                "INSERT INTO fixture (matchday_id, home_team_season_id, away_team_season_id, completion_status)
+                 VALUES ($matchday, {$this->ids['adler']}, {$this->ids['ghosts']}, 'open')"
+            );
+        }
+        $matchday2 = $this->numeral("SELECT matchday_id FROM fixture WHERE id = {$fixtures[2]}");
+
+        self::assertTrue($this->controller->saveResults($this->fullInput('draft'))->successful);
+        $state = array_column($schedule->matchdays($this->ids['season']), null, 'number');
+        self::assertTrue($state[1]['has_results'], 'A draft counts as results.');
+        self::assertFalse($state[2]['has_results']);
+        try {
+            $schedule->cancel($matchday1);
+            self::fail('A matchday with a draft cannot be cancelled.');
+        } catch (MatchdayScheduleException) {
+            // expected
+        }
+
+        self::assertTrue($this->controller->saveResults($this->fullInput('confirm'))->successful);
+        self::assertTrue(array_column($schedule->matchdays($this->ids['season']), null, 'number')[1]['is_complete']);
+        $schedule->cancel($matchday2);
+
+        // The cancelled matchday 2 takes no results and does not block matchday 3.
+        $this->ids['fx'] = $fixtures[2];
+        self::assertStringContainsString('abgesagt', $this->controller->saveResults($this->fullInput('draft'))->message);
+        $this->ids['fx'] = $fixtures[3];
+        $result = $this->controller->saveResults($this->fullInput('confirm'));
+        self::assertTrue($result->successful, $result->message);
+
+        $overview = (new OverviewRepository($this->database))->findEntriesForSeason($this->ids['season']);
+        self::assertSame([$fixture1, $fixtures[3]], array_map(static fn ($e): int => $e->fixtureId, $overview), 'The cancelled matchday is missing from the overview.');
+
+        // Matchday 3 has results: taking the cancellation of matchday 2 back would
+        // undermine the order of the result entry (R30.20).
+        try {
+            $schedule->reinstate($matchday2);
+            self::fail('A later matchday with results prevents taking the cancellation back.');
+        } catch (MatchdayScheduleException $e) {
+            self::assertSame('error.schedule.later_results_entered', $e->message()->key);
+        }
+
+        // Without those results it can be taken back and postponed.
+        $this->pdo->exec("DELETE gr FROM game_result gr JOIN lineup l ON l.id = gr.lineup_id WHERE l.fixture_id = {$fixtures[3]}");
+        $this->pdo->exec("DELETE FROM lineup WHERE fixture_id = {$fixtures[3]}");
+        $this->pdo->exec("UPDATE fixture SET completion_status = 'open' WHERE id = {$fixtures[3]}");
+        $schedule->reinstate($matchday2);
+        $end = (string) $this->pdo->query("SELECT end_date FROM season WHERE id = {$this->ids['season']}")->fetchColumn();
+        $schedule->postpone($matchday2, '2030-09-25');
+
+        $dates = $this->pdo->query("SELECT matchday_number, date FROM matchday WHERE season_id = {$this->ids['season']} ORDER BY matchday_number")->fetchAll(PDO::FETCH_KEY_PAIR);
+        self::assertSame([1 => '2030-09-04', 2 => '2030-09-25', 3 => '2030-10-02'], $dates);
+        self::assertSame(
+            (new \DateTimeImmutable($end))->modify('+14 days')->format('Y-m-d'),
+            $this->pdo->query("SELECT end_date FROM season WHERE id = {$this->ids['season']}")->fetchColumn()
+        );
+    }
+
+    /**
      * A complete fixture of the given matchday in which Dirk plays three games
      * with the given result (matchday 1 reuses the sample fixture).
      */
@@ -950,6 +1026,7 @@ final class ResultEntryIntegrationTest extends TestCase
             'db/migrations/001_schema.sql',
             'db/migrations/002_points_rules.sql',
             'db/migrations/003_players_public.sql',
+            'db/migrations/004_matchday_cancelled.sql',
         ] as $file) {
             $this->pdo->exec((string) file_get_contents($root . '/' . $file));
         }

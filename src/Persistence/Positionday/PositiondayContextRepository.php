@@ -15,7 +15,8 @@ use Bowlingliga\Persistence\Database;
  * Production adapter of the {@see PositiondayContextReader} (R31.2–R31.7).
  *
  * - Previous matchdays: all matchdays of the season with a smaller counter
- *   must be played, i.e. all their fixtures "complete" (R24.1).
+ *   must be played, i.e. all their fixtures "complete" (R24.1); a cancelled
+ *   matchday does not count (R8.20).
  * - Standings: the league table of the season over the played matchdays
  *   (R31.3). Since all previous matchdays must be played first, this equals
  *   the state before the positionday, as long as no later matchdays were
@@ -45,7 +46,7 @@ final class PositiondayContextRepository extends AbstractRepository implements P
 
         $open = $this->findOne(
             'SELECT COUNT(*) AS quantity FROM matchday
-             WHERE season_id = :season_id AND matchday_number < :number AND is_played = 0',
+             WHERE season_id = :season_id AND matchday_number < :number AND is_played = 0 AND is_cancelled = 0',
             ['season_id' => $context['season_id'], 'number' => $context['matchday_number']]
         );
 

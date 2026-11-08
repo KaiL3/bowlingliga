@@ -254,6 +254,10 @@ final class PrintScoreSheetData implements PrintScoreSheetDataSource
     {
         $matchdays = [];
         foreach ($this->matchdays->findAllForSeason($seasonId) as $matchday) {
+            // A cancelled matchday is not printed (R8.20).
+            if ((int) ($matchday["is_cancelled"] ?? 0) === 1) {
+                continue;
+            }
             $matchdays[] = [
                 'id'        => (int) $matchday['id'],
                 'number'    => (int) $matchday['matchday_number'],
@@ -270,7 +274,7 @@ final class PrintScoreSheetData implements PrintScoreSheetDataSource
     public function lotDrawSheets(int $matchdayId): ?array
     {
         $matchday = $this->matchdays->find($matchdayId);
-        if ($matchday === null || (string) $matchday['matchday_type'] !== PrintScoreSheetHeader::TYPE_LOT_DRAW
+        if ($matchday === null || (int) ($matchday['is_cancelled'] ?? 0) === 1 || (string) $matchday['matchday_type'] !== PrintScoreSheetHeader::TYPE_LOT_DRAW
             || $this->teamFixtures->findAllForMatchday($matchdayId) !== []) {
             return null;
         }
@@ -298,6 +302,9 @@ final class PrintScoreSheetData implements PrintScoreSheetDataSource
 
     public function fixtureIds(int $matchdayId): array
     {
+        if ($this->isCancelled($matchdayId)) {
+            return [];
+        }
         $fixtures = [];
         foreach ($this->teamFixtures->findAllForMatchday($matchdayId) as $fixture) {
             [$lane] = $this->laneNumbers($fixture['lane_pair_id'] ?? null);
@@ -308,6 +315,14 @@ final class PrintScoreSheetData implements PrintScoreSheetDataSource
         usort($fixtures, static fn (array $a, array $b): int => [$a['lane'], $a['id']] <=> [$b['lane'], $b['id']]);
 
         return array_column($fixtures, 'id');
+    }
+
+    /** A cancelled matchday has no score sheets (R8.20). */
+    private function isCancelled(int $matchdayId): bool
+    {
+        $matchday = $this->matchdays->find($matchdayId);
+
+        return $matchday !== null && (int) ($matchday["is_cancelled"] ?? 0) === 1;
     }
 
     private function laneNumbers(mixed $lanePairId): array

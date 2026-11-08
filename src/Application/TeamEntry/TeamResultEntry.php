@@ -446,7 +446,9 @@ final class TeamResultEntry
     /** @param array<string, mixed> $fixture */
     private function isAvailable(array $fixture): bool
     {
+        // A cancelled matchday takes no results (R8.20).
         return $fixture['home'] !== null && $fixture['away'] !== null
+            && ! ($fixture['is_cancelled'] ?? false)
             && ! ($fixture['home']['is_ghost_team'] && $fixture['away']['is_ghost_team'])
             && $this->store->isEnabled($fixture['season_id']);
     }

@@ -165,8 +165,28 @@ A rule without a number in brackets belongs to the section as a whole.
   - team entry on/off ([R37](#r37--result-entry-by-the-teams)).
 - Every matchday has a type: regular, positionday or lot draw (R8.18); a lot
   draw is set by the admin before the season starts (R8.19).
+- **Cancel a matchday** (decision of 2026-11-08): the league management can
+  cancel a whole matchday as long as no results are entered for it, not even
+  a draft. It keeps its number and its date, its fixtures are dropped without
+  replacement and the other dates stay. It takes no results, is not printed,
+  not open to team entry and missing from the result entry overview; it does
+  not block the order of the result entry ([R30.20](#r30--result-entry-overview-and-virtual-score-sheet))
+  or the forming of a positionday ([R31](#r31--positionday)). In public it is
+  listed as "abgesagt" and skipped as next matchday. Rules counted by matchday
+  number keep counting it ("Vorjahr im Schnitt bis Spieltag", positionday
+  interval). The cancellation can be taken back only while the matchday lies
+  in the future and no later matchday has results; otherwise an incomplete
+  matchday would suddenly lie before entered ones and undermine the order of
+  the result entry (R8.20).
+- **Postpone a matchday** (decision of 2026-11-08): only a whole matchday that
+  is not complete and not cancelled, to a later date chosen by the league
+  management (suggestion: one week later). The matchday and all later ones
+  (cancelled ones too) move by the same number of days, and so does the
+  season end. A preview shows old → new before anything is saved. Codes of
+  the team entry follow the new date (R8.21).
 - Implementation: `SeasonAdministration`, `SeasonConfiguration`,
-  `SeasonManagementController` (admin area "Saison").
+  `SeasonManagementController` (admin area "Saison", card "Spieltage"),
+  `Application/Schedule/MatchdayRescheduling`, `MatchdayScheduleRepository`.
 
 ## R9 – Season planning
 

@@ -848,6 +848,16 @@ h3 {
     color: var(--blind-text);
 }
 
+/* A cancelled matchday (R8.20). */
+.badge--cancelled {
+    background: var(--warn-bg);
+    color: var(--warn-text);
+}
+
+.matchday-list__entry--cancelled .matchday-list__date {
+    text-decoration: line-through;
+}
+
 .notice {
     padding: 0.75rem 1rem;
     border-radius: var(--radius-element);
@@ -2034,6 +2044,13 @@ button:hover,
     background: var(--warn-bg);
     border-color: var(--warn-border);
     color: var(--warn-text);
+}
+
+/* A cancelled matchday (R8.20). */
+.status--cancelled {
+    background: var(--error-bg);
+    border-color: var(--error-border);
+    color: var(--error-text);
 }
 
 .status--complete,

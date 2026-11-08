@@ -7,6 +7,7 @@ namespace Bowlingliga\Tests\Unit\Presentation;
 use Bowlingliga\Application\LotDraw\LotDrawManagement;
 use Bowlingliga\Application\LotDraw\LotDrawReader;
 use Bowlingliga\Application\Positionday\PositiondayManagement;
+use Bowlingliga\Application\Schedule\MatchdayRescheduling;
 use Bowlingliga\Application\SeasonAdministration;
 use Bowlingliga\Domain\Lane\LaneAssignmentService;
 use Bowlingliga\Domain\Positionday\PositiondayService;
@@ -21,6 +22,8 @@ use Bowlingliga\Tests\Unit\Application\InMemoryTeamRepository;
 use Bowlingliga\Tests\Unit\Application\InMemoryTeamSeasonRepository;
 use Bowlingliga\Tests\Unit\Application\Positionday\RecordingPositiondayStore;
 use Bowlingliga\Tests\Unit\Application\Positionday\FixedPositiondayContext;
+use Bowlingliga\Tests\Unit\Application\ImmediateTransaction;
+use Bowlingliga\Tests\Unit\Application\Schedule\InMemoryMatchdaySchedule;
 use Bowlingliga\Tests\Unit\Application\SwitchableWriteAccess;
 use PHPUnit\Framework\TestCase;
 
@@ -49,9 +52,6 @@ final class SeasonManagementControllerTest extends TestCase
         $this->config->save(1, 4, '5.00', '2.50', 64, 'HDC = (Zielwert - Durchschnitt) * 0.8', 190);
         $this->config->save(2, 4, '5.00', '2.50', 64, null, 190);
 
-        $currentTime = static fn (): \DateTimeImmutable => new \DateTimeImmutable('2025-10-12');
-        $access = new SwitchableWriteAccess(true);
-
         $this->context = new FixedPositiondayContext(true, [
             new TeamStatistics('11', 'Die Adler', 14, 3455, 3779, 24),
             new TeamStatistics('12', 'Eulen', 2, 3420, 3696, 24),
@@ -60,7 +60,15 @@ final class SeasonManagementControllerTest extends TestCase
         ], ['11' => 11, '12' => 12, '13' => 13, '14' => 14]);
         $this->store = new RecordingPositiondayStore();
 
-        $this->controller = new SeasonManagementController(
+        $this->controller = $this->controllerWith(null);
+    }
+
+    private function controllerWith(?MatchdayRescheduling $rescheduling): SeasonManagementController
+    {
+        $currentTime = static fn (): \DateTimeImmutable => new \DateTimeImmutable('2025-10-12');
+        $access = new SwitchableWriteAccess(true);
+
+        return new SeasonManagementController(
             new SeasonAdministration(
                 $this->seasons,
                 $this->config,
@@ -76,6 +84,7 @@ final class SeasonManagementControllerTest extends TestCase
             new SeasonManagementView(),
             new Validator(),
             $currentTime,
+            rescheduling: $rescheduling,
         );
     }
 
@@ -232,6 +241,40 @@ final class SeasonManagementControllerTest extends TestCase
 
         self::assertSame('Der Spieltag ist kein Losentscheid.', $this->controller->saveLotDrawPairings(['matchday_id' => '30', 'home' => ['11', '13'], 'away' => ['12', '14']])->message);
         self::assertNull($this->store->matchdayId, 'Nothing saved.');
+    }
+
+    /** R8.20, R8.21: card "Spieltage" with cancel, take back and postpone. */
+    public function testMatchdaysCanBeCancelledAndPostponedOnTheSeasonPage(): void
+    {
+        $schedule = InMemoryMatchdaySchedule::weekly(4);
+        $schedule->matchdays[1]['is_complete'] = true;
+        $schedule->matchdays[2]['has_results'] = true;
+        $controller = $this->controllerWith(new MatchdayRescheduling($schedule, new SwitchableWriteAccess(true), new ImmediateTransaction(), static fn (): \DateTimeImmutable => new \DateTimeImmutable('2026-09-01')));
+        $csrf = '<input type="hidden" name="csrf_token" value="t">';
+
+        $html = $controller->page($csrf, InMemoryMatchdaySchedule::SEASON);
+        self::assertStringContainsString('<h2>Spieltage</h2>', $html);
+        self::assertSame(2, substr_count($html, 'action="/admin/season/cancel"'), 'Only matchdays 3 and 4 without results can be cancelled.');
+        self::assertSame(3, substr_count($html, 'name="postpone"'), 'A complete matchday cannot be postponed.');
+        self::assertStringContainsString('name="date" value="2026-09-23"', $html, 'Suggestion: one week later.');
+
+        self::assertTrue($controller->cancelMatchday(['matchday_id' => '3'])->successful);
+        self::assertStringContainsString('action="/admin/season/reinstate"', $controller->page($csrf, InMemoryMatchdaySchedule::SEASON));
+        self::assertSame('Für Spieltag 2 sind schon Ergebnisse erfasst; er kann nicht abgesagt werden.', $controller->cancelMatchday(['matchday_id' => '2'])->message);
+
+        // Preview first, nothing saved yet.
+        $preview = $controller->page($csrf, InMemoryMatchdaySchedule::SEASON, postpone: ['matchday_id' => 2, 'date' => '2026-09-16']);
+        self::assertStringContainsString('Spieltag 2 verschieben', $preview);
+        self::assertStringContainsString('3 Spieltage und das Saisonende verschieben sich um 7 Tage.', $preview);
+        self::assertStringContainsString('action="/admin/season/postpone"', $preview);
+        self::assertSame('2026-09-09', $schedule->matchdays[2]['date']);
+
+        self::assertStringContainsString('Das neue Datum muss nach dem bisherigen Termin', $controller->page($csrf, InMemoryMatchdaySchedule::SEASON, postpone: ['matchday_id' => 2, 'date' => '2026-09-01']));
+
+        $result = $controller->postponeMatchday(['matchday_id' => '2', 'date' => '2026-09-16']);
+        self::assertTrue($result->successful, $result->message);
+        self::assertSame('Spieltag 2 und die folgenden (3 Spieltage) wurden um 7 Tage verschoben, ebenso das Saisonende.', $result->message);
+        self::assertSame('2026-09-30', $schedule->matchdays[4]['date']);
     }
 
     public function testLotDrawsAreShownOnTheSeasonPage(): void
