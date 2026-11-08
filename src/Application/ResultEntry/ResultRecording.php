@@ -33,7 +33,7 @@ use Bowlingliga\Security\AccessDeniedException;
  *   not flagged as played and the results do not appear in public views
  *   (R30.16).
  * - {@see confirmAndSave()} requires complete results of both teams
- *   (R30.4/R30.18), saves the net results transactionally as raw data,
+ *   (R30.4/R30.18) and complete earlier matchdays (R30.20), saves the net results transactionally as raw data,
  *   invalidates the dependent caches from the matchday onwards (R22.6,
  *   R35.4), freezes the handicaps of the matchday (R30.18) – without changing
  *   handicaps already frozen (R35.5) –, sets the completion status to
@@ -129,6 +129,13 @@ final class ResultRecording
         $this->check($results, true);
 
         $this->withinTransaction(function () use ($results): void {
+            // Handicaps are frozen from the averages of the earlier matchdays,
+            // so those must be complete first; a draft stays possible (R30.20).
+            $blocking = $this->status->blockingMatchdayNumber($results->fixtureId);
+            if ($blocking !== null) {
+                throw ResultEntryException::earlierMatchdayIncomplete($blocking);
+            }
+
             // Save the net results as raw data (R22.6).
             $this->saveLogged($results, 'confirmed');
 

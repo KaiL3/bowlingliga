@@ -129,6 +129,32 @@ final class FixtureRepository extends AbstractRepository implements FixtureStatu
     }
 
     /**
+     * First earlier matchday of the season that is not complete – without
+     * fixtures, with a fixture not fixed yet or not entered completely – or
+     * null; null as well if the fixture itself is already complete (R30.20).
+     */
+    public function blockingMatchdayNumber(int $fixtureId): ?int
+    {
+        $row = $this->findOne(
+            "SELECT MIN(earlier.matchday_number) AS number
+             FROM fixture fx
+             JOIN matchday md ON md.id = fx.matchday_id
+             JOIN matchday earlier ON earlier.season_id = md.season_id
+                                  AND earlier.matchday_number < md.matchday_number
+             WHERE fx.id = :id AND fx.completion_status <> 'complete'
+               AND (NOT EXISTS (SELECT 1 FROM fixture f WHERE f.matchday_id = earlier.id)
+                    OR EXISTS (SELECT 1 FROM fixture f
+                               WHERE f.matchday_id = earlier.id
+                                 AND (f.completion_status <> 'complete'
+                                      OR f.home_team_season_id IS NULL
+                                      OR f.away_team_season_id IS NULL)))",
+            ['id' => $fixtureId]
+        );
+
+        return $row === null || $row['number'] === null ? null : (int) $row['number'];
+    }
+
+    /**
      * Deletes a fixture (R4).
      */
     public function delete(int $id): void

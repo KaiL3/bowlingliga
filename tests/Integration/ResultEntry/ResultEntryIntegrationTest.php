@@ -751,6 +751,51 @@ final class ResultEntryIntegrationTest extends TestCase
     }
 
     /**
+     * R30.20: a fixture can only be confirmed once every earlier matchday is
+     * complete; a matchday without fixtures counts as incomplete. A draft
+     * stays possible.
+     */
+    public function testAnIncompleteEarlierMatchdayBlocksTheConfirmation(): void
+    {
+        $matchday1 = $this->ids['fx'];
+        $matchday2 = $this->insert(
+            "INSERT INTO matchday (season_id, matchday_number, date, matchday_type, is_played)
+             VALUES ({$this->ids['season']}, 2, '2030-09-11', 'positionday', 0)"
+        );
+        $matchday3 = $this->insert(
+            "INSERT INTO matchday (season_id, matchday_number, date, matchday_type, is_played)
+             VALUES ({$this->ids['season']}, 3, '2030-09-18', 'regular', 0)"
+        );
+        $this->ids['fx'] = $this->insert(
+            "INSERT INTO fixture (matchday_id, home_team_season_id, away_team_season_id, completion_status)
+             VALUES ($matchday3, {$this->ids['adler']}, {$this->ids['ghosts']}, 'open')"
+        );
+
+        $result = $this->controller->saveResults($this->fullInput('confirm'));
+        self::assertFalse($result->successful);
+        self::assertStringContainsString('Spieltag 1 ist noch nicht vollständig erfasst', $result->message);
+        self::assertSame(0, $this->numeral('SELECT COUNT(*) FROM frozen_handicap'));
+
+        self::assertTrue($this->controller->saveResults($this->fullInput('draft'))->successful, 'A draft stays possible.');
+        self::assertSame('in_progress', $this->statusOf($this->ids["fx"]));
+
+        // Matchday 1 complete; matchday 2 has no fixtures yet and still blocks.
+        $fixture3 = $this->ids['fx'];
+        $this->ids['fx'] = $matchday1;
+        self::assertTrue($this->controller->saveResults($this->fullInput('confirm'))->successful);
+        $this->ids['fx'] = $fixture3;
+        self::assertStringContainsString('Spieltag 2 ist', $this->controller->saveResults($this->fullInput('confirm'))->message);
+
+        $this->insert(
+            "INSERT INTO fixture (matchday_id, home_team_season_id, away_team_season_id, completion_status)
+             VALUES ($matchday2, {$this->ids['adler']}, {$this->ids['ghosts']}, 'complete')"
+        );
+        $result = $this->controller->saveResults($this->fullInput('confirm'));
+        self::assertTrue($result->successful, $result->message);
+        self::assertSame('complete', $this->statusOf($this->ids["fx"]));
+    }
+
+    /**
      * A complete fixture of the given matchday in which Dirk plays three games
      * with the given result (matchday 1 reuses the sample fixture).
      */
@@ -836,6 +881,11 @@ final class ResultEntryIntegrationTest extends TestCase
         imagepng($image, $pathName);
 
         return ['name' => 'zettel.png', 'type' => 'image/png', 'tmp_name' => $pathName, 'error' => UPLOAD_ERR_OK, 'size' => filesize($pathName)];
+    }
+
+    private function statusOf(int $fixtureId): string
+    {
+        return (string) $this->pdo->query("SELECT completion_status FROM fixture WHERE id = $fixtureId")->fetchColumn();
     }
 
     private function fixtureStatus(): string

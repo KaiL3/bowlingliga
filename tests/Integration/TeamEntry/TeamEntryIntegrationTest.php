@@ -7,6 +7,7 @@ namespace Bowlingliga\Tests\Integration\TeamEntry;
 use Bowlingliga\Application\ResultEntry\BlindFilling;
 use Bowlingliga\Application\ResultEntry\BlindPlayerOrder;
 use Bowlingliga\Application\ResultEntry\ResultRecording;
+use Bowlingliga\Application\TeamEntry\TeamEntryException;
 use Bowlingliga\Application\TeamEntry\TeamEntryWriteAccess;
 use Bowlingliga\Application\TeamEntry\TeamResultEntry;
 use Bowlingliga\Cache\CacheManager;
@@ -167,6 +168,34 @@ final class TeamEntryIntegrationTest extends TestCase
         ), 'The ghost team plays its fixed score with four ghost players.');
         self::assertSame('complete', $this->pdo->query("SELECT completion_status FROM fixture WHERE id = {$this->ids['fixture']}")->fetchColumn());
         self::assertSame(4, $this->numeral('SELECT COUNT(*) FROM frozen_handicap'), 'Handicaps of the 4 real players.');
+    }
+
+    /**
+     * R30.20: with an incomplete earlier matchday the confirmation is rejected
+     * with a note; the sent entries stay for the admin.
+     */
+    public function testAnIncompleteEarlierMatchdayRejectsTheConfirmation(): void
+    {
+        $this->pdo->exec('UPDATE matchday SET matchday_number = 2');
+        $this->pdo->exec("INSERT INTO matchday (season_id, matchday_number, date) VALUES ({$this->ids['season']}, 1, DATE_SUB('" . self::DATE . "', INTERVAL 7 DAY))");
+        $home = $this->codes->create($this->ids['fixture'], 'home', 1);
+        $away = $this->codes->create($this->ids['fixture'], 'away', 1);
+        $this->enterAll($home, 'h', 170);
+        $this->enterAll($away, 'a', 160);
+        $this->entry->submit($home);
+        $this->entry->submit($away);
+        $this->entry->confirm($away);
+
+        try {
+            $this->entry->confirm($home);
+            self::fail('An incomplete earlier matchday must reject the confirmation (R30.20).');
+        } catch (TeamEntryException $e) {
+            self::assertSame('team_entry.error.earlier_matchday_incomplete', $e->message()->key);
+        }
+
+        self::assertSame(0, $this->numeral('SELECT COUNT(*) FROM game_result'), 'Nothing is final.');
+        self::assertSame(0, $this->numeral('SELECT COUNT(*) FROM frozen_handicap'));
+        self::assertSame(2, $this->numeral('SELECT COUNT(*) FROM team_entry WHERE closed_at IS NULL'), 'The entries stay for the admin.');
     }
 
     public function testAdminTakesTheEntryOverIntoTheVirtualScoreSheet(): void

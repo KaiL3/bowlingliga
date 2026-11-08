@@ -168,6 +168,41 @@ final class ResultRecordingTest extends TestCase
         self::assertArrayNotHasKey(self::MATCHDAY, $this->flag->isPlayed);
     }
 
+    /**
+     * R30.20: as long as an earlier matchday is incomplete the fixture can
+     * only be saved as a draft; nothing is saved, frozen or flagged.
+     */
+    public function testAnIncompleteEarlierMatchdayBlocksTheConfirmation(): void
+    {
+        $this->status->incompleteEarlierMatchday = 2;
+
+        try {
+            $this->management->confirmAndSave($this->completeResults());
+            self::fail('An incomplete earlier matchday must block the confirmation (R30.20).');
+        } catch (ResultEntryException $e) {
+            self::assertTrue($e->isEarlierMatchdayIncomplete());
+            self::assertSame(['number' => 2], $e->message()->params);
+        }
+
+        self::assertArrayNotHasKey(self::FIXTURE, $this->results->saved);
+        self::assertSame([], $this->handicaps->frozen);
+        self::assertArrayNotHasKey(self::FIXTURE, $this->status->status);
+
+        $this->management->saveDraft($this->completeResults());
+        self::assertSame('in_progress', $this->status->status[self::FIXTURE], 'A draft stays possible.');
+    }
+
+    /** R30.20: correcting a fixture that is already complete is not blocked. */
+    public function testACompleteFixtureCanStillBeCorrected(): void
+    {
+        $this->status->incompleteEarlierMatchday = 2;
+        $this->status->status[self::FIXTURE] = 'complete';
+
+        $this->management->confirmAndSave($this->completeResults());
+
+        self::assertArrayHasKey(self::FIXTURE, $this->results->saved);
+    }
+
     public function testInvalidNetValueIsRejected(): void
     {
         $games = $this->completeGames();

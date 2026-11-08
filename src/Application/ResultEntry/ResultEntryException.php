@@ -19,6 +19,8 @@ final class ResultEntryException extends \RuntimeException implements Translatab
 {
     use CarriesMessage;
 
+    private const EARLIER_MATCHDAY_INCOMPLETE = 'error.result.earlier_matchday_incomplete';
+
     /**
      * A confirmation was attempted although not all required net results of
      * both teams are given (R30.4, R30.18).
@@ -26,6 +28,20 @@ final class ResultEntryException extends \RuntimeException implements Translatab
     public static function incomplete(): self
     {
         return new self('error.result.incomplete');
+    }
+
+    /**
+     * An earlier matchday of the season is not complete yet, so the fixture
+     * can only be saved as a draft (R30.20).
+     */
+    public static function earlierMatchdayIncomplete(int $number): self
+    {
+        return new self(self::EARLIER_MATCHDAY_INCOMPLETE, ['number' => $number]);
+    }
+
+    public function isEarlierMatchdayIncomplete(): bool
+    {
+        return $this->message()->key === self::EARLIER_MATCHDAY_INCOMPLETE;
     }
 
     /**
