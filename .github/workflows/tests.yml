@@ -33,7 +33,7 @@ jobs:
         # LTS, plus the lowest supported combination (MariaDB of Debian 12).
         php: ['8.4', '8.5']
         # renovate: datasource=docker depName=mariadb
-        mariadb: ['12.3']
+        mariadb: ['13.0']
         include:
           - php: '8.4'
             # renovate: datasource=docker depName=mariadb
