@@ -20,7 +20,7 @@ development sessions, without having to reread the whole code base.
 | [data-transfer.md](data-transfer.md) | Copying the complete league data from one database into another (e.g. local demo → online demo) |
 | [development.md](development.md) | Local environment, databases, tests, conventions, recipe for new admin areas |
 | [glossary.md](glossary.md) | Binding German → English glossary of the domain terms |
-| [contribute.md](contribute.md) | Rules for contributions, adding a language or a text of the user interface |
+| [CONTRIBUTING.md](../CONTRIBUTING.md) | How to propose changes, rules for contributions, adding a language or a text of the user interface |
 
 ## Key facts at a glance
 
@@ -46,6 +46,6 @@ development sessions, without having to reread the whole code base.
   `bowlingliga_test` is rebuilt by the integration tests for every test.
 - **Language:** Code, identifiers, comments and this documentation are
   English; the user interface is German and English (catalogs in `lang/`,
-  see [contribute.md](contribute.md#adding-a-language)). Domain terms are translated
+  see [CONTRIBUTING.md](../CONTRIBUTING.md#adding-a-language)). Domain terms are translated
   according to the [glossary](glossary.md) (e.g. `ResultRecording`,
   `areAllComplete`).

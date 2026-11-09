@@ -247,7 +247,7 @@ The user interface is available in German and English (decision of
   placeholders. The catalogs describe themselves:
   [Languages](../src/I18n/Languages.php) finds every `lang/<code>.php`
   (two-letter name), its key `language.name` names the language in itself;
-  a new language is one new file (see [contribute.md](contribute.md#adding-a-language)).
+  a new language is one new file (see [CONTRIBUTING.md](../CONTRIBUTING.md#adding-a-language)).
 - **Language of a request**
   ([LanguageNegotiator](../src/I18n/LanguageNegotiator.php)): the visitor's
   choice (cookie `bl_lang`, set by the footer form via `/appearance`), on
