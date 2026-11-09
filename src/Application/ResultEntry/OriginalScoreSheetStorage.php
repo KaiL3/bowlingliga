@@ -7,6 +7,8 @@ namespace Bowlingliga\Application\ResultEntry;
 use Bowlingliga\Domain\Ocr\UploadedFile;
 use Bowlingliga\Domain\Ocr\OcrException;
 use Bowlingliga\Domain\Ocr\OcrModule;
+use Bowlingliga\Domain\ScoreSheet\ScoreSheetPhoto;
+use Bowlingliga\Domain\ScoreSheet\ScoreSheetPhotoException;
 use Bowlingliga\Security\WriteAccess;
 use Bowlingliga\Security\AccessDeniedException;
 
@@ -14,8 +16,9 @@ use Bowlingliga\Security\AccessDeniedException;
  * Writing use case: immutable storage of the uploaded original score sheet and
  * assignment to the fixture (R3.15–R3.17).
  *
- * The original score sheet is stored permanently and unchanged as
- * documentary evidence (R3.15) and assigned to the fixture so that it can be
+ * The original score sheet is stored permanently as documentary evidence
+ * (R3.15); photos are turned upright, scaled down and stored as JPEG without
+ * metadata (R3.20). It is assigned to the fixture so that it can be
  * shown in the public detail view (R3.16). Storing is deliberately decoupled
  * from the OCR result: it happens regardless of whether the OCR recognition
  * succeeded, failed or was corrected manually (R3.17). This use case
@@ -39,19 +42,23 @@ final class OriginalScoreSheetStorage
     }
 
     /**
-     * Stores the uploaded original score sheet unchanged and assigns it to the
-     * fixture; returns the id of the stored record (R3.15, R3.16, R3.17).
+     * Stores the uploaded original score sheet (photos prepared, R3.20) and
+     * assigns it to the fixture; returns the id of the stored record (R3.15, R3.16, R3.17).
      *
      * @throws AccessDeniedException if there is no write access (R5.1).
      * @throws OcrException for an unsupported format or too large a file
      *         (R3.2).
+     * @throws ScoreSheetPhotoException for a photo that cannot be prepared (R3.20).
      */
     public function save(int $fixtureId, UploadedFile $file): int
     {
         $this->ensureWriteAccess();
         $this->ensureFormatAndSize($file);
 
-        return $this->store->save($fixtureId, $file->content, $file->mimeType);
+        // Small, upright, and without location, device and time of capture (R3.20).
+        $stored = ScoreSheetPhoto::prepare($file);
+
+        return $this->store->save($fixtureId, $stored->content, $stored->mimeType);
     }
 
     /**

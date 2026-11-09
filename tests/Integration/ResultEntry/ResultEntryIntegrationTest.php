@@ -649,8 +649,8 @@ final class ResultEntryIntegrationTest extends TestCase
     }
 
     /**
-     * R3.15/R3.16: the upload stores the original unchanged as evidence (file
-     * type determined from the content), without creating results.
+     * R3.15/R3.16/R3.20: the upload stores the original as evidence (file type
+     * determined from the content, photos as JPEG), without creating results.
      */
     public function testUploadStoresOriginalAsEvidence(): void
     {
@@ -661,7 +661,7 @@ final class ResultEntryIntegrationTest extends TestCase
 
         self::assertTrue($result->successful, $result->message);
         self::assertSame(1, $this->numeral('SELECT COUNT(*) FROM original_score_sheet'));
-        self::assertSame('image/png', (string) $this->pdo->query('SELECT mime_type FROM original_score_sheet')->fetchColumn());
+        self::assertSame('image/jpeg', (string) $this->pdo->query('SELECT mime_type FROM original_score_sheet')->fetchColumn());
         self::assertSame(0, $this->numeral('SELECT COUNT(*) FROM game_result'));
 
         $html = $this->controller->scoreSheetPage(self::CSRF, $this->ids['fx']);

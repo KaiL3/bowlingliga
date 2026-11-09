@@ -344,6 +344,8 @@ return [
     'error.previous_season.season_started'       => 'Die Vorjahreswerte dieser Saison können nicht mehr geändert werden, da die Saison bereits begonnen hat.',
     'error.result.incomplete'                    => 'Der Spielzettel kann nicht als vollständig bestätigt werden, da nicht alle erforderlichen Netto-Ergebnisse beider Teams vorliegen.',
     'error.result.earlier_matchday_incomplete'   => 'Spieltag {number} ist noch nicht vollständig erfasst. Diese Begegnung kann erst danach bestätigt werden; als Entwurf lässt sie sich schon speichern.',
+    'error.score_sheet_photo.unreadable'      => 'Das Foto lässt sich nicht lesen. Bitte als JPEG, PNG oder PDF erneut hochladen.',
+    'error.score_sheet_photo.too_many_pixels' => 'Das Foto hat {megapixels} Megapixel; erlaubt sind höchstens {max}. Bitte mit geringerer Auflösung aufnehmen.',
     'error.result.matchday_cancelled'      => 'Der Spieltag ist abgesagt; für ihn werden keine Ergebnisse erfasst.',
     'error.result.too_many_in_game'              => '{team}: In Spiel {game} sind {count} Ergebnisse eingetragen. Es spielen höchstens 4 Spieler gleichzeitig (Blindspiele mitgezählt).',
     'error.result.game_incomplete'               => '{team}: In Spiel {game} sind erst {count} von 4 Ergebnissen eingetragen.',

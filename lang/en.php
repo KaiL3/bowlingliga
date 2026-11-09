@@ -343,6 +343,8 @@ return [
     'error.previous_season.season_started'       => 'The previous season records of this season can no longer be changed because the season has already started.',
     'error.result.incomplete'                    => 'The score sheet cannot be confirmed as complete because not all required net results of both teams are present.',
     'error.result.earlier_matchday_incomplete'   => 'Matchday {number} has not been entered completely yet. This fixture can only be confirmed afterwards; it can already be saved as a draft.',
+    'error.score_sheet_photo.unreadable'      => 'The photo cannot be read. Please upload it again as JPEG, PNG or PDF.',
+    'error.score_sheet_photo.too_many_pixels' => 'The photo has {megapixels} megapixels; at most {max} are allowed. Please take it at a lower resolution.',
     'error.result.matchday_cancelled'      => 'The matchday is cancelled; no results are entered for it.',
     'error.result.too_many_in_game'              => '{team}: {count} results are entered in game {game}. At most 4 players play at the same time (blind games included).',
     'error.result.game_incomplete'               => '{team}: only {count} of 4 results are entered in game {game}.',
