@@ -856,8 +856,17 @@ return [
     'results.score_sheet_number'     => 'Spielzettel {number}',
     'results.open'                   => 'Öffnen',
     'results.original'               => 'Original-Spielzettel',
-    'results.original_hint'          => 'Unverändert als Beleg gespeichert und in der Spieltag-Ansicht verlinkt.',
+    'results.original_hint'          => 'Als Beleg gespeichert (Fotos auf das Blatt zugeschnitten) und in der Spieltag-Ansicht verlinkt.',
     'results.upload_label'           => 'Foto oder Scan (JPEG, PNG oder PDF, höchstens 10 MB)',
+    'results.crop_needs_javascript'  => 'Fotos werden vor dem Hochladen auf das Blatt zugeschnitten; dafür wird JavaScript benötigt. PDFs lassen sich auch ohne hochladen.',
+    'results.crop_hint'              => 'Ziehe die vier Punkte auf die Ecken des Spielzettels. Gespeichert wird nur das Blatt, gerade gerückt.',
+    'results.crop_area'              => 'Foto mit den Ecken des Spielzettels',
+    'results.crop_rotate'            => 'Drehen',
+    'results.crop_reset'             => 'Ecken zurücksetzen',
+    'results.crop_working'           => 'Das Blatt wird zugeschnitten …',
+    'results.crop_unreadable'        => 'Das Foto lässt sich im Browser nicht öffnen.',
+    'results.crop_unsupported'       => 'Dieser Browser kann das zugeschnittene Foto nicht hochladen. Bitte einen aktuellen Browser verwenden oder das Blatt als PDF scannen.',
+    'results.crop_required'          => 'Fotos müssen vor dem Hochladen auf das Blatt zugeschnitten werden; dafür wird JavaScript benötigt. PDFs lassen sich auch ohne hochladen.',
     'results.upload'                 => 'Hochladen',
 
     // Result entry: messages

@@ -855,8 +855,17 @@ return [
     'results.score_sheet_number'     => 'Score sheet {number}',
     'results.open'                   => 'Open',
     'results.original'               => 'Original score sheet',
-    'results.original_hint'          => 'Stored unchanged as proof and linked in the matchday view.',
+    'results.original_hint'          => 'Stored as proof (photos cropped to the sheet) and linked in the matchday view.',
     'results.upload_label'           => 'Photo or scan (JPEG, PNG or PDF, at most 10 MB)',
+    'results.crop_needs_javascript'  => 'Photos are cropped to the sheet before the upload, which needs JavaScript. PDFs can be uploaded without it.',
+    'results.crop_hint'              => 'Drag the four points onto the corners of the score sheet. Only the sheet is stored, straightened.',
+    'results.crop_area'              => 'Photo with the corners of the score sheet',
+    'results.crop_rotate'            => 'Rotate',
+    'results.crop_reset'             => 'Reset corners',
+    'results.crop_working'           => 'Cropping the sheet …',
+    'results.crop_unreadable'        => 'The browser cannot open this photo.',
+    'results.crop_unsupported'       => 'This browser cannot upload the cropped photo. Please use a current browser or scan the sheet as PDF.',
+    'results.crop_required'          => 'Photos have to be cropped to the sheet before the upload, which needs JavaScript. PDFs can be uploaded without it.',
     'results.upload'                 => 'Upload',
 
     // Result entry: messages

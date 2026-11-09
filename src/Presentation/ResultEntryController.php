@@ -330,6 +330,11 @@ final class ResultEntryController
             $content = (string) file_get_contents((string) $file['tmp_name']);
             $mime   = (new \finfo(FILEINFO_MIME_TYPE))->buffer($content) ?: '';
 
+            // Only the sheet is stored: photos must have been cropped in the browser (R3.21).
+            if (str_starts_with($mime, 'image/') && ($input['cropped'] ?? '') !== '1') {
+                return ActionResult::error($this->t->t('results.crop_required'));
+            }
+
             try {
                 $this->originalStorage->save(
                     $fixture['id'],

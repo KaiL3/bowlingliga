@@ -60,7 +60,7 @@ scrolls the active area into view).
 | `/admin/results/team-entry-take-over` | POST | Take the values entered by the teams over into the virtual score sheet as a draft and end the team entry (`fixture_id`); the card with state, links and QR codes of both teams is below the virtual score sheet | `TeamEntryController::adminFixtureCard`, `TeamResultEntry::takeOver` |
 | `/admin/results/team-entry-codes` | POST | New codes for a fixture; printed QR codes become invalid | `TeamResultEntry::renewCodes` |
 | `/admin/results/remove` | POST | Remove all results of a fixture | as above |
-| `/admin/results/upload` | POST | Upload the original score sheet as evidence (no OCR) | as above + `OriginalScoreSheetStorage` |
+| `/admin/results/upload` | POST | Upload the original score sheet as evidence (no OCR); photos only cropped to the sheet (field `cropped`, R3.21) | as above + `OriginalScoreSheetStorage`, `sheet-crop.js` |
 | `/admin/print` | GET | Choose the matchday and the language of the sheets; the next unplayed matchday and the season's language are preselected | `PrintController::selection` |
 | `/admin/print?matchday=` (`&language=`) | GET | Score sheets of all fixtures of the matchday as one PDF, one fixture per page, sorted by lane (PDF via mPDF, otherwise HTML). Errors (no fixtures, missing lane, teams open) show the selection with a notice | `PrintController::generateForMatchday` |
 | `/admin/print?fixture=` (`&language=`) | GET | Single print score sheet of one fixture; without `language` in the season's language | `PrintController::generate` |

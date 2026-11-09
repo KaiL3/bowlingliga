@@ -84,6 +84,15 @@ A rule without a number in brackets belongs to the section as a whole.
   small. Photos above 50 megapixels or that cannot be decoded are rejected.
   PDFs stay unchanged. Score sheets stored before this rule stay as they
   are (R3.20, `Domain/ScoreSheet/ScoreSheetPhoto`).
+- **Only the sheet is stored:** a photo is cropped in the browser before
+  the upload. Four corner handles are placed on the corners of the sheet (with
+  a magnifier while dragging, a button to rotate by 90°), and the marked area
+  is rectified to A4, landscape or portrait by its shape. The uncropped photo
+  is not kept. Without JavaScript photos are rejected; PDFs (e.g. from a scan
+  app) need no cropping (R3.21, `public/assets/js/sheet-crop.js`,
+  `ResultEntryController::saveOriginal` checks the field `cropped`). Planned:
+  corner marks on the printed score sheet to propose the corners
+  automatically, and an upload by the teams with one place per fixture.
 - **Deleting a fixture** deletes its score sheets and their files, unless
   another record uses the same content (R3.19).
 - **Deferred – OCR (decision of 2026-10-12):** recognising the handwritten
