@@ -649,24 +649,55 @@ final class ResultEntryIntegrationTest extends TestCase
     }
 
     /**
-     * R3.15/R3.16: the upload stores the original unchanged as evidence (file
-     * type determined from the content), without creating results.
+     * R3.15/R3.16/R3.20: the upload stores the original as evidence (file type
+     * determined from the content, photos as JPEG), without creating results.
      */
     public function testUploadStoresOriginalAsEvidence(): void
     {
         $upload = $this->pngUpload();
         $upload['type'] = 'application/octet-stream'; // What the browser claims is ignored.
 
-        $result = $this->controller->saveOriginal(['fixture_id' => (string) $this->ids['fx']], $upload);
+        $result = $this->controller->saveOriginal(['fixture_id' => (string) $this->ids['fx'], 'cropped' => '1'], $upload);
 
         self::assertTrue($result->successful, $result->message);
         self::assertSame(1, $this->numeral('SELECT COUNT(*) FROM original_score_sheet'));
-        self::assertSame('image/png', (string) $this->pdo->query('SELECT mime_type FROM original_score_sheet')->fetchColumn());
+        self::assertSame('image/jpeg', (string) $this->pdo->query('SELECT mime_type FROM original_score_sheet')->fetchColumn());
         self::assertSame(0, $this->numeral('SELECT COUNT(*) FROM game_result'));
 
         $html = $this->controller->scoreSheetPage(self::CSRF, $this->ids['fx']);
         self::assertStringContainsString('href="/score-sheet/', $html);
         self::assertStringNotContainsString('auslesen', $html);
+
+        // R3.21: the form crops photos in the browser; gallery and files stay selectable.
+        self::assertStringContainsString('class="form js-sheet-crop"', $html);
+        self::assertStringContainsString('<input type="hidden" name="cropped" value="">', $html);
+        self::assertStringContainsString('<div class="sheet-crop" hidden>', $html);
+        self::assertStringContainsString('src="/assets/js/sheet-crop.js?v=', $html);
+        self::assertStringContainsString('data-crop-working="Das Blatt wird zugeschnitten …"', $html);
+        self::assertStringNotContainsString('capture=', $html);
+    }
+
+    /**
+     * R3.21: a photo that was not cropped in the browser is rejected (no
+     * JavaScript); a PDF needs no cropping.
+     */
+    public function testUncroppedPhotoIsRejectedButAPdfIsNot(): void
+    {
+        $photo = $this->controller->saveOriginal(['fixture_id' => (string) $this->ids['fx']], $this->pngUpload());
+
+        self::assertFalse($photo->successful);
+        self::assertStringContainsString('auf das Blatt zugeschnitten', $photo->message);
+        self::assertSame(0, $this->numeral('SELECT COUNT(*) FROM original_score_sheet'));
+
+        $pathName = (string) tempnam(sys_get_temp_dir(), 'szt');
+        file_put_contents($pathName, "%PDF-1.4\n%âãÏÓ\n1 0 obj << >> endobj\ntrailer << >>\n%%EOF\n");
+        $pdf = $this->controller->saveOriginal(
+            ['fixture_id' => (string) $this->ids['fx']],
+            ['name' => 'scan.pdf', 'type' => 'application/pdf', 'tmp_name' => $pathName, 'error' => UPLOAD_ERR_OK, 'size' => filesize($pathName)],
+        );
+
+        self::assertTrue($pdf->successful, $pdf->message);
+        self::assertSame('application/pdf', (string) $this->pdo->query('SELECT mime_type FROM original_score_sheet')->fetchColumn());
     }
 
     /**

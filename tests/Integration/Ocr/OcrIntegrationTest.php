@@ -190,8 +190,9 @@ final class OcrIntegrationTest extends TestCase
             // expected
         }
 
-        $content = random_bytes(256);
-        $file  = new UploadedFile($content, 'zettel.jpg', 'image/jpeg');
+        // A PDF: photos are re-encoded on upload (R3.20), PDFs stay byte for byte.
+        $content = '%PDF-1.7' . random_bytes(256);
+        $file  = new UploadedFile($content, 'zettel.pdf', 'application/pdf');
 
         $storage = new OriginalScoreSheetStorage($this->scoreSheet, new AlwaysWriteAccess());
         $id          = $storage->save($fixtureId, $file);
@@ -200,7 +201,7 @@ final class OcrIntegrationTest extends TestCase
         $saved = $this->scoreSheet->find($id);
         self::assertNotNull($saved);
         self::assertSame($fixtureId, (int) $saved['fixture_id']);
-        self::assertSame('image/jpeg', $saved['mime_type']);
+        self::assertSame('application/pdf', $saved['mime_type']);
         self::assertSame($content, $saved['file'], 'The binary content must be stored unchanged (R3.15).');
     }
 
@@ -218,8 +219,9 @@ final class OcrIntegrationTest extends TestCase
         $data = $module->recognizeScoreSheet($this->file());
         self::assertTrue($data->hasValuesNeedingReview(), 'Precondition: the recognition needs review.');
 
-        $content = random_bytes(256);
-        $file  = new UploadedFile($content, 'zettel.png', 'image/png');
+        // A PDF: photos are re-encoded on upload (R3.20), PDFs stay byte for byte.
+        $content = '%PDF-1.7' . random_bytes(256);
+        $file  = new UploadedFile($content, 'zettel.pdf', 'application/pdf');
 
         $storage = new OriginalScoreSheetStorage($this->scoreSheet, new AlwaysWriteAccess());
         $id          = $storage->save($fixtureId, $file);

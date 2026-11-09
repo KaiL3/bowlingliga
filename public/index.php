@@ -123,10 +123,11 @@ require dirname(__DIR__) . '/vendor/autoload.php';
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: SAMEORIGIN');
 header('Referrer-Policy: strict-origin-when-cross-origin');
-header("Content-Security-Policy: default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; "
+header("Content-Security-Policy: default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; "
     . "object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'");
 // The league never needs location and microphone. The camera stays allowed,
-// because the score sheet upload lets the phone take a photo directly.
+// because the score sheet upload lets the phone take a photo directly. Images
+// from blob: are the chosen photo while it is cropped (R3.21).
 header('Permissions-Policy: geolocation=(), microphone=()');
 // HTTPS only from the second visit on, so nobody in the same network can
 // intercept the first unencrypted request (only sent over HTTPS).

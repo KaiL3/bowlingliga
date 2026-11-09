@@ -634,15 +634,40 @@ final class ResultEntryView
             . '<span class="card__sub">' . $this->text('results.original_hint') . '</span></div>'
             . $items
             . sprintf(
-                '<form class="form" method="post" action="/admin/results/upload" enctype="multipart/form-data">%s'
-                . '<input type="hidden" name="fixture_id" value="%d">'
+                '<form class="form js-sheet-crop" method="post" action="/admin/results/upload" enctype="multipart/form-data"'
+                . ' data-crop-working="%3$s" data-crop-unreadable="%4$s" data-crop-unsupported="%5$s">%1$s'
+                . '<input type="hidden" name="fixture_id" value="%2$d">'
+                . '<input type="hidden" name="cropped" value="">'
                 . '<div class="form__field"><label for="upload-file">' . $this->text('results.upload_label') . '</label>'
-                . '<input id="upload-file" type="file" name="score_sheet" accept="image/jpeg,image/png,application/pdf" capture="environment" required></div>'
+                . '<input id="upload-file" type="file" name="score_sheet" accept="image/jpeg,image/png,application/pdf" required>'
+                . '<noscript><small>' . $this->text('results.crop_needs_javascript') . '</small></noscript></div>'
+                . $this->renderCropPanel()
                 . '<button type="submit" class="button">' . $this->text('results.upload') . '</button></form>',
                 $csrfField,
                 $tp,
+                $this->text('results.crop_working'),
+                $this->text('results.crop_unreadable'),
+                $this->text('results.crop_unsupported'),
             )
-            . '</section>';
+            . '</section>'
+            . '<script src="' . $this->escape(Layout::versioned('/assets/js/sheet-crop.js')) . '" defer></script>';
+    }
+
+    /**
+     * Area in which the photo is cropped to the sheet before the upload; shown
+     * by sheet-crop.js once a photo is chosen (R3.21).
+     */
+    private function renderCropPanel(): string
+    {
+        return '<div class="sheet-crop" hidden>'
+            . '<p class="sheet-crop__hint">' . $this->text('results.crop_hint') . '</p>'
+            . '<canvas class="sheet-crop__canvas" aria-label="' . $this->text('results.crop_area') . '"></canvas>'
+            . '<div class="sheet-crop__actions">'
+            . '<button type="button" class="button button--secondary" data-crop-rotate>' . $this->text('results.crop_rotate') . '</button>'
+            . '<button type="button" class="button button--secondary" data-crop-reset>' . $this->text('results.crop_reset') . '</button>'
+            . '</div>'
+            . '<p class="sheet-crop__status" role="status" aria-live="polite"></p>'
+            . '</div>';
     }
 
     private function escape(string $value): string

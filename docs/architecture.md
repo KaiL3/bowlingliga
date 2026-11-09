@@ -104,7 +104,10 @@ $router->admin('/area/action', static function () use (...): void {
   content, allowlist JPEG/PNG/PDF, stored as a file in the score sheet
   directory (see below), served under `/score-sheet/{id}` – publicly only once
   the fixture is complete. File names come only from hashes, never from the
-  upload.
+  upload. Photos are cropped to the sheet in the browser (`sheet-crop.js`,
+  R3.21) and prepared again on the server (`ScoreSheetPhoto`: upright, at most
+  2000 px, JPEG without metadata, R3.20); the CSP allows `blob:` images for
+  the photo while it is cropped.
 
 ## Score sheet files
 
@@ -317,7 +320,10 @@ The user interface is available in German and English (decision of
   `.badge`, `.rank`.
 - JavaScript only as an enhancement: `tabs.js` (fixture tabs),
   `score-sheet.js` (live calculation in the admin score sheet),
-  `appearance.js`, `admin-bar.js`. Without JavaScript everything stays usable.
+  `appearance.js`, `admin-bar.js`. Without JavaScript everything stays usable,
+  with one exception: `sheet-crop.js` crops a score sheet photo before the
+  upload (corner handles, perspective correction to A4), so without it only
+  PDFs can be uploaded (R3.21).
 - **Admin area:** same variables and styles. Building blocks in
   [AdminComponents](../src/Presentation/AdminComponents.php) (page header,
   card, messages, status chip, date) and in the "Adminbereich" section of

@@ -71,11 +71,28 @@ A rule without a number in brackets belongs to the section as a whole.
 - **Upload:** JPEG, PNG or PDF up to 10 MB; the file type is determined from
   the content; anything else is rejected with the reason (R3.1, R3.2). On a
   phone the camera can be used directly (R36.6).
-- **Storage:** the original is kept unchanged and permanently as a file,
+- **Storage:** the original is kept unchanged (photos as prepared, see below)
+  and permanently as a file,
   content-addressed by its SHA-256 (also its checksum in the database); the
   same content is stored only once (R3.15). It belongs to its fixture (R3.16)
   and is public in the detail view only once the fixture is complete. It is
   kept regardless of how the results were entered (R3.17).
+- **Photos** (JPEG, PNG) are prepared on upload: turned upright by their
+  EXIF orientation, scaled down to at most 2000 pixels on the longer edge and
+  stored as JPEG (quality 85). Re-encoding drops all metadata, so location,
+  device and time of capture do not become public, and keeps the files
+  small. Photos above 50 megapixels or that cannot be decoded are rejected.
+  PDFs stay unchanged. Score sheets stored before this rule stay as they
+  are (R3.20, `Domain/ScoreSheet/ScoreSheetPhoto`).
+- **Only the sheet is stored:** a photo is cropped in the browser before
+  the upload. Four corner handles are placed on the corners of the sheet (with
+  a magnifier while dragging, a button to rotate by 90°), and the marked area
+  is rectified to A4, landscape or portrait by its shape. The uncropped photo
+  is not kept. Without JavaScript photos are rejected; PDFs (e.g. from a scan
+  app) need no cropping (R3.21, `public/assets/js/sheet-crop.js`,
+  `ResultEntryController::saveOriginal` checks the field `cropped`). Planned:
+  corner marks on the printed score sheet to propose the corners
+  automatically, and an upload by the teams with one place per fixture.
 - **Deleting a fixture** deletes its score sheets and their files, unless
   another record uses the same content (R3.19).
 - **Deferred – OCR (decision of 2026-10-12):** recognising the handwritten

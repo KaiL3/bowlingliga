@@ -3292,3 +3292,34 @@ button:hover,
     font-weight: 700;
     white-space: nowrap;
 }
+
+/* --- Cropping a score sheet photo before the upload (R3.21) ------------- */
+.sheet-crop {
+    display: grid;
+    gap: calc(var(--spacing) * 0.5);
+    margin-block: var(--spacing);
+}
+.sheet-crop[hidden] {
+    display: none;
+}
+.sheet-crop__hint,
+.sheet-crop__status {
+    margin: 0;
+}
+.sheet-crop__status:empty {
+    display: none;
+}
+.sheet-crop__canvas {
+    display: block;
+    max-width: 100%;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-element);
+    background: var(--background);
+    /* Dragging a corner must not scroll the page. */
+    touch-action: none;
+}
+.sheet-crop__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: calc(var(--spacing) * 0.5);
+}

@@ -14,6 +14,7 @@ use Bowlingliga\Application\ResultEntry\ScoreSheetTeam;
 use Bowlingliga\Application\ResultEntry\VirtualScoreSheetService;
 use Bowlingliga\Domain\BlindPlayerService;
 use Bowlingliga\Domain\Ocr\OcrException;
+use Bowlingliga\Domain\ScoreSheet\ScoreSheetPhotoException;
 use Bowlingliga\Domain\Ocr\UploadedFile;
 use Bowlingliga\I18n\Translator;
 use Bowlingliga\Security\AccessDeniedException;
@@ -329,13 +330,18 @@ final class ResultEntryController
             $content = (string) file_get_contents((string) $file['tmp_name']);
             $mime   = (new \finfo(FILEINFO_MIME_TYPE))->buffer($content) ?: '';
 
+            // Only the sheet is stored: photos must have been cropped in the browser (R3.21).
+            if (str_starts_with($mime, 'image/') && ($input['cropped'] ?? '') !== '1') {
+                return ActionResult::error($this->t->t('results.crop_required'));
+            }
+
             try {
                 $this->originalStorage->save(
                     $fixture['id'],
                     new UploadedFile($content, (string) ($file['name'] ?? 'spielzettel'), $mime),
                 );
-            } catch (OcrException $e) {
-                // Unsupported format or too large (R3.2).
+            } catch (OcrException | ScoreSheetPhotoException $e) {
+                // Unsupported format, too large (R3.2) or not a readable photo (R3.20).
                 return ActionResult::error($this->t->error($e));
             }
 
