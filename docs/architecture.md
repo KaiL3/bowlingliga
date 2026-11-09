@@ -302,7 +302,10 @@ The user interface is available in German and English (decision of
   for text on a light background there is `--accent-text`.
 - **Switcher** in the footer: without JavaScript a form
   (POST `/appearance`, sets cookies, 303 back, local targets only), with
-  JavaScript effective immediately (`appearance.js`).
+  JavaScript effective immediately (`appearance.js`). Below the league name
+  an inconspicuous link "Quellcode auf GitHub" points to the upstream
+  repository (fixed in `Layout`, also in other installations). External
+  assets stay forbidden (R36.8); plain links are fine.
 - **Mobile (< 48rem):** main navigation as a fixed bar at the bottom with
   icons. Below 40rem: columns with `.only-wide` disappear, `.table__extra`
   appears below the team name, the score sheet turns into one card per

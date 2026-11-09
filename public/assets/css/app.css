@@ -724,6 +724,25 @@ h3 {
     font-weight: 600;
 }
 
+.footer__about {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+/* Inconspicuous link to the source code of the project. */
+.footer__source {
+    color: var(--text-2);
+    font-size: 0.8125rem;
+    text-decoration: none;
+}
+
+.footer__source:hover,
+.footer__source:focus-visible {
+    color: var(--text);
+    text-decoration: underline;
+}
+
 .appearance {
     display: flex;
     flex-wrap: wrap;

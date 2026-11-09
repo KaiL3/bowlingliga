@@ -42,6 +42,7 @@ return [
     'layout.admin'              => 'Admin',
     'layout.my_account'         => 'My account',
     'layout.log_out'            => 'Log out',
+    'layout.source_code'        => 'Source code on GitHub',
     'layout.season'             => 'Season',
     'layout.season_current'     => '{season} (current)',
     'layout.season_switch'      => 'Switch',

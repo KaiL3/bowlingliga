@@ -43,8 +43,19 @@ final class LayoutTest extends TestCase
         $html = $this->layout->render('Titel', '<p>Inhalt</p>');
 
         self::assertStringContainsString('href="/assets/css/app.css?v=', $html, 'The stylesheet must be included locally (R36.8).');
-        self::assertStringNotContainsString('http://', $html, 'No external (http) assets may be included (R36.8).');
-        self::assertStringNotContainsString('https://', $html, 'No external (https/CDN) assets may be included (R36.8).');
+        self::assertDoesNotMatchRegularExpression(
+            '#<(link|script|img|iframe)\b[^>]*\b(href|src)="(https?:)?//#i',
+            $html,
+            'No external (CDN) assets may be included (R36.8); plain links are fine.'
+        );
+    }
+
+    public function testTheFooterLinksTheSourceCode(): void
+    {
+        $html = $this->layout->render('Titel', '<p>Inhalt</p>');
+
+        self::assertStringContainsString('<a class="footer__source" href="https://github.com/KaiL3/bowlingliga">Quellcode auf GitHub</a>', $html);
+        self::assertStringContainsString('>Source code on GitHub</a>', (new Layout(null, new Translator('en')))->render('Title', '<p>x</p>'));
     }
 
     public function testFaviconsAreIncludedAndPresent(): void

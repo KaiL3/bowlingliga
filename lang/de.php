@@ -43,6 +43,7 @@ return [
     'layout.admin'              => 'Admin',
     'layout.my_account'         => 'Mein Konto',
     'layout.log_out'            => 'Abmelden',
+    'layout.source_code'        => 'Quellcode auf GitHub',
     'layout.season'             => 'Saison',
     'layout.season_current'     => '{season} (aktuell)',
     'layout.season_switch'      => 'Wechseln',
