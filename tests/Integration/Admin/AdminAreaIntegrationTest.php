@@ -1229,6 +1229,7 @@ final class AdminAreaIntegrationTest extends TestCase
             'db/migrations/001_schema.sql',
             'db/migrations/002_points_rules.sql',
             'db/migrations/003_players_public.sql',
+            'db/migrations/004_matchday_cancelled.sql',
         ] as $file) {
             $this->pdo->exec((string) file_get_contents($root . '/' . $file));
         }

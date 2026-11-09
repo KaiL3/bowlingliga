@@ -12,7 +12,8 @@ use Bowlingliga\Application\ResultEntry\OverviewReader;
  *
  * Implements the {@see OverviewReader} port: returns all fixtures of a
  * season's matchdays with completion status and the team names involved,
- * chronologically by matchday counter. Reads via prepared statements (R4.1),
+ * chronologically by matchday counter; cancelled matchdays are left out
+ * (R8.20). Reads via prepared statements (R4.1),
  * unchanged return (R4.5).
  */
 final class OverviewRepository extends AbstractRepository implements OverviewReader
@@ -36,7 +37,7 @@ final class OverviewRepository extends AbstractRepository implements OverviewRea
              LEFT JOIN team_season home ON home.id = fx.home_team_season_id
              LEFT JOIN team_season away ON away.id = fx.away_team_season_id
              LEFT JOIN lane_pair lp ON lp.id = fx.lane_pair_id
-             WHERE s.season_id = :season_id
+             WHERE s.season_id = :season_id AND s.is_cancelled = 0
              ORDER BY s.matchday_number, fx.id',
             ['season_id' => $seasonId]
         );

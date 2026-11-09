@@ -165,8 +165,28 @@ A rule without a number in brackets belongs to the section as a whole.
   - team entry on/off ([R37](#r37--result-entry-by-the-teams)).
 - Every matchday has a type: regular, positionday or lot draw (R8.18); a lot
   draw is set by the admin before the season starts (R8.19).
+- **Cancel a matchday** (decision of 2026-11-08): the league management can
+  cancel a whole matchday as long as no results are entered for it, not even
+  a draft. It keeps its number and its date, its fixtures are dropped without
+  replacement and the other dates stay. It takes no results, is not printed,
+  not open to team entry and missing from the result entry overview; it does
+  not block the order of the result entry ([R30.20](#r30--result-entry-overview-and-virtual-score-sheet))
+  or the forming of a positionday ([R31](#r31--positionday)). In public it is
+  listed as "abgesagt" and skipped as next matchday. Rules counted by matchday
+  number keep counting it ("Vorjahr im Schnitt bis Spieltag", positionday
+  interval). The cancellation can be taken back only while the matchday lies
+  in the future and no later matchday has results; otherwise an incomplete
+  matchday would suddenly lie before entered ones and undermine the order of
+  the result entry (R8.20).
+- **Postpone a matchday** (decision of 2026-11-08): only a whole matchday that
+  is not complete and not cancelled, to a later date chosen by the league
+  management (suggestion: one week later). The matchday and all later ones
+  (cancelled ones too) move by the same number of days, and so does the
+  season end. A preview shows old → new before anything is saved. Codes of
+  the team entry follow the new date (R8.21).
 - Implementation: `SeasonAdministration`, `SeasonConfiguration`,
-  `SeasonManagementController` (admin area "Saison").
+  `SeasonManagementController` (admin area "Saison", card "Spieltage"),
+  `Application/Schedule/MatchdayRescheduling`, `MatchdayScheduleRepository`.
 
 ## R9 – Season planning
 
@@ -591,6 +611,15 @@ A rule without a number in brackets belongs to the section as a whole.
   **confirm** (status "vollständig", handicaps frozen, matchday played once
   all its fixtures are complete, R30.18). Nets 0–300 (R30.13).
 - Before "vollständig" nothing is public or counted (R30.16).
+- **Order** (decision of 2026-11-08): a fixture can only be confirmed once
+  every earlier matchday of the season is complete – all its fixtures fixed
+  and "vollständig"; a matchday without fixtures (e.g. a positionday not yet
+  formed) counts as incomplete. Otherwise the handicaps would be frozen from
+  an incomplete average and never corrected by themselves (R12.12). A draft
+  stays possible, and correcting a fixture that is already complete is not
+  blocked. In the result entry by the teams the confirmation is rejected with
+  a note; the sent entries stay, and the admin takes them over and confirms
+  later (R30.20).
 - A blind value deviating from its reference is highlighted with a note
   (R30.10, R30.11). R30.12 (only a warning for the blind player order) is
   **superseded** by the rejection in R27.15.

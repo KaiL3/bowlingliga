@@ -655,6 +655,12 @@ $seasonManagementController = new \Bowlingliga\Presentation\SeasonManagementCont
     $validator,
     t: $translator,
     defaultLanguage: $defaultLanguage,
+    // Cancel or postpone a whole matchday (R8.20, R8.21).
+    rescheduling: new \Bowlingliga\Application\Schedule\MatchdayRescheduling(
+        new \Bowlingliga\Persistence\Schedule\MatchdayScheduleRepository($database),
+        $auth,
+        new \Bowlingliga\Persistence\PdoTransaction($database),
+    ),
 );
 
 // --- Composition root: honours preview (task 35.5) --------------------------
@@ -1619,7 +1625,12 @@ $router->admin('/season', static function () use (
         return;
     }
 
-    echo $adminPage('admin.area.season.title', $seasonManagementController->page($csrf->fieldHtml(), $adminSeasonId()));
+    // Preview of a postponement (R8.21): `postpone` = matchday id, `date` = new date.
+    $postponeId = filter_input(INPUT_GET, 'postpone', FILTER_VALIDATE_INT);
+    $postponeDate = filter_input(INPUT_GET, 'date');
+    $postpone = is_int($postponeId) && is_string($postponeDate) ? ['matchday_id' => $postponeId, 'date' => trim($postponeDate)] : null;
+
+    echo $adminPage('admin.area.season.title', $seasonManagementController->page($csrf->fieldHtml(), $adminSeasonId(), postpone: $postpone));
 });
 
 $seasonActions = [
@@ -1627,6 +1638,9 @@ $seasonActions = [
     'configuration' => 'updateConfiguration',
     'positionday'   => 'formPositiondayFixtures',
     'lot-draw'  => 'saveLotDrawPairings',
+    'cancel'    => 'cancelMatchday',
+    'reinstate' => 'reinstateMatchday',
+    'postpone'  => 'postponeMatchday',
 ];
 
 foreach ($seasonActions as $pathName => $method) {

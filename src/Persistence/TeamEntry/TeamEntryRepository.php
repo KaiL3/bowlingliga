@@ -50,7 +50,7 @@ final class TeamEntryRepository extends AbstractRepository implements TeamEntryS
     {
         $row = $this->findOne(
             'SELECT fx.id, fx.matchday_id, fx.completion_status, fx.home_team_season_id, fx.away_team_season_id,
-                    md.season_id, md.matchday_number, md.date, lp.lane_a, lp.lane_b,
+                    md.season_id, md.matchday_number, md.date, md.is_cancelled, lp.lane_a, lp.lane_b,
                     COALESCE(sc.ghost_score, ' . \Bowlingliga\Application\SeasonConfiguration::DEFAULT_GHOST_SCORE . ') AS ghost_score
              FROM fixture fx
              JOIN matchday md ON md.id = fx.matchday_id
@@ -69,6 +69,7 @@ final class TeamEntryRepository extends AbstractRepository implements TeamEntryS
             'season_id'       => (int) $row['season_id'],
             'matchday_number' => (int) $row['matchday_number'],
             'date'            => (string) $row['date'],
+            'is_cancelled'    => (int) $row['is_cancelled'] === 1,
             'lanes'           => $row['lane_a'] !== null ? $row['lane_a'] . '/' . $row['lane_b'] : null,
             'status'          => (string) $row['completion_status'],
             'ghost_score'     => (int) $row['ghost_score'],
@@ -203,7 +204,7 @@ final class TeamEntryRepository extends AbstractRepository implements TeamEntryS
              JOIN matchday md ON md.id = fx.matchday_id
              JOIN team_season h ON h.id = fx.home_team_season_id
              JOIN team_season a ON a.id = fx.away_team_season_id
-             WHERE md.season_id = :season AND fx.completion_status <> 'complete'
+             WHERE md.season_id = :season AND md.is_cancelled = 0 AND fx.completion_status <> 'complete'
                AND (EXISTS (SELECT 1 FROM team_entry_game g WHERE g.fixture_id = fx.id)
                     OR EXISTS (SELECT 1 FROM team_entry e WHERE e.fixture_id = fx.id
                                AND (e.submitted_at IS NOT NULL OR e.confirmed_at IS NOT NULL OR e.rejection_note IS NOT NULL)))

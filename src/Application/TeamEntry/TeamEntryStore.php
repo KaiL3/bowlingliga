@@ -20,8 +20,10 @@ interface TeamEntryStore
     /**
      * Fixture with matchday, status and both teams including their roster.
      *
+     * `is_cancelled` (R8.20) may be missing and then counts as false.
+     *
      * @return array{id: int, matchday_id: int, season_id: int, matchday_number: int, date: string,
-     *               lanes: string|null, status: string, ghost_score: int,
+     *               is_cancelled?: bool, lanes: string|null, status: string, ghost_score: int,
      *               home: array{team_season_id: int, team_name: string, is_ghost_team: bool, players: array<int, string>}|null,
      *               away: array{team_season_id: int, team_name: string, is_ghost_team: bool, players: array<int, string>}|null}|null
      */

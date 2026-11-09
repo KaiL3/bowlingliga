@@ -10,6 +10,7 @@ migrations have run. All migrations are repeatable
 | `001_schema.sql` | The complete schema: all raw data tables, the cache tables (`cache_*`, JSON payload + hash, can be discarded at any time) and the settings row `league_setting` with the league name "Bowlingliga" |
 | `002_points_rules.sql` | Points rules per season (game points, bonus points scale) in `season_config` |
 | `003_players_public.sql` | `league_setting.players_public` (R40): off for a new installation, on for one that already has seasons |
+| `004_matchday_cancelled.sql` | `matchday.is_cancelled` (R8.20): a cancelled matchday, reversible |
 
 Create new schema changes as `002_…sql`, `003_…sql` and so on, and add them
 to the `applySchema()` lists of the integration tests.
@@ -23,7 +24,7 @@ season 1─1 season_config            (lane_count, entry_fee, blind_fee, max_han
   ├─n team_season ─n─1 team         (team_name per season, is_ghost_team)
   │     └─n roster ─n─1 player      (player: name, gender)
   ├─n lane_pair                     (lane_a, lane_b)
-  └─n matchday                      (matchday_number, date, matchday_type, is_played)
+  └─n matchday                      (matchday_number, date, matchday_type, is_played, is_cancelled)
         ├─n fixture                 (home/away → team_season, lane_pair, completion_status)
         │     ├─n lineup            (team_season, sheet_row 1..n, player_id NULL = ghost team
         │     │     │                or blind slot, is_blind = player serves as blind player
@@ -62,6 +63,11 @@ fixture 1─2 team_entry               (side home/away, code_version, submitted_
 - **`matchday.is_played`:** "played matchday". Only set when **all** fixtures
   of the matchday are `complete` (R24.1). Only such matchdays count towards
   standings, averages and honours and are clickable on the public site.
+- **`matchday.is_cancelled`:** the league management cancelled the whole
+  matchday (R8.20). It keeps number, date and fixtures (so the cancellation
+  can be taken back) but takes no results and does not block later
+  matchdays. Postponing (R8.21) only changes `matchday.date` and
+  `season.end_date`.
 - **`fixture.completion_status`:** `open` → `in_progress` (draft)
   → `complete` (confirmed, 24 single games = 2 teams × 3 games × exactly
   4 results).

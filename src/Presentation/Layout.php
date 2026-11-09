@@ -102,6 +102,7 @@ final class Layout
         $language  = $this->escape($this->t->language());
         $skip      = $this->escape($this->t->t('layout.skip_link'));
         $league    = $this->escape($this->leagueName);
+        $source    = $this->escape($this->t->t('layout.source_code'));
 
         return <<<HTML
             <!DOCTYPE html>
@@ -132,7 +133,10 @@ final class Layout
                 </main>
                 <footer class="footer">
                     <div class="footer__inner">
-                        <span class="footer__brand">{$league}</span>
+                        <div class="footer__about">
+                            <span class="footer__brand">{$league}</span>
+                            <a class="footer__source" href="https://github.com/KaiL3/bowlingliga">{$source}</a>
+                        </div>
                         {$toggle}
                     </div>
                 </footer>

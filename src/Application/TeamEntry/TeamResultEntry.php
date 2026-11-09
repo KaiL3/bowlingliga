@@ -10,6 +10,7 @@ use Bowlingliga\Application\ResultEntry\BlindPosition;
 use Bowlingliga\Application\ResultEntry\EnteredGame;
 use Bowlingliga\Application\ResultEntry\EnteredResults;
 use Bowlingliga\Application\ResultEntry\FixtureLogEntry;
+use Bowlingliga\Application\ResultEntry\ResultEntryException;
 use Bowlingliga\Application\ResultEntry\ResultRecording;
 use Bowlingliga\Application\ResultEntry\TeamSheetRules;
 use Bowlingliga\Application\Transaction;
@@ -445,7 +446,9 @@ final class TeamResultEntry
     /** @param array<string, mixed> $fixture */
     private function isAvailable(array $fixture): bool
     {
+        // A cancelled matchday takes no results (R8.20).
         return $fixture['home'] !== null && $fixture['away'] !== null
+            && ! ($fixture['is_cancelled'] ?? false)
             && ! ($fixture['home']['is_ghost_team'] && $fixture['away']['is_ghost_team'])
             && $this->store->isEnabled($fixture['season_id']);
     }
@@ -645,7 +648,13 @@ final class TeamResultEntry
     private function saveFinally(TeamEntrySheet $sheet, string $detail): void
     {
         $results = $this->results($sheet);
-        $this->teamAccess->grantDuring(fn () => $this->teamRecording->confirmAndSave($results));
+        try {
+            $this->teamAccess->grantDuring(fn () => $this->teamRecording->confirmAndSave($results));
+        } catch (ResultEntryException $e) {
+            // The entries stay sent; the league management confirms the
+            // fixture once the earlier matchdays are complete (R30.20).
+            throw $e->isEarlierMatchdayIncomplete() ? TeamEntryException::earlierMatchdayIncomplete() : $e;
+        }
         $this->store->close($sheet->fixture['id']);
         $this->store->log($sheet->fixture['id'], null, 'final', $detail);
     }

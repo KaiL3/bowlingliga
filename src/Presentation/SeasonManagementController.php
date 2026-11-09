@@ -8,6 +8,8 @@ use Bowlingliga\Application\LotDraw\LotDrawException;
 use Bowlingliga\Application\LotDraw\LotDrawManagement;
 use Bowlingliga\Application\Positionday\PositiondayException;
 use Bowlingliga\Application\Positionday\PositiondayManagement;
+use Bowlingliga\Application\Schedule\MatchdayRescheduling;
+use Bowlingliga\Application\Schedule\MatchdayScheduleException;
 use Bowlingliga\Application\SeasonAdministration;
 use Bowlingliga\Application\SeasonConfiguration;
 use Bowlingliga\Domain\Message;
@@ -29,6 +31,8 @@ use Bowlingliga\Security\Validator;
  *   results have been entered (R31.7).
  * - The fixtures of a lot draw are drawn on site and entered here, as long as
  *   no results have been entered (R32).
+ * - A whole matchday can be cancelled (reversibly) or postponed with a
+ *   preview, moving all later matchdays and the season end (R8.20, R8.21).
  *
  * Writing actions return an {@see ActionResult}; domain errors are translated
  * into messages.
@@ -48,14 +52,17 @@ final class SeasonManagementController
         ?callable $clock = null,
         private readonly Translator $t = new Translator(),
         private readonly string $defaultLanguage = Languages::DEFAULT,
+        private readonly ?MatchdayRescheduling $rescheduling = null,
     ) {
         $this->clock = $clock ?? static fn (): \DateTimeImmutable => new \DateTimeImmutable('today');
     }
 
     /**
      * @param array<string, mixed>|null $prefill Form inputs after an error
+     * @param array{matchday_id: int, date: string}|null $postpone Requested
+     *        postponement whose preview is shown (R8.21)
      */
-    public function page(string $csrfField, ?int $seasonId, ?string $message = null, ?string $error = null, ?array $prefill = null): string
+    public function page(string $csrfField, ?int $seasonId, ?string $message = null, ?string $error = null, ?array $prefill = null, ?array $postpone = null): string
     {
         $season = $seasonId !== null ? $this->reader->season($seasonId) : null;
         if ($season === null) {
@@ -63,6 +70,19 @@ final class SeasonManagementController
         }
         // Without a language of its own the season prints in the installation's language.
         $season['score_sheet_language'] = ($season['score_sheet_language'] ?? null) ?? $this->defaultLanguage;
+
+        $schedule = null;
+        if ($this->rescheduling !== null) {
+            $preview = null;
+            if ($postpone !== null) {
+                try {
+                    $preview = $this->rescheduling->preview($postpone['matchday_id'], $postpone['date']);
+                } catch (AccessDeniedException | MatchdayScheduleException $e) {
+                    $error = $this->t->error($e);
+                }
+            }
+            $schedule = ['matchdays' => $this->rescheduling->matchdays($seasonId), 'preview' => $preview];
+        }
 
         return $this->view->page(
             $csrfField,
@@ -75,7 +95,59 @@ final class SeasonManagementController
             $prefill,
             $this->reader->lotDraws($seasonId),
             $this->reader->seasonTeams($seasonId),
+            $schedule,
         );
+    }
+
+    /**
+     * Cancels a whole matchday (R8.20).
+     *
+     * @param array<string, mixed> $input `matchday_id`
+     */
+    public function cancelMatchday(array $input): ActionResult
+    {
+        return $this->perform(function () use ($input): ActionResult {
+            $this->schedule()->cancel($this->integer($input, 'matchday_id'));
+
+            return ActionResult::success($this->t->t('season.matchday_cancelled'));
+        });
+    }
+
+    /**
+     * Takes a cancellation back (R8.20).
+     *
+     * @param array<string, mixed> $input `matchday_id`
+     */
+    public function reinstateMatchday(array $input): ActionResult
+    {
+        return $this->perform(function () use ($input): ActionResult {
+            $this->schedule()->reinstate($this->integer($input, 'matchday_id'));
+
+            return ActionResult::success($this->t->t('season.matchday_reinstated'));
+        });
+    }
+
+    /**
+     * Postpones a matchday and all later ones as shown in the preview (R8.21).
+     *
+     * @param array<string, mixed> $input `matchday_id`, `date`
+     */
+    public function postponeMatchday(array $input): ActionResult
+    {
+        return $this->perform(function () use ($input): ActionResult {
+            $postponement = $this->schedule()->postpone($this->integer($input, 'matchday_id'), $this->text($input, 'date'));
+
+            return ActionResult::success($this->t->t('season.matchday_postponed', [
+                'number' => $postponement->number,
+                'count'  => count($postponement->moves),
+                'days'   => $postponement->days,
+            ]));
+        });
+    }
+
+    private function schedule(): MatchdayRescheduling
+    {
+        return $this->rescheduling ?? throw new \LogicException('Rescheduling is not wired.');
     }
 
     /**
@@ -245,7 +317,7 @@ final class SeasonManagementController
     {
         try {
             return $action();
-        } catch (AccessDeniedException | ValidationException | PositiondayException | LotDrawException $e) {
+        } catch (AccessDeniedException | ValidationException | PositiondayException | LotDrawException | MatchdayScheduleException $e) {
             return ActionResult::error($this->t->error($e));
         } catch (\RuntimeException $e) {
             // Exceptions of the season management carry messages for the user.

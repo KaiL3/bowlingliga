@@ -27,4 +27,15 @@ interface FixtureStatusStore
      * fixed yet is not complete.
      */
     public function areAllComplete(int $matchdayId): bool;
+
+    /**
+     * Number of the first earlier matchday of the season that is not complete
+     * yet and therefore blocks confirming the fixture (R30.20), or null. A
+     * fixture already complete is never blocked: its correction stays
+     * possible.
+     */
+    public function blockingMatchdayNumber(int $fixtureId): ?int;
+
+    /** Tells whether the matchday is cancelled; it takes no results (R8.20). */
+    public function isMatchdayCancelled(int $matchdayId): bool;
 }

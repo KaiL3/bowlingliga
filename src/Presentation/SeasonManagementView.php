@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Bowlingliga\Presentation;
 
+use Bowlingliga\Application\Schedule\Postponement;
 use Bowlingliga\Application\SeasonConfiguration;
 use Bowlingliga\Domain\Handicap\HandicapFormula;
 use Bowlingliga\I18n\Formatter;
@@ -41,6 +42,7 @@ final class SeasonManagementView
      * @param array<string, mixed>|null $prefill
      * @param list<array{id: int, number: int, date: string, locked: bool, fixtures: list<array{home: int, away: int}>}> $lotDraws
      * @param list<array{id: int, name: string}> $teams
+     * @param array{matchdays: list<array{id: int, season_id: int, number: int, date: string, type: string, is_cancelled: bool, has_results: bool, is_complete: bool, can_reinstate?: bool}>, preview: Postponement|null}|null $schedule
      */
     public function page(
         string $csrfField,
@@ -53,6 +55,7 @@ final class SeasonManagementView
         ?array $prefill,
         array $lotDraws = [],
         array $teams = [],
+        ?array $schedule = null,
     ): string {
         $header = AdminComponents::pageHeader(
             $season['name'],
@@ -70,6 +73,7 @@ final class SeasonManagementView
             . $this->configuration($csrfField, $season['id'], $configuration, $hasStarted, $prefill)
             . $this->masterData($csrfField, $season, $prefill)
             . '</div>'
+            . ($schedule !== null ? $this->schedule($csrfField, $season['id'], $schedule['matchdays'], $schedule['preview']) : '')
             . $this->positiondays($csrfField, $positiondays)
             . $this->lotDraws($csrfField, $lotDraws, $teams, $prefill);
     }
@@ -412,6 +416,136 @@ final class SeasonManagementView
             '<ul class="team-cards">' . $entries . '</ul>',
             $this->plain('season.positiondays_hint'),
         );
+    }
+
+    /**
+     * Card "Spieltage": every matchday with its state; cancel, take a
+     * cancellation back or postpone with a preview (R8.20, R8.21).
+     *
+     * @param list<array{id: int, season_id: int, number: int, date: string, type: string, is_cancelled: bool, has_results: bool, is_complete: bool, can_reinstate?: bool}> $matchdays
+     */
+    private function schedule(string $csrfField, int $seasonId, array $matchdays, ?Postponement $preview): string
+    {
+        if ($matchdays === []) {
+            return '';
+        }
+
+        $rows = '';
+        foreach ($matchdays as $day) {
+            [$status, $class] = match (true) {
+                $day['is_cancelled'] => ['season.state_cancelled', 'status status--cancelled'],
+                $day['is_complete']  => ['season.state_complete', 'status status--complete'],
+                $day['has_results']  => ['season.state_in_progress', 'status status--in-progress'],
+                default              => ['season.state_open', 'status'],
+            };
+
+            $actions = '';
+            if ($day['is_cancelled']) {
+                // Only for a matchday in the future (R8.20).
+                $actions = ! ($day['can_reinstate'] ?? false) ? '' : $this->scheduleButton($csrfField, $seasonId, 'reinstate', $day['id'], 'season.reinstate', 'button--secondary');
+            } elseif (! $day['is_complete']) {
+                $suggestion = (new \DateTimeImmutable($day['date']))->modify('+7 days')->format('Y-m-d');
+                $actions = sprintf(
+                    '<form class="inline-form" method="get" action="/admin/season">'
+                    . '<input type="hidden" name="season" value="%d"><input type="hidden" name="postpone" value="%d">'
+                    . '<label class="visually-hidden" for="postpone-%d">%s</label>'
+                    . '<input type="date" id="postpone-%d" name="date" value="%s" min="%s" required>'
+                    . '<button type="submit" class="button button--secondary">%s</button></form>',
+                    $seasonId,
+                    $day['id'],
+                    $day['id'],
+                    $this->text('season.new_date'),
+                    $day['id'],
+                    $suggestion,
+                    (new \DateTimeImmutable($day['date']))->modify('+1 day')->format('Y-m-d'),
+                    $this->text('season.postpone'),
+                );
+                if (! $day['has_results']) {
+                    $actions .= $this->scheduleButton($csrfField, $seasonId, 'cancel', $day['id'], 'season.cancel', 'button--danger');
+                }
+            }
+
+            $rows .= sprintf(
+                '<li class="data-list__row"><span class="data-list__main">%s<span class="data-list__aside">%s · %s</span></span>'
+                . '<span class="%s">%s</span><span class="data-list__actions">%s</span></li>',
+                $this->text('common.matchday_number', ['number' => $day['number']]),
+                $this->e($this->format->date($day['date'], true)),
+                $this->e($this->labels()->matchdayType($day['type'])),
+                $class,
+                $this->text($status),
+                $actions,
+            );
+        }
+
+        return ($preview !== null ? $this->postponementPreview($csrfField, $seasonId, $preview) : '')
+            . AdminComponents::card(
+                $this->plain('season.matchdays'),
+                '<ul class="data-list">' . $rows . '</ul>',
+                $this->plain('season.matchdays_hint'),
+            );
+    }
+
+    private function scheduleButton(string $csrfField, int $seasonId, string $action, int $matchdayId, string $label, string $style): string
+    {
+        return sprintf(
+            '<form class="inline-form" method="post" action="/admin/season/%s">%s'
+            . '<input type="hidden" name="season_id" value="%d"><input type="hidden" name="matchday_id" value="%d">'
+            . '<button type="submit" class="button %s">%s</button></form>',
+            $action,
+            $csrfField,
+            $seasonId,
+            $matchdayId,
+            $style,
+            $this->text($label),
+        );
+    }
+
+    /** Old → new dates of a postponement before it is saved (R8.21). */
+    private function postponementPreview(string $csrfField, int $seasonId, Postponement $preview): string
+    {
+        $rows = '';
+        foreach ($preview->moves as $move) {
+            $rows .= sprintf(
+                '<tr><th scope="row">%s%s</th><td>%s</td><td>%s</td></tr>',
+                $this->text('common.matchday_number', ['number' => $move['number']]),
+                $move['is_cancelled'] ? ' <span class="status status--cancelled">' . $this->text('season.state_cancelled') . '</span>' : '',
+                $this->e($this->format->date($move['old'], true)),
+                $this->e($this->format->date($move['new'], true)),
+            );
+        }
+        $rows .= sprintf(
+            '<tr><th scope="row">%s</th><td>%s</td><td>%s</td></tr>',
+            $this->text('field.end_date'),
+            $this->e($this->format->date($preview->oldSeasonEnd)),
+            $this->e($this->format->date($preview->newSeasonEnd)),
+        );
+
+        return AdminComponents::card(
+            $this->plain('season.postpone_preview', ['number' => $preview->number]),
+            '<p>' . $this->text('season.postpone_preview_text', ['count' => count($preview->moves), 'days' => $preview->days]) . '</p>'
+            . '<div class="table-scroll"><table class="table"><thead><tr><th scope="col">' . $this->text('public.matchday')
+            . '</th><th scope="col">' . $this->text('season.old_date') . '</th><th scope="col">' . $this->text('season.new_date') . '</th></tr></thead>'
+            . '<tbody>' . $rows . '</tbody></table></div>'
+            . sprintf(
+                '<form class="inline-form" method="post" action="/admin/season/postpone">%s'
+                . '<input type="hidden" name="season_id" value="%d"><input type="hidden" name="matchday_id" value="%d"><input type="hidden" name="date" value="%s">'
+                . '<button type="submit" class="button">%s</button> <a class="button button--secondary" href="/admin/season?season=%d">%s</a></form>',
+                $csrfField,
+                $seasonId,
+                $preview->matchdayId,
+                $this->e($preview->moves[0]['new']),
+                $this->text('season.postpone_confirm'),
+                $seasonId,
+                $this->text('common.cancel'),
+            ),
+            '',
+            'card--highlight',
+        );
+    }
+
+    private function labels(): ValueLabels
+    {
+        return new ValueLabels($this->t);
     }
 
     /**

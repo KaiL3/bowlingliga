@@ -32,6 +32,12 @@ final class TeamEntryException extends RuntimeException implements Translatable
         return new self('team_entry.error.not_today', ['date' => $date]);
     }
 
+    /** An earlier matchday is not complete yet (R30.20). */
+    public static function earlierMatchdayIncomplete(): self
+    {
+        return new self('team_entry.error.earlier_matchday_incomplete');
+    }
+
     public static function finished(): self
     {
         return new self('team_entry.error.finished');

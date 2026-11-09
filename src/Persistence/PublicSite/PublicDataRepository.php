@@ -69,6 +69,7 @@ final class PublicDataRepository implements PublicDataReader
                 $homeName,
                 $awayName,
                 (int) $matchday['is_played'] === 1,
+                (int) ($matchday['is_cancelled'] ?? 0) === 1,
             );
         }
 
@@ -78,7 +79,8 @@ final class PublicDataRepository implements PublicDataReader
     public function nextMatchday(int $seasonId, string $today): ?UpcomingMatchday
     {
         foreach ($this->matchdays->findAllForSeason($seasonId) as $matchday) {
-            if ((int) $matchday['is_played'] === 1 || (string) $matchday['date'] < $today) {
+            // A cancelled matchday is not played (R8.20).
+            if ((int) $matchday['is_played'] === 1 || (int) ($matchday['is_cancelled'] ?? 0) === 1 || (string) $matchday['date'] < $today) {
                 continue;
             }
 
