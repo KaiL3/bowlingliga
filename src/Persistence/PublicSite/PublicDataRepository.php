@@ -168,6 +168,8 @@ final class PublicDataRepository implements PublicDataReader
         $homeSheet = $this->scoreSheetDisplay->forTeam($fixtureId, $homeId ?? 0, $matchdayId, $homeName);
         $awaySheet = $this->scoreSheetDisplay->forTeam($fixtureId, $awayId ?? 0, $matchdayId, $awayName);
 
+        $original = $this->originalScoreSheet($fixtureId);
+
         return new MatchdayFixture(
             $fixtureId,
             $this->lanes($lanePairId),
@@ -175,8 +177,9 @@ final class PublicDataRepository implements PublicDataReader
             $awaySheet,
             $this->averageLists->averageList($homeId ?? 0, $counter),
             $this->averageLists->averageList($awayId ?? 0, $counter),
-            $this->originalScoreSheetId($fixtureId),
+            $original['id'] ?? null,
             $points,
+            $original['mime_type'] ?? null,
         );
     }
 
@@ -269,13 +272,14 @@ final class PublicDataRepository implements PublicDataReader
         return $teamSeason === null ? null : (string) $teamSeason['team_name'];
     }
 
-    private function originalScoreSheetId(int $fixtureId): ?int
+    /** @return array{id: int, mime_type: string}|null the first original score sheet */
+    private function originalScoreSheet(int $fixtureId): ?array
     {
         $sheet = $this->scoreSheet->findAllForFixture($fixtureId);
         if ($sheet === []) {
             return null;
         }
 
-        return (int) $sheet[0]['id'];
+        return ['id' => (int) $sheet[0]['id'], 'mime_type' => (string) $sheet[0]['mime_type']];
     }
 }

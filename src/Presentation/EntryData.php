@@ -35,9 +35,9 @@ interface EntryData
     public function roster(int $teamSeasonId): array;
 
     /**
-     * Ids of the uploaded original score sheets of the fixture.
+     * The uploaded original score sheets of the fixture: id and MIME type.
      *
-     * @return list<int>
+     * @return list<array{id: int, mime_type: string}>
      */
     public function originalScoreSheet(int $fixtureId): array;
 

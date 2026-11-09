@@ -3323,3 +3323,95 @@ button:hover,
     flex-wrap: wrap;
     gap: calc(var(--spacing) * 0.5);
 }
+
+/* --- Overlay for the original score sheet (R15.6) ------------------------ */
+.lightbox {
+    width: 100vw;
+    height: 100dvh;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: #0A0B0E;
+    color: #FFFFFF;
+}
+.lightbox[open] {
+    display: flex;
+    flex-direction: column;
+}
+.lightbox::backdrop {
+    background: rgba(10, 11, 14, 0.6);
+}
+html:has(.lightbox[open]) {
+    overflow: hidden;
+}
+.lightbox__bar {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing);
+    padding: calc(var(--spacing) * 0.5) var(--spacing);
+    padding-top: max(calc(var(--spacing) * 0.5), env(safe-area-inset-top));
+}
+.lightbox__title {
+    flex: 1;
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.lightbox__close {
+    flex: none;
+    width: var(--target-size-min);
+    height: var(--target-size-min);
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.16);
+    color: #FFFFFF;
+    font-size: 1.75rem;
+    line-height: 1;
+    cursor: pointer;
+}
+.lightbox__close:hover {
+    background: rgba(255, 255, 255, 0.28);
+}
+.lightbox__close:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+}
+.lightbox__body {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    display: flex;
+    padding: 0 var(--spacing) var(--spacing);
+}
+.lightbox__image {
+    display: block;
+    /* Centred while it fits, scrollable from its top left corner once enlarged. */
+    margin: auto;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    background: #FFFFFF;
+    cursor: zoom-in;
+}
+.lightbox__image--full {
+    max-width: none;
+    max-height: none;
+    cursor: zoom-out;
+}
+.link-note {
+    font-weight: 400;
+    opacity: 0.8;
+}
+@media (prefers-reduced-motion: no-preference) {
+    .lightbox[open] {
+        animation: lightbox-in 0.15s ease-out;
+    }
+    @keyframes lightbox-in {
+        from { opacity: 0; }
+    }
+}

@@ -188,7 +188,7 @@ final class ResultEntryView
      * @param array<string, array<string, mixed>> $teams      View data per side ('home', 'away')
      * @param array<string, array<string, mixed>> $calculated Derived values per side ({@see ScoreSheetCalculator})
      * @param array{factor: float, target_score: int, max: int}|null $formula Handicap formula for the live calculation
-     * @param list<int>                           $originals  Ids of uploaded original score sheets
+     * @param list<array{id: int, mime_type: string}> $originals uploaded original score sheets
      * @param PointsRules|null                    $points     Points rules of the season for the live calculation (R17.11)
      */
     public function renderScoreSheet(
@@ -613,22 +613,29 @@ final class ResultEntryView
     }
 
     /**
-     * @param list<int> $originals
+     * @param list<array{id: int, mime_type: string}> $originals
      */
     private function renderOriginals(string $csrfField, int $tp, array $originals): string
     {
+        // R15.6: images open in an overlay on the page, PDFs in a new window.
+        $lightbox = new Lightbox($this->t);
         $items = $originals === []
             ? '<p class="empty">' . $this->text('results.no_original') . '</p>'
             : '<ul class="data-list">' . implode('', array_map(
-                fn (int $id): string => sprintf(
-                    '<li class="data-list__row"><span class="data-list__main">%2$s</span>'
-                    . '<span class="data-list__actions"><a class="button button--secondary" href="/score-sheet/%1$d" target="_blank" rel="noopener">%3$s</a></span></li>',
-                    $id,
-                    $this->text('results.score_sheet_number', ['number' => $id]),
-                    $this->text('results.open'),
+                fn (array $sheet): string => sprintf(
+                    '<li class="data-list__row"><span class="data-list__main">%s</span>'
+                    . '<span class="data-list__actions">%s</span></li>',
+                    $this->text('results.score_sheet_number', ['number' => $sheet['id']]),
+                    $lightbox->link(
+                        $sheet['id'],
+                        $sheet['mime_type'],
+                        $this->plain('results.open'),
+                        $this->plain('results.score_sheet_number', ['number' => $sheet['id']]),
+                        'button button--secondary',
+                    ),
                 ),
                 $originals
-            )) . '</ul>';
+            )) . '</ul>' . $lightbox->dialog();
 
         return '<section class="card" aria-labelledby="h-original"><div class="card__header"><h2 id="h-original">' . $this->text('results.original') . '</h2>'
             . '<span class="card__sub">' . $this->text('results.original_hint') . '</span></div>'

@@ -29,6 +29,7 @@ final class MatchdayFixture
      * @param AverageList        $averageListAway      Average list away (R2.1)
      * @param int|null           $originalScoreSheetId Id of the original score sheet or null (R15.4)
      * @param PointsRules        $points               Points rules of the season (R17.11)
+     * @param string|null        $originalScoreSheetMimeType MIME type of the original score sheet; images open in an overlay (R15.6)
      */
     public function __construct(
         public readonly int $fixtureId,
@@ -39,6 +40,7 @@ final class MatchdayFixture
         public readonly AverageList $averageListAway,
         public readonly ?int $originalScoreSheetId,
         public readonly PointsRules $points = new PointsRules(),
+        public readonly ?string $originalScoreSheetMimeType = null,
     ) {
     }
 

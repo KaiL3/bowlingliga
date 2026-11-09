@@ -320,7 +320,8 @@ The user interface is available in German and English (decision of
   `.badge`, `.rank`.
 - JavaScript only as an enhancement: `tabs.js` (fixture tabs),
   `score-sheet.js` (live calculation in the admin score sheet),
-  `appearance.js`, `admin-bar.js`. Without JavaScript everything stays usable,
+  `appearance.js`, `admin-bar.js`, `lightbox.js` (original score sheet in an
+  overlay, R15.6). Without JavaScript everything stays usable,
   with one exception: `sheet-crop.js` crops a score sheet photo before the
   upload (corner handles, perspective correction to A4), so without it only
   PDFs can be uploaded (R3.21).

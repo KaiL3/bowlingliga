@@ -140,6 +140,28 @@ final class PublicViewTest extends TestCase
         self::assertStringContainsString('/score-sheet/42', $html, 'An existing score sheet is linked (R15.1).');
     }
 
+    public function testAPhotoOpensInAnOverlayAndAPdfInANewWindow(): void
+    {
+        $photo = $this->view->renderMatchdayDetail($this->buildDetail(originalScoreSheetId: 42, mimeType: 'image/jpeg'));
+
+        self::assertStringContainsString(
+            '<a class="action-button action-button--secondary js-lightbox" href="/score-sheet/42" data-lightbox-title="Spielzettel Alpha – Beta">Original-Spielzettel ansehen</a>',
+            $photo,
+            'The link keeps working without JavaScript (R15.6).',
+        );
+        self::assertStringContainsString('<dialog class="lightbox js-lightbox-dialog" aria-labelledby="lightbox-title">', $photo);
+        self::assertStringContainsString('aria-label="Schließen"', $photo);
+        self::assertStringContainsString('src="/assets/js/lightbox.js?v=', $photo);
+
+        $pdf = $this->view->renderMatchdayDetail($this->buildDetail(originalScoreSheetId: 43, mimeType: 'application/pdf'));
+
+        self::assertStringContainsString(
+            'href="/score-sheet/43" target="_blank" rel="noopener">Original-Spielzettel ansehen <span class="link-note">(PDF, neues Fenster)</span></a>',
+            $pdf,
+        );
+        self::assertStringNotContainsString('js-lightbox"', $pdf);
+    }
+
     public function testAverageListShowsEmptyHdcWithoutHandicap(): void
     {
         // A player without a frozen handicap -> HCP field empty (R2.15).
@@ -396,6 +418,7 @@ final class PublicViewTest extends TestCase
     private function buildDetail(
         ?int $originalScoreSheetId,
         ?\Bowlingliga\Domain\AverageList\AverageList $averageListHome = null,
+        ?string $mimeType = 'image/jpeg',
     ): MatchdayDetail {
         $averageListHome ??= $this->averageLists->averageList([
             new AverageListPlayerInput('1', 'Anna', Gender::FEMALE, [150, 160, 170], 20),
@@ -416,6 +439,8 @@ final class PublicViewTest extends TestCase
             $averageListHome,
             $averageListAway,
             $originalScoreSheetId,
+            new \Bowlingliga\Domain\Points\PointsRules(),
+            $originalScoreSheetId !== null ? $mimeType : null,
         );
 
         return new MatchdayDetail(7, 1, '2026-01-15', [$fixture], $matchdayTable);
