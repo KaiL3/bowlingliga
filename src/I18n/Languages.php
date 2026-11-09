@@ -9,7 +9,7 @@ namespace Bowlingliga\I18n;
  * A catalog describes itself – the file name is the two-letter code, the
  * key `language.name` the name of the language in itself ("Deutsch",
  * "English"). Adding a language therefore needs no code; see
- * docs/contribute.md. German is the default and the fallback for keys a
+ * CONTRIBUTING.md. German is the default and the fallback for keys a
  * catalog lacks.
  *
  * Only two-letter file names count, so a code from a cookie or a form can

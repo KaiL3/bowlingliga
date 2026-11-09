@@ -1,27 +1,62 @@
 # Contributing
 
-Thank you for helping with the league website. This page explains the few
-rules every change follows and walks through the most common contribution
-that needs no programming: **adding a language**.
+Thank you for helping with the league website. This page explains how to
+propose a change, the few rules every change follows, and walks through the
+most common contribution that needs no programming: **adding a language**.
+
+## Ways to contribute
+
+- **Report a bug** as an issue: what you did, what you expected, what
+  happened, and the page or screen. Leave out real player data.
+- **Suggest a feature** as an issue first. The league rules in
+  [domain-logic.md](docs/domain-logic.md) are binding; a change of a rule
+  (scoring, handicap, matchday status, printed sheets) needs the agreement of
+  the maintainer before any code is written.
+- **Translate** the site into your language – see
+  [Adding a language](#adding-a-language).
+- **Improve the documentation** – typos and unclear passages are welcome as
+  small pull requests.
+
+## Pull requests
+
+1. Fork the repository and branch off **`development`**, the branch all work
+   happens on; `main` only receives tested states from `development`.
+2. Keep a pull request to one topic. Larger changes: open an issue first, so
+   nobody does work that cannot be merged.
+3. Follow the rules below, add or adapt tests, and update the documentation
+   in `docs/` when behaviour changes.
+4. Write the commit message in English: a short summary line, then what
+   changed and **why** – the reason for a decision belongs in the commit
+   message, the rule itself in the documentation.
+5. Open the pull request against `development`. GitHub runs the tests; a
+   pull request is merged once they are green and the maintainer has
+   reviewed it. This is a hobby project, so an answer may take a while.
+
+Dependencies are kept up to date by Renovate; please do not bump versions in
+an unrelated pull request.
+
+By contributing you agree that your contribution is licensed under the
+project's license, the GNU General Public License version 2 or (at your
+option) any later version ([LICENSE](LICENSE)).
 
 ## Before you start
 
 - Set up PHP, Composer and MariaDB as described in
-  [development.md](development.md#requirements); the tests need
+  [development.md](docs/development.md#requirements); the tests need
   the test database `bowlingliga_test`, which they rebuild themselves.
 - Found a security problem? Please do not open an issue; report it
-  privately as described in [SECURITY.md](../SECURITY.md).
-- Working with an AI coding agent? [AGENTS.md](../AGENTS.md) holds the
+  privately as described in [SECURITY.md](SECURITY.md).
+- Working with an AI coding agent? [AGENTS.md](AGENTS.md) holds the
   rules and commands in short form; Claude Code reads it via `CLAUDE.md`.
-- Read the [architecture](architecture.md) (layers, ports and adapters) and,
-  for domain changes, the rules in [domain-logic.md](domain-logic.md).
+- Read the [architecture](docs/architecture.md) (layers, ports and adapters) and,
+  for domain changes, the rules in [domain-logic.md](docs/domain-logic.md).
 
 ## Rules for every change
 
 - **English in code**, identifiers, comments, commit messages and this
-  documentation. Domain terms follow the [glossary](glossary.md).
+  documentation. Domain terms follow the [glossary](docs/glossary.md).
 - **Texts of the user interface live in the catalogs** `lang/<code>.php`,
-  never in the code (see [Languages](architecture.md#languages)). Requirement
+  never in the code (see [Languages](docs/architecture.md#languages)). Requirement
   numbers such as `(R12.9)` belong in comments only, never in visible texts.
 - **Raw data is the single source of truth**: standings, averages and points
   are computed, not stored.
@@ -37,7 +72,7 @@ that needs no programming: **adding a language**.
   MariaDB 12.3, PHP 8.4 with MariaDB 10.11, see `.github/workflows/tests.yml`).
 
 - For changes to pages or the printed score sheet, look at the result
-  (see [visual check](development.md#visual-check-via-screenshot-without-node)).
+  (see [visual check](docs/development.md#visual-check-via-screenshot-without-node)).
 
 ## Adding a language
 
@@ -64,7 +99,7 @@ printed score sheets per season and the print form.
      it.
    - Keep markup-free texts free of HTML; the pages escape every text.
    - Domain terms: use what bowlers in your language call them; the
-     [glossary](glossary.md) explains what each German term means.
+     [glossary](docs/glossary.md) explains what each German term means.
 4. **Dates and numbers** are part of the catalog:
    - `date.pattern` builds a date from `{d}` (day without leading zero),
      `{dd}`, `{mm}`, `{month}` (short month name) and `{yyyy}`; pick the
@@ -115,10 +150,10 @@ When a change needs a new text in the user interface:
 1. Choose a key after the existing pattern (`area.purpose`, e.g.
    `season.lot_draws_hint`) and add it to **every** catalog.
 2. In views, use the `text()` helper of the
-   [ViewTexts](../src/Presentation/ViewTexts.php) trait (escaped) or
+   [ViewTexts](src/Presentation/ViewTexts.php) trait (escaped) or
    `$translator->t()`; below the presentation layer, return a
-   [Message](../src/Domain/Message.php) (key and parameters) or throw an
-   exception implementing [Translatable](../src/Domain/Translatable.php)
+   [Message](src/Domain/Message.php) (key and parameters) or throw an
+   exception implementing [Translatable](src/Domain/Translatable.php)
    instead of a sentence.
 3. The English page tests (`PublicViewTest`, `TeamEntryViewTest`,
    `AdminAreaIntegrationTest`) fail if a German text or a bare key shows up on

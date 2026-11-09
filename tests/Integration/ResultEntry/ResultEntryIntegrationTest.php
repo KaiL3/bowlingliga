@@ -666,6 +666,7 @@ final class ResultEntryIntegrationTest extends TestCase
 
         $html = $this->controller->scoreSheetPage(self::CSRF, $this->ids['fx']);
         self::assertStringContainsString('href="/score-sheet/', $html);
+        self::assertStringContainsString('js-lightbox" href="/score-sheet/', $html, 'The photo opens in the overlay (R15.6).');
         self::assertStringNotContainsString('auslesen', $html);
 
         // R3.21: the form crops photos in the browser; gallery and files stay selectable.

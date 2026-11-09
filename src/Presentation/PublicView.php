@@ -227,6 +227,9 @@ final class PublicView
             </div>
             HTML;
 
+        // One overlay for the original score sheets of all fixtures (R15.6).
+        $lightbox = (new Lightbox($this->t))->dialog();
+
         $matchdayTable = '<section class="card"><h2>' . $this->text('public.day_table') . '</h2>'
             . $this->renderTableBody($detail->matchdayTable)
             . '</section>';
@@ -238,6 +241,7 @@ final class PublicView
             </div>
             {$tabs}
             {$matchdayTable}
+            {$lightbox}
             <script src="/assets/js/tabs.js" defer></script>
             HTML;
     }
@@ -407,11 +411,14 @@ final class PublicView
         $awayName = $this->escape($fixture->away->teamName ?? '—');
 
         $original = $fixture->hasOriginalScoreSheet()
-            ? sprintf(
-                '<p><a class="action-button action-button--secondary" href="/score-sheet/%d">%s</a></p>',
-                $fixture->originalScoreSheetId,
-                $this->text('public.original_score_sheet'),
-            )
+            // R15.6: an image opens in an overlay, a PDF in a new window.
+            ? '<p>' . (new Lightbox($this->t))->link(
+                (int) $fixture->originalScoreSheetId,
+                $fixture->originalScoreSheetMimeType ?? 'image/jpeg',
+                $this->t->t('public.original_score_sheet'),
+                ($fixture->home->teamName ?? '—') . ' – ' . ($fixture->away->teamName ?? '—'),
+                'action-button action-button--secondary',
+            ) . '</p>'
             // R15.4: no original score sheet exists.
             : '<p class="notice">' . $this->text('public.no_original_score_sheet') . '</p>';
 

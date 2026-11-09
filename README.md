@@ -121,7 +121,7 @@ GitHub Actions runs the complete suite with PHP 8.4 and 8.5 against MariaDB
 ## Contributing
 
 Contributions are welcome – from bug reports to new languages. Start with
-[docs/contribute.md](docs/contribute.md); [AGENTS.md](AGENTS.md) has the rules
+[CONTRIBUTING.md](CONTRIBUTING.md); [AGENTS.md](AGENTS.md) has the rules
 in short form, also for AI coding agents.
 
 ## Security

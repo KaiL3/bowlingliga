@@ -64,11 +64,11 @@ final class EntryDataRepository extends AbstractRepository implements EntryData
     public function originalScoreSheet(int $fixtureId): array
     {
         $rows = $this->findAll(
-            'SELECT id FROM original_score_sheet WHERE fixture_id = :id ORDER BY id',
+            'SELECT id, mime_type FROM original_score_sheet WHERE fixture_id = :id ORDER BY id',
             ['id' => $fixtureId]
         );
 
-        return array_map(static fn (array $z): int => (int) $z['id'], $rows);
+        return array_map(static fn (array $z): array => ['id' => (int) $z['id'], 'mime_type' => (string) $z['mime_type']], $rows);
     }
 
     public function seasonMatchdays(int $seasonId): array

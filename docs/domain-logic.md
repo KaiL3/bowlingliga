@@ -340,6 +340,12 @@ A rule without a number in brackets belongs to the section as a whole.
   matchday, with rank and total row (R15.3).
 - Without an original score sheet a note says so (R15.4); an unplayed
   matchday shows a message instead of the view (R15.5).
+- **The original score sheet opens on the page:** a photo in an overlay with
+  a close button; Escape, a click next to it and the back button or swipe of
+  the phone close it, a click on the photo switches to its original size. A
+  PDF opens in a new window, which the link says. Without JavaScript the link
+  opens the file itself. The same applies in the admin area (R15.6,
+  `Presentation/Lightbox`, `lightbox.js`).
 
 ## R16 – League table and day table
 
