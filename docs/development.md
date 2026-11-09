@@ -102,8 +102,9 @@ version of the CI, configured in
 - minor and patch updates of the development tools and the CI tools are
   merged automatically once the tests are green; runtime packages (mPDF,
   HTML Purifier, …) and major updates are reviewed by hand,
-- `config.platform.php` in `composer.json` is 8.4.0, so packages are always
-  resolved for the lowest supported PHP version,
+- `config.platform.php` in `composer.json` is 8.4.1, so packages are always
+  resolved for the lowest supported PHP version (8.4.1 rather than 8.4.0,
+  since PHPUnit 13 requires it),
 - MariaDB updates only appear as a checkbox in the Dependency Dashboard:
   Renovate cannot tell an LTS line from a short-term release, so approve
   only a new LTS (see [endoflife.date/mariadb](https://endoflife.date/mariadb));
@@ -129,7 +130,7 @@ project (8.3 left it at the end of 2025), MariaDB from 10.11 (Debian 12).
   the controller translates them into an `ActionResult`.
 - Views escape every output; forms contain `$csrf->fieldHtml()`.
 - Tests use PHPUnit attributes such as `#[DataProvider('name')]` with a static
-  provider; docblock annotations (`@dataProvider`) are ignored by PHPUnit 12.
+  provider; docblock annotations (`@dataProvider`) are ignored by PHPUnit 12 and later.
   PHPUnit captures `error_log()` during a test, so code that logs gets the log
   function injected (example: `TeamEntryController`, parameter `log`).
 - New schema changes: add a new numbered migration and update
