@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Bowlingliga\Presentation;
 
 /**
- * Draws a simple line chart as inline SVG (R39.3, R39.4): one value per
- * matchday, optionally as steps (a value that holds for a whole matchday) and
- * with a second series of single dots. Missing values (null) leave a gap.
+ * Draws a simple line chart as inline SVG (R39.3, R39.4, R41.4): one value per
+ * matchday, optionally as steps (a value that holds for a whole matchday),
+ * with a second, dashed line and with a series of single dots. Missing values
+ * (null) leave a gap. The axis can be turned upside down (rank 1 on top) and
+ * given a fixed range.
  *
  * No script and no library: the colours come from the stylesheet (classes
  * `chart__*` with the design tokens), so the chart follows style and colour
@@ -31,23 +33,39 @@ final class SvgLineChart
      * @param list<float|null> $dots       Optional single values per position.
      * @param bool             $steps      Draw the line as steps.
      * @param callable(float): string $formatY Label of a y tick.
+     * @param list<float|null> $second     Optional second line (dashed), one value per position.
+     * @param bool             $invert     Smallest value on top (e.g. rank 1).
+     * @param array{0: float, 1: float, 2: float}|null $range Fixed y range: minimum, maximum, tick step.
      */
-    public function render(string $label, array $xLabels, array $line, array $dots = [], bool $steps = false, ?callable $formatY = null): string
-    {
+    public function render(
+        string $label,
+        array $xLabels,
+        array $line,
+        array $dots = [],
+        bool $steps = false,
+        ?callable $formatY = null,
+        array $second = [],
+        bool $invert = false,
+        ?array $range = null,
+    ): string {
         $formatY ??= static fn (float $value): string => (string) (int) round($value);
         $count     = count($xLabels);
-        $values    = array_values(array_filter([...$line, ...$dots], static fn (?float $v): bool => $v !== null));
+        $values    = array_values(array_filter([...$line, ...$second, ...$dots], static fn (?float $v): bool => $v !== null));
         if ($count === 0 || $values === []) {
             return '';
         }
 
-        [$min, $max, $step] = self::scale(min($values), max($values));
+        [$min, $max, $step] = $range ?? self::scale(min($values), max($values));
 
         $plotWidth  = self::WIDTH - self::LEFT - self::RIGHT;
         $plotHeight = self::HEIGHT - self::TOP - self::BOTTOM;
         $slot       = $plotWidth / $count;
         $x = static fn (int $i): float => self::LEFT + $slot * ($i + 0.5);
-        $y = static fn (float $v): float => self::TOP + $plotHeight * (1 - ($v - $min) / ($max - $min));
+        $y = static function (float $v) use ($min, $max, $plotHeight, $invert): float {
+            $share = ($v - $min) / ($max - $min);
+
+            return self::TOP + $plotHeight * ($invert ? $share : 1 - $share);
+        };
 
         $grid = '';
         for ($v = $min; $v <= $max + 1e-9; $v += $step) {
@@ -77,7 +95,7 @@ final class SvgLineChart
             }
         }
 
-        $paths = '';
+        $paths = self::linePaths($second, $x, $y, 'chart__line chart__line--second');
         foreach (self::segments($line) as $segment) {
             $d = '';
             foreach ($segment as $n => $i) {
@@ -116,6 +134,30 @@ final class SvgLineChart
             $paths,
             $points,
         );
+    }
+
+    /**
+     * Paths of a plain line (no steps); a single value becomes a point.
+     *
+     * @param list<float|null>        $values
+     * @param callable(int): float    $x
+     * @param callable(float): float  $y
+     */
+    private static function linePaths(array $values, callable $x, callable $y, string $class): string
+    {
+        $paths = '';
+        foreach (self::segments($values) as $segment) {
+            $d = '';
+            foreach ($segment as $n => $i) {
+                $d .= sprintf('%s%s %s', $n === 0 ? 'M' : ' L', self::n($x($i)), self::n($y((float) $values[$i])));
+            }
+            $paths .= '<path class="' . $class . '" d="' . $d . '"/>';
+            if (count($segment) === 1) {
+                $paths .= sprintf('<circle class="chart__point chart__point--second" cx="%s" cy="%s" r="3"/>', self::n($x($segment[0])), self::n($y((float) $values[$segment[0]])));
+            }
+        }
+
+        return $paths;
     }
 
     /**

@@ -232,7 +232,10 @@ final class MasterDataView
             $isGhostTeam = (int) ($team['is_ghost_team'] ?? 0) === 1;
             $cards .= sprintf(
                 '<li class="team-card"><div class="team-card__header"><h3>%s%s</h3>%s</div>%s</li>',
-                $this->escape((string) $team['team_name']),
+                // The team page shows the statistics of the season (R41.1); the ghost team has none.
+                $isGhostTeam
+                    ? $this->escape((string) $team['team_name'])
+                    : sprintf('<a href="/admin/master-data/team?id=%d">%s</a>', (int) $team['id'], $this->escape((string) $team['team_name'])),
                 $isGhostTeam ? ' <span class="badge">' . $this->text('master_data.ghost_team') . '</span>' : '',
                 $this->deleteButton($csrfField, 'team-remove', 'team_season_id', (int) $team['id'], (string) $team['team_name']),
                 $isGhostTeam

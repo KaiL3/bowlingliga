@@ -67,6 +67,18 @@ final class TableAggregator
     }
 
     /**
+     * League table from the given fixtures, e.g. those up to a matchday for
+     * the standing history of the team page (R41.4).
+     *
+     * @param list<FixtureRawData> $fixtures
+     * @param array<int, string>   $presetTeams Team season id → team name (R16.7)
+     */
+    public function tableFrom(array $fixtures, array $presetTeams, PointsRules $rules): Table
+    {
+        return $this->tables->leagueTable($this->buildStatistics($fixtures, $presetTeams, $rules));
+    }
+
+    /**
      * Points rules of the season the matchday belongs to (R17.11), e.g. for
      * the points of a single fixture.
      */
@@ -165,7 +177,7 @@ final class TableAggregator
      * lanes, whichever rows they come from. Missing values (incomplete legacy
      * data) count as 0.
      */
-    private function buildLineup(FixtureTeamRawData $team): PointsLineup
+    public function buildLineup(FixtureTeamRawData $team): PointsLineup
     {
         $places = array_fill(0, 4, [0, 0, 0]);
         foreach ([1, 2, 3] as $game) {

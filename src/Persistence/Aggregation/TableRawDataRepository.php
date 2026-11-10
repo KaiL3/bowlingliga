@@ -73,10 +73,10 @@ final class TableRawDataRepository extends AbstractRepository implements TableRa
     private function loadFixtures(string $condition, int $value): array
     {
         $rows = $this->findAll(
-            "SELECT fx.id AS fixture_id, fx.home_team_season_id AS home_id, fx.away_team_season_id AS away_id,
+            "SELECT fx.id AS fixture_id, fx.matchday_id, fx.home_team_season_id AS home_id, fx.away_team_season_id AS away_id,
                     ts.id AS team_season_id, ts.team_name, ts.is_ghost_team,
                     a.id AS lineup_id, a.player_id,
-                    e.game_number, e.net, h.handicap
+                    e.game_number, e.net, (e.is_blind = 1 OR a.is_blind = 1) AS blind, h.handicap
              FROM fixture fx
              JOIN matchday md ON md.id = fx.matchday_id AND md.is_played = 1
              JOIN team_season ts ON ts.id IN (fx.home_team_season_id, fx.away_team_season_id)
@@ -89,12 +89,12 @@ final class TableRawDataRepository extends AbstractRepository implements TableRa
             ['value' => $value]
         );
 
-        /** @var array<int, array{home: int, away: int, teams: array<int, array<string, mixed>>}> $fixtures */
+        /** @var array<int, array{matchday: int, home: int, away: int, teams: array<int, array<string, mixed>>}> $fixtures */
         $fixtures = [];
         foreach ($rows as $z) {
             $tp = (int) $z['fixture_id'];
             $ts = (int) $z['team_season_id'];
-            $fixtures[$tp] ??= ['home' => (int) $z['home_id'], 'away' => (int) $z['away_id'], 'teams' => []];
+            $fixtures[$tp] ??= ['matchday' => (int) $z['matchday_id'], 'home' => (int) $z['home_id'], 'away' => (int) $z['away_id'], 'teams' => []];
             $fixtures[$tp]['teams'][$ts] ??= [
                 'name'       => (string) $z['team_name'],
                 'ghost'      => (int) $z['is_ghost_team'] === 1,
@@ -110,12 +110,16 @@ final class TableRawDataRepository extends AbstractRepository implements TableRa
             $team['rows'][$aId] ??= [
                 'player' => $z['player_id'] === null ? null : (int) $z['player_id'],
                 'net'   => [],
+                'blind' => [],
                 // Ghost team without handicap (R20.2); otherwise frozen HDC (R17.2, R12.12).
                 'hdc'     => $team['ghost'] || $z['player_id'] === null || $z['handicap'] === null ? 0 : (int) $z['handicap'],
             ];
             $num = $z['game_number'] === null ? 0 : (int) $z['game_number'];
             if ($num >= 1 && $num <= 3) {
                 $team['rows'][$aId]['net'][$num] = (int) $z['net'];
+                if ((int) $z['blind'] === 1) {
+                    $team['rows'][$aId]['blind'][] = $num;
+                }
             }
             unset($team);
         }
@@ -125,6 +129,7 @@ final class TableRawDataRepository extends AbstractRepository implements TableRa
             $result[] = new FixtureRawData(
                 $this->buildTeamFrom($fixture['home'], $fixture['teams'][$fixture['home']] ?? null),
                 $this->buildTeamFrom($fixture['away'], $fixture['teams'][$fixture['away']] ?? null),
+                $fixture['matchday'],
             );
         }
 
@@ -132,7 +137,7 @@ final class TableRawDataRepository extends AbstractRepository implements TableRa
     }
 
     /**
-     * @param array{name: string, ghost: bool, rows: array<int, array{player: int|null, net: array<int, int>, hdc: int}>}|null $team
+     * @param array{name: string, ghost: bool, rows: array<int, array{player: int|null, net: array<int, int>, blind: list<int>, hdc: int}>}|null $team
      */
     private function buildTeamFrom(int $teamSeasonId, ?array $team): FixtureTeamRawData
     {
@@ -142,7 +147,7 @@ final class TableRawDataRepository extends AbstractRepository implements TableRa
 
         foreach ($team['rows'] ?? [] as $row) {
             $hasRealPlayer = $hasRealPlayer || $row['player'] !== null;
-            $rows[]        = new SheetRowResults($row['net'], $row['hdc']);
+            $rows[]        = new SheetRowResults($row['net'], $row['hdc'], $row['blind']);
         }
 
         return new FixtureTeamRawData(
