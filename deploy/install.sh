@@ -372,9 +372,14 @@ SITE=/etc/nginx/sites-available/$INSTANCE
 # Throttle the login: at most 10 attempts per minute and IP (short bursts up
 # to 5 allowed). Makes trying out passwords and codes and deliberately
 # locking an account harder.
+# The team entry gets a generous limit of its own: on a matchday all teams
+# often share one address (the alley's Wi-Fi, carrier NAT), and every open
+# page reloads the sheet every 15 s. 2 requests per second with bursts of 60
+# go unnoticed there but keep scans of team codes and their load small.
 cat > "/etc/nginx/conf.d/$INSTANCE-rate-limit.conf" <<NGINX
 # Bowlingliga instance $INSTANCE (deploy/install.sh)
 limit_req_zone \$binary_remote_addr zone=${INSTANCE}_login:10m rate=10r/m;
+limit_req_zone \$binary_remote_addr zone=${INSTANCE}_entry:10m rate=120r/m;
 limit_req_status 429;
 NGINX
 
@@ -437,6 +442,12 @@ $LISTEN
     # Login (steps 1 and 2) throttled
     location ^~ /admin/login {
         limit_req zone=${INSTANCE}_login burst=5 nodelay;
+        try_files \$uri /index.php\$is_args\$args;
+    }
+
+    # Team entry (page, sheet refresh, actions) throttled generously
+    location ^~ /entry {
+        limit_req zone=${INSTANCE}_entry burst=60 nodelay;
         try_files \$uri /index.php\$is_args\$args;
     }
 
