@@ -247,10 +247,14 @@ final class AdminAreaIntegrationTest extends TestCase
         ]);
         self::assertSame(401, $status);
         self::assertSame(401, $this->get('/admin')[0]);
+        self::assertStringNotContainsString('header__admin', $this->get('/')[1], 'Visitors see no way into the admin area (R28.19).');
 
         $this->logIn();
+        self::assertStringContainsString('<a class="header__admin" href="/admin" title="Adminbereich" aria-label="Adminbereich">', $this->get('/')[1], 'A logged-in admin finds the way back (R28.19).');
+        self::assertStringContainsString('class="header__admin"', $this->get('/table')[1]);
 
         [$status, $html] = $this->get('/admin');
+        self::assertStringNotContainsString('header__admin', $html, 'Not inside the admin area, it has its own bar.');
         self::assertSame(200, $status);
         foreach (['/admin/master-data', '/admin/season-planning', '/admin/results', '/admin/home-page', '/admin/rules', '/admin/league'] as $link) {
             self::assertStringContainsString('href="' . $link . '"', $html, 'The overview links ' . $link);
@@ -260,6 +264,7 @@ final class AdminAreaIntegrationTest extends TestCase
         self::assertSame(302, $status);
         self::assertStringContainsString('Location: /admin/login', $header);
         self::assertSame(401, $this->get('/admin/master-data')[0]);
+        self::assertStringNotContainsString('header__admin', $this->get('/')[1], 'Gone after logging out.');
     }
 
     /**

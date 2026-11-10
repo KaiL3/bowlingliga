@@ -50,6 +50,18 @@ final class LayoutTest extends TestCase
         );
     }
 
+    public function testOnlyALoggedInAdminGetsTheWayBackToTheAdminArea(): void
+    {
+        self::assertStringNotContainsString('header__admin', $this->layout->render('Titel', '<p>Inhalt</p>'));
+
+        $html = $this->layout->render('Titel', '<p>Inhalt</p>', adminLink: true);
+        self::assertStringContainsString('<a class="header__admin" href="/admin" title="Adminbereich" aria-label="Adminbereich"><svg', $html);
+        self::assertLessThan(strpos($html, '</header>'), strpos($html, 'header__admin'), 'In the header.');
+
+        $english = (new Layout(null, new Translator('en')))->render('Title', '<p>x</p>', adminLink: true);
+        self::assertStringContainsString('aria-label="Admin area"', $english);
+    }
+
     public function testTheFooterLinksTheSourceCode(): void
     {
         $html = $this->layout->render('Titel', '<p>Inhalt</p>');

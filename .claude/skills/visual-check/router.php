@@ -39,6 +39,8 @@ if (getenv('BOWLINGLIGA_ADMIN')) {
         return true;
     }
     session_start();
+    // Public pages only look at a login if the browser sent a session cookie.
+    $_COOKIE[session_name()] = session_id();
     $accountId = (int) getenv('BOWLINGLIGA_ADMIN');
     $_SESSION['auth_account_id'] = $accountId;
     $_SESSION['auth_logged_in_at'] = time();

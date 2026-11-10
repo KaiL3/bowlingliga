@@ -220,11 +220,17 @@ $auth = new AuthModule(
  * league makes it public, otherwise only for a logged-in admin. Without a
  * session cookie no session is started, so anonymous visitors get none.
  */
-$playersVisible = static function () use ($leagueStore, $auth): bool {
+$adminLoggedIn = static function () use ($auth): bool {
+    static $loggedIn = null;
+
+    // Reading public pages does not extend the admin session (R5.11).
+    return $loggedIn ??= isset($_COOKIE[session_name()]) && $auth->isLoggedIn();
+};
+
+$playersVisible = static function () use ($leagueStore, $adminLoggedIn): bool {
     static $visible = null;
 
-    return $visible ??= $leagueStore->playersPublic()
-        || (isset($_COOKIE[session_name()]) && $auth->checkWriteAccess());
+    return $visible ??= $leagueStore->playersPublic() || $adminLoggedIn();
 };
 
 $dataReader = new PublicDataRepository(
@@ -304,12 +310,14 @@ $seasonForLinks = static function (?int $seasonId) use ($defaultSeasonId): ?int 
  * season (R28.2): the navigation items carry the query parameter `saison`.
  * Pages of a matchday or team pass their own season.
  */
-$page = static function (string $title, string $content, ?int $seasonId = null) use ($layout, $navigation, $currentSeasonId, $seasonForLinks): string {
+$page = static function (string $title, string $content, ?int $seasonId = null) use ($layout, $navigation, $currentSeasonId, $seasonForLinks, $adminLoggedIn): string {
     return $layout->render(
         $title,
         $content,
         $navigation->entries($seasonForLinks($seasonId ?? $currentSeasonId())),
         (string) ($_SERVER['REQUEST_URI'] ?? '/'),
+        // A logged-in admin finds the way back to the admin area (R28.19).
+        adminLink: $adminLoggedIn(),
     );
 };
 
@@ -466,11 +474,11 @@ $router->public('/rules', static function () use ($t, $page, $cmsView, $rules, $
 // Delivery of the uploaded original score sheet (R3.16, R15.4).
 // Public only once the fixture is entered completely (before that only for
 // logged-in admins); otherwise 404, without revealing that it exists.
-$router->publicWithId('/score-sheet', static function (int $id) use ($t, $scoreSheet, $teamFixtures, $auth, $playersVisible): void {
+$router->publicWithId('/score-sheet', static function (int $id) use ($t, $scoreSheet, $teamFixtures, $adminLoggedIn, $playersVisible): void {
     $dataRecord = $scoreSheet->find($id);
     $fixture   = $dataRecord !== null ? $teamFixtures->find((int) $dataRecord['fixture_id']) : null;
     // The original shows the players' names: without public player data only for admins (R40.2).
-    $visible  = $fixture !== null && (($fixture['completion_status'] === 'complete' && $playersVisible()) || $auth->checkWriteAccess());
+    $visible  = $fixture !== null && (($fixture['completion_status'] === 'complete' && $playersVisible()) || $adminLoggedIn());
 
     if ($dataRecord === null || ! $visible) {
         http_response_code(404);

@@ -137,6 +137,9 @@ A rule without a number in brackets belongs to the section as a whole.
   it is forgotten. At most 10 trusted devices per account, the most recently
   used ones; one browser can be trusted for several accounts. The rule
   applies to every kind of account, not only to admins (R5.10).
+- Only requests in the admin area count as activity. Public pages check
+  the login (link to the admin area, player data) without extending the
+  session, so reading the website keeps no session alive (R5.11).
 - Implementation: `Security/AuthModule`, details in
   [architecture.md](architecture.md#security).
 
@@ -597,7 +600,10 @@ A rule without a number in brackets belongs to the section as a whole.
 - **Admin area** only after login; otherwise the login form (R28.8, R28.9).
   Areas: results, season (master data, configuration, planning, lot draws,
   printing), content (home page posts, rules), accounts, honours preview
-  (R28.10–R28.17), league name ([R38](#r38--league-name)).
+  (R28.10–R28.17), league name ([R38](#r38--league-name)). A logged-in
+  admin sees a gear symbol at the right of the header on the public pages
+  that leads back to the admin area; visitors without a login do not see it
+  (R28.19).
 - **Season choice** (R28.18): without a choice – also on the first visit –
   the running season (today between start and end date), in the summer
   break the last finished one, before the first season the next one. A

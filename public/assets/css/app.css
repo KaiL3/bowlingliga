@@ -411,6 +411,24 @@ h3 {
     color: var(--accent);
 }
 
+/* Way back to the admin area, only for a logged-in admin on public pages */
+.header__admin {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--target-size-min);
+    height: var(--target-size-min);
+    border-radius: var(--radius-nav);
+    color: var(--text-2);
+}
+
+.header__admin:hover,
+.header__admin:focus-visible {
+    background: var(--surface-2);
+    color: var(--text);
+}
+
 .nav {
     position: fixed;
     left: 0;
@@ -487,6 +505,11 @@ h3 {
 
     [data-style="bento"] .header__inner {
         padding: 0.5rem 0.5rem 0.5rem 1.5rem;
+    }
+
+    /* With the admin symbol behind it the menu stays on the right. */
+    .nav {
+        margin-left: auto;
     }
 
     .nav,
