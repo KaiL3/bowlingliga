@@ -412,6 +412,10 @@ $LISTEN
     index index.php;
     client_max_body_size 12m;
 
+    # No nginx version in the Server header and on error pages. Set per site,
+    # so other sites on the same server keep their own setting.
+    server_tokens off;
+
     # Own log files per instance; Debian's logrotate covers /var/log/nginx/*.log.
     # PHP errors arrive here as well (FastCGI stderr).
     access_log /var/log/nginx/$INSTANCE.access.log;
