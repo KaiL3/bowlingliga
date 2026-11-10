@@ -118,16 +118,17 @@ final class PublicController
 
     /**
      * Renders the team page with the current average list (R2); unknown teams
-     * and the ghost team get a message (R1.5).
+     * and the ghost team get a message (R1.5). Without header only the list
+     * card, as part of the team page (R41.7).
      */
-    public function teamAverageList(int $teamSeasonId, bool $withPlayers = true): string
+    public function teamAverageList(int $teamSeasonId, bool $withPlayers = true, bool $withHeader = true): string
     {
         $team = $this->reader->teamAverageList($teamSeasonId);
         if ($team === null) {
             return $this->message('public.team_not_found');
         }
 
-        return $this->view->renderTeamAverageList($team, $withPlayers);
+        return $this->view->renderTeamAverageList($team, $withPlayers, $withHeader);
     }
 
     /**

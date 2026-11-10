@@ -15,9 +15,13 @@ namespace Bowlingliga\Application\Aggregation;
  */
 final class FixtureRawData
 {
+    /**
+     * @param int $matchdayId Matchday of the fixture; the team page groups by it (R41.3), 0 if unknown
+     */
     public function __construct(
         public readonly FixtureTeamRawData $home,
         public readonly FixtureTeamRawData $away,
+        public readonly int $matchdayId = 0,
     ) {
     }
 }

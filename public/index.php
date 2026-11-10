@@ -244,6 +244,13 @@ $cmsView    = new CmsView($translator);
 // Player page, public and in the admin area (R39).
 $playerProfiles    = new \Bowlingliga\Application\PlayerProfile\PlayerProfiles(new \Bowlingliga\Persistence\PlayerProfile\PlayerProfileRepository($database));
 $playerProfileView = new \Bowlingliga\Presentation\PlayerProfileView($translator);
+// Team page, public and in the admin area (R41).
+$teamProfiles    = new \Bowlingliga\Application\TeamProfile\TeamProfiles(
+    new \Bowlingliga\Persistence\TeamProfile\TeamProfileRepository($database),
+    new TableRawDataRepository($database),
+    new TableAggregator(new TableRawDataRepository($database)),
+);
+$teamProfileView = new \Bowlingliga\Presentation\TeamProfileView($translator);
 // Text of the catalog in the request's language (for page titles and short messages).
 $t = static fn (string $key, array $params = []): string => $translator->t($key, $params);
 
@@ -359,15 +366,26 @@ $router->publicWithId('/matchday', static function (int $matchdayId) use ($t, $p
     echo $page($t('public.matchday'), $controller->matchdayDetail($matchdayId, $playersVisible()), $matchday !== null ? (int) $matchday['season_id'] : null);
 });
 
-// Team page with the current average list, linked from the league table (R2).
-// The navigation keeps the team's season.
-$router->publicWithId('/team', static function (int $teamSeasonId) use ($t, $page, $controller, $teamSeasons, $playersVisible): void {
-    $team = $teamSeasons->find($teamSeasonId);
+// Team page with statistics and the current average list (R41, R2), linked from
+// the league table. The navigation keeps the team's season.
+$router->publicWithId('/team', static function (int $teamSeasonId) use ($t, $page, $controller, $teamProfiles, $teamProfileView, $playersVisible): void {
+    $profile = $teamProfiles->profile($teamSeasonId);
+    if ($profile === null) {
+        http_response_code(404);
+        echo $page($t('team.title'), '<p class="notice" role="status">' . htmlspecialchars($t('team.not_found')) . '</p>');
+
+        return;
+    }
 
     echo $page(
-        $team !== null ? (string) $team['team_name'] : $t('common.team'),
-        $controller->teamAverageList($teamSeasonId, $playersVisible()),
-        $team !== null ? (int) $team['season_id'] : null,
+        $profile->teamName,
+        $teamProfileView->render(
+            $profile,
+            static fn (int $id): string => '/team/' . $id,
+            $controller->teamAverageList($teamSeasonId, $playersVisible(), false),
+            '<p><a class="more" href="/table?season=' . $profile->seasonId . '">' . htmlspecialchars($t('public.back_to_table')) . '</a></p>',
+        ),
+        $profile->seasonId,
     );
 });
 
@@ -993,6 +1011,34 @@ $router->admin('/master-data/player', static function () use ($t, $ensureAdminAc
     echo $adminPage(
         'player.title',
         $playerProfileView->render($profile, static fn (int $seasonId): string => '/admin/master-data/player?id=' . $profile->playerId . '&season=' . $seasonId, $back),
+    );
+});
+
+// Team page in the admin area, linked from the master data (R41.8); player
+// data is always visible here.
+$router->admin('/master-data/team', static function () use ($t, $ensureAdminAccess, $adminPage, $teamProfiles, $teamProfileView, $controller): void {
+    if (! $ensureAdminAccess()) {
+        return;
+    }
+
+    $teamSeasonId = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
+    $profile      = is_int($teamSeasonId) && $teamSeasonId > 0 ? $teamProfiles->profile($teamSeasonId) : null;
+    $back         = '<p><a class="more" href="/admin/master-data?tab=teams">' . htmlspecialchars($t('team.back_to_list')) . '</a></p>';
+    if ($profile === null) {
+        http_response_code(404);
+        echo $adminPage('team.title', '<p class="notice" role="status">' . htmlspecialchars($t('team.not_found')) . '</p>' . $back);
+
+        return;
+    }
+
+    echo $adminPage(
+        'team.title',
+        $teamProfileView->render(
+            $profile,
+            static fn (int $id): string => '/admin/master-data/team?id=' . $id,
+            $controller->teamAverageList($profile->teamSeasonId, true, false),
+            str_replace('?tab=teams', '?tab=teams&amp;season=' . $profile->seasonId, $back),
+        ),
     );
 });
 

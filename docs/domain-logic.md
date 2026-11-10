@@ -16,7 +16,7 @@ A rule without a number in brackets belongs to the section as a whole.
 
 | Area | Sections |
 |---|---|
-| Public pages | [R1](#r1--results-of-a-fixture) · [R2](#r2--average-list-of-a-team) · [R14](#r14--season-selection-and-matchday-list) · [R15](#r15--matchday-detail-view) · [R16](#r16--league-table-and-day-table) · [R28](#r28--navigation-and-season-choice) · [R33](#r33--home-page-posts) · [R34](#r34--rules-page) · [R36](#r36--mobile-use) · [R39](#r39--player-page) · [R40](#r40--public-player-data) |
+| Public pages | [R1](#r1--results-of-a-fixture) · [R2](#r2--average-list-of-a-team) · [R14](#r14--season-selection-and-matchday-list) · [R15](#r15--matchday-detail-view) · [R16](#r16--league-table-and-day-table) · [R28](#r28--navigation-and-season-choice) · [R33](#r33--home-page-posts) · [R34](#r34--rules-page) · [R36](#r36--mobile-use) · [R39](#r39--player-page) · [R40](#r40--public-player-data) · [R41](#r41--team-page) |
 | League data | [R6](#r6--players) · [R7](#r7--teams) · [R8](#r8--seasons-matchdays-and-season-configuration) · [R25](#r25--data-minimisation) · [R29](#r29--previous-season-records) · [R38](#r38--league-name) · [R40](#r40--public-player-data) |
 | Season planning | [R9](#r9--season-planning) · [R18](#r18--lane-assignment) · [R31](#r31--positionday) · [R32](#r32--lot-draw) |
 | Scoring | [R11](#r11--player-average) · [R12](#r12--handicap) · [R13](#r13--honours) · [R17](#r17--points) · [R20](#r20--ghost-team) · [R21](#r21--roster-and-lineup) · [R24](#r24--played-matchday) · [R27](#r27--blind-players) |
@@ -61,8 +61,9 @@ A rule without a number in brackets belongs to the section as a whole.
   the team averages (R2.14).
 - A team without games yet shows a message and an empty list (R2.4); a
   loading error shows a message instead of incomplete values (R2.6).
-- Clicking a team in the league table shows its current average list
-  (`/team/{id}`, state after the last played matchday).
+- Clicking a team in the league table shows its team page
+  ([R41](#r41--team-page)) with the current average list (`/team/{id}`, state
+  after the last played matchday).
 - Implementation: `Application/Aggregation/AverageListAggregator`,
   `AverageListRawDataRepository`.
 
@@ -858,7 +859,8 @@ A rule without a number in brackets belongs to the section as a whole.
   - Matchday detail view: per fixture the result with the team sums per game
     and the points, and the day table; no score sheet, no original score
     sheet, no average lists, a note instead.
-  - Team page: a note in place of the average list.
+  - Team page: a note in place of the average list; the team statistics
+    stay visible ([R41](#r41--team-page)).
   - Honours: a note, since every honour names a player.
   - Player page (`/player/{id}`) and original score sheet (`/score-sheet/{id}`):
     404.
@@ -872,3 +874,42 @@ A rule without a number in brackets belongs to the section as a whole.
   `LeagueSettings::playersPublic()`/`save()`, `LeagueSettingsView` (checkbox),
   `$playersVisible` in `public/index.php`, `$withPlayers` of
   `PublicController`/`PublicView`.
+
+## R41 – Team page
+
+- Every team has a page per season, public at `/team/{id}` (id of the team
+  season) and in the admin area at `/admin/master-data/team?id={id}` with the
+  same content. The league and day table link to the public page, the team
+  names in the master data to the admin page, the opponents on the page to
+  their own page. The ghost team has no page (R41.1).
+- **Seasons:** a team keeps its identity (team id) across seasons whatever
+  its name; with more than one season a selection switches between them
+  (R41.2). Creating a team for a new season still makes a new team; carrying
+  a team over into the next season is open.
+- **Key figures** of the season (R41.3): rank of the league table, points
+  with the bonus points among them, team average net and gross like the
+  table (R16.1), the average without blind games (R41.5), gross pins, single
+  games won, drawn and lost (R17.3), best team game and best series (gross
+  of an evening), blind games and matchdays played.
+- **Charts** after every played matchday (R41.4): league position (rank 1 on
+  top) from the league table of all matchdays so far, points next to those
+  of the leader, and the team average net with and without blind games plus
+  the evening's average as dots. A matchday without a fixture of the team
+  still moves the standing.
+- **Without blind games** (R41.5): blind games leave out both their pins and
+  their count, so a blind value does not pull the average; the line with
+  blind games matches the league table (R27.12).
+- **Games of the season** (R41.6): per matchday the opponent, the outcome of
+  the three games, points for and against, bonus points, gross pins and the
+  rank after the matchday; cancelled matchdays and matchdays without a
+  fixture of the team are listed but count for nothing.
+- **Average list** (R41.7): the team's current average list
+  ([R2](#r2--average-list-of-a-team)) follows; without public player data a
+  note replaces it ([R40](#r40--public-player-data)), the team statistics
+  stay. The admin page always shows it (R41.8).
+- The page computes everything from the raw data of the table (R35) and
+  stores nothing.
+- Implementation: `Application/TeamProfile/TeamProfiles` (uses
+  `TableAggregator::tableFrom()` per matchday), `TeamProfileRepository`,
+  `TableRawDataRepository` (blind games and matchday per fixture),
+  `Presentation/TeamProfileView` with `SvgLineChart`.

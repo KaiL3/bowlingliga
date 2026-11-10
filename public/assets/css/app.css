@@ -1557,6 +1557,17 @@ a.matchday-list__row:hover {
     fill: var(--accent);
 }
 
+/* Second line (team page: average without blind games, the leader's points) */
+.chart__line--second {
+    stroke: var(--text-2);
+    stroke-width: 2;
+    stroke-dasharray: 6 5;
+}
+
+.chart__point--second {
+    fill: var(--text-2);
+}
+
 .chart__dot {
     fill: var(--surface);
     stroke: var(--text-2);
@@ -1582,6 +1593,13 @@ a.matchday-list__row:hover {
     background: var(--accent);
 }
 
+.chart__key--second {
+    width: 1rem;
+    height: 0;
+    margin-left: 0.5rem;
+    border-top: 2px dashed var(--text-2);
+}
+
 .chart__key--dot {
     width: 0.5rem;
     height: 0.5rem;
@@ -1592,6 +1610,54 @@ a.matchday-list__row:hover {
 
 .table tr.is-selected td {
     font-weight: 700;
+}
+
+.card__note {
+    margin-left: 0.5rem;
+    color: var(--text-2);
+    font-size: 0.8125rem;
+    font-weight: 400;
+}
+
+/* Team page: outcome of the three games and matchdays without a game */
+.outcomes {
+    display: inline-flex;
+    gap: 0.25rem;
+}
+
+.outcome {
+    display: inline-block;
+    min-width: 1.5em;
+    padding: 0.0625rem 0.25rem;
+    border-radius: var(--radius-element);
+    text-align: center;
+    text-decoration: none;
+    font-weight: 700;
+    background: var(--surface-2);
+    color: var(--text-2);
+}
+
+.outcome--win {
+    background: var(--accent);
+    color: var(--on-accent, #fff);
+}
+
+/* Phones: compact badges, so that the games of the season fit without
+   sideways scrolling. */
+@media (max-width: 39.99rem) {
+    .outcomes {
+        gap: 0.125rem;
+    }
+
+    .outcome {
+        min-width: 1.25em;
+        padding: 0 0.125rem;
+        font-size: 0.875rem;
+    }
+}
+
+.table__row--muted td {
+    color: var(--text-2);
 }
 
 .honours {

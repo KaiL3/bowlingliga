@@ -8,9 +8,9 @@ use Bowlingliga\Presentation\SvgLineChart;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Unit test of the inline SVG line chart of the player page.
+ * Unit test of the inline SVG line chart of the player and team page.
  *
- * Validates: R39.3, R39.4
+ * Validates: R39.3, R39.4, R41.4
  */
 final class SvgLineChartTest extends TestCase
 {
@@ -34,6 +34,25 @@ final class SvgLineChartTest extends TestCase
         self::assertStringStartsWith('<svg class="chart" viewBox="0 0 480 220" role="img"', $svg);
         self::assertStringContainsString('aria-label="Schnitt &lt;Anna&gt; &amp; &quot;Ben&quot;"', $svg);
         self::assertStringNotContainsString('<script', $svg);
+    }
+
+    public function testTheSecondLineIsDashedAndCountsForTheScale(): void
+    {
+        $svg = $this->chart->render('Punkte', ['1', '2'], [7.0, 8.0], second: [7.0, 30.0]);
+
+        self::assertSame(1, substr_count($svg, '<path class="chart__line chart__line--second"'));
+        self::assertStringContainsString('>30</text>', $svg, 'The scale reaches the higher second line.');
+    }
+
+    public function testAnInvertedChartWithFixedRangeShowsRankOneOnTop(): void
+    {
+        $svg = $this->chart->render('Platz', ['1', '2'], [1.0, 3.0], invert: true, range: [1.0, 3.0, 1.0]);
+
+        // Rank 1 sits at the top edge of the plot (y = 12), rank 3 at the bottom (y = 192).
+        self::assertStringContainsString('d="M', $svg);
+        self::assertMatchesRegularExpression('/d="M[\d.]+ 12 L[\d.]+ 192"/', $svg);
+        self::assertStringContainsString('y="16" text-anchor="end">1</text>', $svg, 'Tick 1 at the top.');
+        self::assertStringNotContainsString('>0</text>', $svg, 'No rank 0.');
     }
 
     public function testAGapSplitsTheLine(): void

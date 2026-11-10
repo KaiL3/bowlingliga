@@ -23,11 +23,25 @@ final class SheetRowResults
     /**
      * @param array<int, int> $net      Net values by game number (1–3) of the games of this row
      * @param int             $handicap Handicap for the gross (R17.2); 0 for the ghost team
+     * @param list<int>       $blind    Game numbers of this row that are blind games (R27.12); only
+     *                                  the team page needs them (R41.5), the table counts them normally
      */
     public function __construct(
         public readonly array $net,
         public readonly int $handicap,
+        public readonly array $blind = [],
     ) {
+    }
+
+    /**
+     * Net values by game number of the games actually played, without blind
+     * games (R27.13, R41.5).
+     *
+     * @return array<int, int>
+     */
+    public function playedNet(): array
+    {
+        return array_diff_key($this->net, array_flip($this->blind));
     }
 
     /**

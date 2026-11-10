@@ -256,9 +256,10 @@ final class PublicView
 
     /**
      * Team page: a team's current average list, reachable via the team name
-     * in the league and matchday table (R2).
+     * in the league and matchday table (R2). Without header only the list
+     * card with its standing, as part of the team page (R41.7).
      */
-    public function renderTeamAverageList(TeamAverageList $team, bool $withPlayers = true): string
+    public function renderTeamAverageList(TeamAverageList $team, bool $withPlayers = true, bool $withHeader = true): string
     {
         $backLink = sprintf('<p><a class="more" href="/table?season=%d">%s</a></p>', $team->seasonId, $this->text('public.back_to_table'));
         $standing = $team->standingMatchdayCounter !== null
@@ -278,13 +279,24 @@ final class PublicView
             $this->escape($team->teamLabel),
         );
 
+        if (! $withHeader) {
+            // Part of the team page (R41.7): the list only, titled with its standing.
+            $header   = '';
+            $backLink = '';
+        }
+
         if (! $withPlayers) {
             // R40.2: the average list consists of players only.
             return $header . $this->playersHiddenCard() . $backLink;
         }
 
+        $title = $this->text('public.average_list');
+        if (! $withHeader) {
+            $title .= ' <small class="card__note">' . $this->escape($standing) . '</small>';
+        }
+
         return $header
-            . $this->renderAverageList($this->escape($team->teamLabel), $team->averageList, $this->text('public.average_list'), $blank, $team->seasonId)
+            . $this->renderAverageList($this->escape($team->teamLabel), $team->averageList, $title, $blank, $team->seasonId)
             . $backLink;
     }
 
