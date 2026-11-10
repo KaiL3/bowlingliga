@@ -90,6 +90,17 @@ $router->admin('/area/action', static function () use (...): void {
   Every login step runs in a transaction that locks the account row
   (`findByUsernameForUpdate`/`findForUpdate`): parallel attempts on the same
   account run one after the other, so the 5-attempt limit holds exactly.
+- **Trusted devices** ([TrustedDevices](../src/Security/TrustedDevices.php),
+  R5.10): after a complete login the browser gets the cookie `bl_device` with
+  a random token (32 bytes, base64url, 90 days, path `/`); the table
+  `trusted_device` keeps only its SHA-256 hash, per account and with the
+  account's `session_version`. The account lock skips a trusted device, so
+  locking an account on purpose no longer keeps its owner out; the device
+  counts its own failed attempts and is forgotten after five. A new session
+  version forgets the other devices (`prune()`), `renewSession()` trusts the
+  own browser again. Ports `TrustedDeviceStore` and `DeviceCookie` keep the
+  flow testable; nothing in it is specific to admin accounts. The table is
+  never part of a data transfer.
 - **Session cookie:** HttpOnly, SameSite=Strict, Secure with HTTPS.
 - **HSTS** ([TransportSecurity](../src/Security/TransportSecurity.php)): over
   HTTPS every response carries `Strict-Transport-Security` (without
@@ -104,10 +115,14 @@ $router->admin('/area/action', static function () use (...): void {
   content, allowlist JPEG/PNG/PDF, stored as a file in the score sheet
   directory (see below), served under `/score-sheet/{id}` – publicly only once
   the fixture is complete. File names come only from hashes, never from the
-  upload. Photos are cropped to the sheet in the browser (`sheet-crop.js`,
+  upload. Only a file PHP accepted as upload in the same request is read
+  (`is_uploaded_file`). Photos are cropped to the sheet in the browser (`sheet-crop.js`,
   R3.21) and prepared again on the server (`ScoreSheetPhoto`: upright, at most
   2000 px, JPEG without metadata, R3.20); the CSP allows `blob:` images for
-  the photo while it is cropped.
+  the photo while it is cropped. When served, an image gets a narrow CSP
+  of its own (`default-src 'none'; img-src 'self'`); a PDF is served
+  without a CSP, because the built-in PDF viewers of the browsers behave
+  differently under one.
 
 ## Score sheet files
 

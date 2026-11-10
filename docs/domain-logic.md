@@ -124,10 +124,19 @@ A rule without a number in brackets belongs to the section as a whole.
   latest 8 hours after login (R5.8); logging out ends it (R5.5).
 - A failed login does not reveal whether the username or the password was
   wrong (R5.3). 5 failed attempts in a row lock the account for 15 minutes
-  (R5.6).
+  (R5.6), but only for devices that are not trusted (R5.10).
 - Changing the password, setting up or switching off two-factor login, or
-  "Alle anderen Sitzungen abmelden" end all other sessions of the account;
-  the own session stays. A lock does not end sessions (R5.9).
+  "Alle anderen Sitzungen abmelden" end all other sessions of the account
+  and forget its other trusted devices; the own session stays and its
+  browser stays trusted. A lock does not end sessions (R5.9).
+- A browser in which an account logged in completely (password and, if
+  active, code) is a trusted device of that account for 90 days; every
+  complete login renews it. The account lock does not apply to it, so
+  whoever knows a username can lock out unknown devices but not the owner.
+  Failed attempts from a trusted device count only for that device; after 5
+  it is forgotten. At most 10 trusted devices per account, the most recently
+  used ones; one browser can be trusted for several accounts. The rule
+  applies to every kind of account, not only to admins (R5.10).
 - Implementation: `Security/AuthModule`, details in
   [architecture.md](architecture.md#security).
 

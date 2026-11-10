@@ -84,6 +84,8 @@ final class AuthModule implements WriteAccess, SessionRenewal
      *        while another one is about to lock the account (R5.6).
      * @param callable(): \DateTimeImmutable|null $clock Optional clock for
      *        deterministic tests; without it the current time is used.
+     * @param TrustedDevices|null $devices Trusted devices (R5.10); without
+     *        them the account lock applies to every device.
      */
     public function __construct(
         private readonly AdminAccountRepository $accounts,
@@ -93,6 +95,7 @@ final class AuthModule implements WriteAccess, SessionRenewal
         private readonly SessionStore $session,
         private readonly Transaction $transaction,
         ?callable $clock = null,
+        private readonly ?TrustedDevices $devices = null,
     ) {
         $this->clock = $clock ?? static fn (): \DateTimeImmutable => new \DateTimeImmutable();
     }
@@ -151,15 +154,17 @@ final class AuthModule implements WriteAccess, SessionRenewal
         }
 
         $accountId = (int) $account['id'];
+        $device    = $this->trustedDevice($accountId, $account);
 
-        // R5.6: a currently locked account is rejected without further checks.
-        if ($this->isLocked($account)) {
+        // R5.6: a currently locked account is rejected without further checks,
+        // unless the browser is a trusted device of the account (R5.10).
+        if ($device === null && $this->isLocked($account)) {
             return LoginResult::accountLocked();
         }
 
         // R5.3: password check; a failure counts as failed attempt.
         if (! $this->passwordHasher->check($password, (string) $account['password_hash'])) {
-            return $this->processFailedAttempt($accountId, $account, LoginResult::invalidCredentials());
+            return $this->processFailedAttempt($accountId, $account, LoginResult::invalidCredentials(), $device);
         }
 
         // R23.7/R23.8: with active 2FA a valid TOTP code is required as well.
@@ -174,13 +179,14 @@ final class AuthModule implements WriteAccess, SessionRenewal
                 return LoginResult::secondFactorRequired();
             }
             if (! $this->checkSecondFactor($account, $totpCode, $totpTime)) {
-                return $this->processFailedAttempt($accountId, $account, LoginResult::invalidSecondFactor());
+                return $this->processFailedAttempt($accountId, $account, LoginResult::invalidSecondFactor(), $device);
             }
         }
 
         // Success: reset failed attempts and set up the session (R5.2).
         $this->resetFailedAttempts($accountId, $account);
         $this->setUpSession($accountId, $account);
+        $this->devices?->trust($accountId, self::sessionVersion($account), $this->currentTime());
 
         return LoginResult::successful();
     }
@@ -213,14 +219,15 @@ final class AuthModule implements WriteAccess, SessionRenewal
             return LoginResult::loginExpired();
         }
 
-        if ($this->isLocked($account)) {
+        $device = $this->trustedDevice($accountId, $account);
+        if ($device === null && $this->isLocked($account)) {
             $this->cancelSecondFactor();
 
             return LoginResult::accountLocked();
         }
 
         if (! $this->checkSecondFactor($account, $totpCode, $totpTime)) {
-            $result = $this->processFailedAttempt($accountId, $account, LoginResult::invalidSecondFactor());
+            $result = $this->processFailedAttempt($accountId, $account, LoginResult::invalidSecondFactor(), $device);
             if ($result->status === LoginStatus::ACCOUNT_LOCKED) {
                 $this->cancelSecondFactor();
             }
@@ -231,6 +238,7 @@ final class AuthModule implements WriteAccess, SessionRenewal
         $this->cancelSecondFactor();
         $this->resetFailedAttempts($accountId, $account);
         $this->setUpSession($accountId, $account);
+        $this->devices?->trust($accountId, self::sessionVersion($account), $this->currentTime());
 
         return LoginResult::successful();
     }
@@ -349,6 +357,9 @@ final class AuthModule implements WriteAccess, SessionRenewal
 
         $this->session->regenerateId();
         $this->session->set(self::SESSION_VERSION, self::sessionVersion($account));
+        // The other devices are forgotten with the old session version (R5.9),
+        // this browser stays trusted like its session stays logged in (R5.10).
+        $this->devices?->trust($accountId, self::sessionVersion($account), $this->currentTime());
     }
 
     /**
@@ -404,12 +415,20 @@ final class AuthModule implements WriteAccess, SessionRenewal
     /**
      * Processes a failed attempt: increases the counter, locks the account for
      * 15 minutes when the maximum is reached and returns the matching result
-     * (R5.6).
+     * (R5.6). A failed attempt from a trusted device only counts for that
+     * device and never locks the account (R5.10).
      *
      * @param array<string, mixed> $account
+     * @param array{id: int, session_version: int, failed_attempts: int, expires_at: string}|null $device
      */
-    private function processFailedAttempt(int $accountId, array $account, LoginResult $defaultResult): LoginResult
+    private function processFailedAttempt(int $accountId, array $account, LoginResult $defaultResult, ?array $device = null): LoginResult
     {
+        if ($device !== null && $this->devices !== null) {
+            $this->devices->recordFailure($device);
+
+            return $defaultResult;
+        }
+
         $failedAttempts = (int) ($account['failed_attempts'] ?? 0) + 1;
 
         if ($failedAttempts >= self::MAX_FAILED_ATTEMPTS) {
@@ -424,6 +443,17 @@ final class AuthModule implements WriteAccess, SessionRenewal
         $this->accounts->updateFailedAttempts($accountId, $failedAttempts);
 
         return $defaultResult;
+    }
+
+    /**
+     * The trusted device of this browser for the account, or null (R5.10).
+     *
+     * @param array<string, mixed> $account
+     * @return array{id: int, session_version: int, failed_attempts: int, expires_at: string}|null
+     */
+    private function trustedDevice(int $accountId, array $account): ?array
+    {
+        return $this->devices?->recognise($accountId, self::sessionVersion($account), $this->currentTime());
     }
 
     /**

@@ -59,6 +59,14 @@ final class ResultEntryController
     /** At most 3 blind players per game (R27.2). */
     private const MAX_BLIND = 3;
 
+    /**
+     * Checks that a path is a file PHP accepted as upload in this request;
+     * only tests pass another check, because their files are no uploads.
+     *
+     * @var \Closure(string): bool
+     */
+    private readonly \Closure $isUploadedFile;
+
     public function __construct(
         private readonly ScoreSheetOverview $overview,
         private readonly VirtualScoreSheetService $scoreSheet,
@@ -71,7 +79,9 @@ final class ResultEntryController
         private readonly ScoreSheetCalculator $calculator = new ScoreSheetCalculator(),
         private readonly BlindPlayerService $blindPlayer = new BlindPlayerService(),
         private readonly Translator $t = new Translator(),
+        ?\Closure $isUploadedFile = null,
     ) {
+        $this->isUploadedFile = $isUploadedFile ?? is_uploaded_file(...);
     }
 
     /**
@@ -696,8 +706,10 @@ final class ResultEntryController
         $error = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
 
         return match ($error) {
-            // tmp_name comes from PHP itself ($_FILES), not from the client.
-            UPLOAD_ERR_OK => is_file((string) ($file['tmp_name'] ?? ''))
+            // tmp_name comes from PHP itself ($_FILES), not from the client. Still
+            // only a file PHP received as upload in this request is read, never any
+            // other file of the server.
+            UPLOAD_ERR_OK => ($this->isUploadedFile)((string) ($file['tmp_name'] ?? ''))
                 ? null
                 : $this->t->t('upload.unreadable'),
             UPLOAD_ERR_NO_FILE => $this->t->t('upload.no_file'),

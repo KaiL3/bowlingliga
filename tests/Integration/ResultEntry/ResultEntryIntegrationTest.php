@@ -88,9 +88,10 @@ final class ResultEntryIntegrationTest extends TestCase
 
     /**
      * Builds the production controller with real repositories; optionally with
-     * a different handicap freezing (e.g. one that fails).
+     * a different handicap freezing (e.g. one that fails). The test files are
+     * no real uploads, so the upload check is is_file() unless $realUploads.
      */
-    private function buildController(?HandicapFreezing $freezing = null): ResultEntryController
+    private function buildController(?HandicapFreezing $freezing = null, bool $realUploads = false): ResultEntryController
     {
         $access       = new SwitchableWriteAccess(true);
         $matchdays     = new MatchdayRepository($this->database);
@@ -118,6 +119,7 @@ final class ResultEntryIntegrationTest extends TestCase
             new EntryDataRepository($this->database),
             new ResultEntryView(),
             $handicaps,
+            isUploadedFile: $realUploads ? null : is_file(...),
         );
     }
 
@@ -719,6 +721,22 @@ final class ResultEntryIntegrationTest extends TestCase
     }
 
     /**
+     * Only a file PHP received as upload is read, never another file of the
+     * server – with the check of the live wiring (is_uploaded_file).
+     */
+    public function testAFileThatIsNoUploadIsNotRead(): void
+    {
+        $result = $this->buildController(realUploads: true)->saveOriginal(
+            ['fixture_id' => (string) $this->ids['fx'], 'cropped' => '1'],
+            ['name' => 'x.png', 'type' => 'image/png', 'tmp_name' => __FILE__, 'error' => UPLOAD_ERR_OK, 'size' => filesize(__FILE__)],
+        );
+
+        self::assertFalse($result->successful);
+        self::assertSame('Die hochgeladene Datei konnte nicht gelesen werden.', $result->message);
+        self::assertSame(0, $this->numeral('SELECT COUNT(*) FROM original_score_sheet'));
+    }
+
+    /**
      * The overview lists the fixture as to be filled in.
      */
     public function testOverview(): void
@@ -1059,6 +1077,7 @@ final class ResultEntryIntegrationTest extends TestCase
             'db/migrations/002_points_rules.sql',
             'db/migrations/003_players_public.sql',
             'db/migrations/004_matchday_cancelled.sql',
+            'db/migrations/005_trusted_device.sql',
         ] as $file) {
             $this->pdo->exec((string) file_get_contents($root . '/' . $file));
         }
@@ -1070,7 +1089,7 @@ final class ResultEntryIntegrationTest extends TestCase
         foreach ([
             'fixture_log', 'team_entry_game', 'team_entry', 'game_result', 'lineup', 'original_score_sheet', 'fixture', 'lane_pair',
             'frozen_handicap', 'roster', 'team_season', 'team', 'matchday', 'season_config', 'season',
-            'player', 'previous_season_record', 'admin_account', 'login_attempt', 'home_page_post',
+            'player', 'previous_season_record', 'admin_account', 'login_attempt', 'trusted_device', 'home_page_post',
             'rules', 'privacy_policy', 'legal_notice', 'league_setting',
             'cache_average', 'cache_league_table', 'cache_matchday_table', 'cache_honours',
         ] as $table) {

@@ -563,7 +563,7 @@ return [
     'account.repeat_password'    => 'Repeat the new password',
     'account.sessions'           => 'Sessions',
     'account.sessions_text'      => 'A login ends after 30 minutes without activity, at the latest after 8 hours. Changing the password and every change of the two-factor login log out all other devices.',
-    'account.sessions_foreign'   => 'Logged in on someone else\'s device and not logged out? All other sessions can be ended here at once.',
+    'account.sessions_foreign'   => 'Logged in on someone else\'s device and not logged out? All other sessions can be ended here at once; the other devices are then no longer known.',
     'account.end_sessions'       => 'Log out all other sessions',
 
     // My account: messages
@@ -1043,6 +1043,10 @@ return [
     'operation.save_totp_secret'                  => 'Save the TOTP secret',
     'operation.save_team_entry_lineup'            => 'Save the lineup of the team entry',
     'operation.delete_fixture'                    => 'Delete the fixture',
+    'operation.save_trusted_device'               => 'Save the device as trusted',
+    'operation.update_trusted_device_failures'    => 'Update the failed attempts of the device',
+    'operation.delete_trusted_device'             => 'Remove the device',
+    'operation.prune_trusted_devices'             => 'Remove old devices',
     'operation.raise_session_version'             => 'Raise the session version',
     'operation.save_team_entry_result'            => 'Save the result of the team entry',
     'operation.save_totp_time_step'               => 'Save the TOTP time step',

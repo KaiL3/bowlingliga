@@ -11,6 +11,7 @@ migrations have run. All migrations are repeatable
 | `002_points_rules.sql` | Points rules per season (game points, bonus points scale) in `season_config` |
 | `003_players_public.sql` | `league_setting.players_public` (R40): off for a new installation, on for one that already has seasons |
 | `004_matchday_cancelled.sql` | `matchday.is_cancelled` (R8.20): a cancelled matchday, reversible |
+| `005_trusted_device.sql` | `trusted_device` (R5.10): trusted browsers of an account, exempt from the account lock |
 
 Create new schema changes as `002_…sql`, `003_…sql` and so on, and add them
 to the `applySchema()` lists of the integration tests.
@@ -39,6 +40,9 @@ player 1─n previous_season_record   (season_id, game_count, net_pins_total –
 admin_account ─n login_attempt      (password_hash, totp_secret_encrypted,
                                      totp_last_time_step, locked_until, failed_attempts,
                                      session_version)
+  └─n trusted_device                (token_hash = SHA-256 of the cookie token, session_version,
+                                     failed_attempts, last_used_at, expires_at; column
+                                     account_id, meant for every kind of account)
 home_page_post, rules, privacy_policy, legal_notice   (CMS)
 league_setting                       (name of the league, players_public; one row)
 
