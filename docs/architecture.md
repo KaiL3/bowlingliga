@@ -104,7 +104,8 @@ $router->admin('/area/action', static function () use (...): void {
   content, allowlist JPEG/PNG/PDF, stored as a file in the score sheet
   directory (see below), served under `/score-sheet/{id}` – publicly only once
   the fixture is complete. File names come only from hashes, never from the
-  upload. Photos are cropped to the sheet in the browser (`sheet-crop.js`,
+  upload. Only a file PHP accepted as upload in the same request is read
+  (`is_uploaded_file`). Photos are cropped to the sheet in the browser (`sheet-crop.js`,
   R3.21) and prepared again on the server (`ScoreSheetPhoto`: upright, at most
   2000 px, JPEG without metadata, R3.20); the CSP allows `blob:` images for
   the photo while it is cropped. When served, an image gets a narrow CSP

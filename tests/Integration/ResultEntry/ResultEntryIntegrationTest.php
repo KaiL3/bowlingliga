@@ -88,9 +88,10 @@ final class ResultEntryIntegrationTest extends TestCase
 
     /**
      * Builds the production controller with real repositories; optionally with
-     * a different handicap freezing (e.g. one that fails).
+     * a different handicap freezing (e.g. one that fails). The test files are
+     * no real uploads, so the upload check is is_file() unless $realUploads.
      */
-    private function buildController(?HandicapFreezing $freezing = null): ResultEntryController
+    private function buildController(?HandicapFreezing $freezing = null, bool $realUploads = false): ResultEntryController
     {
         $access       = new SwitchableWriteAccess(true);
         $matchdays     = new MatchdayRepository($this->database);
@@ -118,6 +119,7 @@ final class ResultEntryIntegrationTest extends TestCase
             new EntryDataRepository($this->database),
             new ResultEntryView(),
             $handicaps,
+            isUploadedFile: $realUploads ? null : is_file(...),
         );
     }
 
@@ -715,6 +717,22 @@ final class ResultEntryIntegrationTest extends TestCase
 
         self::assertFalse($format->successful);
         self::assertFalse($isMissing->successful);
+        self::assertSame(0, $this->numeral('SELECT COUNT(*) FROM original_score_sheet'));
+    }
+
+    /**
+     * Only a file PHP received as upload is read, never another file of the
+     * server – with the check of the live wiring (is_uploaded_file).
+     */
+    public function testAFileThatIsNoUploadIsNotRead(): void
+    {
+        $result = $this->buildController(realUploads: true)->saveOriginal(
+            ['fixture_id' => (string) $this->ids['fx'], 'cropped' => '1'],
+            ['name' => 'x.png', 'type' => 'image/png', 'tmp_name' => __FILE__, 'error' => UPLOAD_ERR_OK, 'size' => filesize(__FILE__)],
+        );
+
+        self::assertFalse($result->successful);
+        self::assertSame('Die hochgeladene Datei konnte nicht gelesen werden.', $result->message);
         self::assertSame(0, $this->numeral('SELECT COUNT(*) FROM original_score_sheet'));
     }
 
