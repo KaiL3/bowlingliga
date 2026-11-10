@@ -35,7 +35,7 @@ use Bowlingliga\Persistence\AdminAccountRepository;
  * - Even for an unknown username a password check against a dummy hash is
  *   run, to make timing inferences harder.
  */
-final class AuthModule implements WriteAccess, SessionRenewal
+final class AuthModule implements WriteAccess, SessionRenewal, LoggedInAccount
 {
     /** Session key: id of the logged-in account. */
     public const SESSION_ACCOUNT_ID = 'auth_account_id';

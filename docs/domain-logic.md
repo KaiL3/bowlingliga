@@ -510,8 +510,30 @@ A rule without a number in brackets belongs to the section as a whole.
   password and code; there is no reset of other accounts' 2FA.
 - The TOTP secret is stored encrypted (libsodium, key `totp_key` in the
   configuration) and shown only during setup (R23.9).
+- **Permissions:** an account holds permissions; the permissions themselves
+  are fixed in the code (`Security\Permission`), the table
+  `account_permission` records who holds which. So far there is one:
+  "Adminkonten verwalten" – create and remove admin accounts, grant and
+  revoke permissions, change another account's password or two-factor
+  login. Without it the tab of the admin accounts is not shown and those
+  actions are refused; "Mein Konto" stays allowed for everybody. A change
+  applies to the next request without logging anybody out (R23.10).
+- At least one account always keeps "Adminkonten verwalten": it can neither
+  be revoked from nor removed with the last such account (R23.11). The
+  command line (`bin/create-admin.php`) creates an account with every
+  permission, as the way back in.
+- Nobody grants or revokes a permission they do not hold themselves
+  (R23.12).
+- A new account gets every permission except "Adminkonten verwalten"
+  (R23.13). A new permission comes with a migration that grants it to all
+  existing accounts, so nobody silently loses anything; the existing
+  accounts got "Adminkonten verwalten" with the introduction.
+- Creating and removing accounts and every granted or revoked permission
+  is logged with time, acting account and target (by name, so an entry
+  stays readable after the account is gone) and shown under the accounts
+  (R23.14).
 - Implementation: `Security/AuthModule`, `AdminAccountManagement`,
-  `/admin/account`.
+  `Security/AccountPermissions`, `/admin/account`.
 
 ## R24 – Played matchday
 

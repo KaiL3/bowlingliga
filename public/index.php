@@ -552,6 +552,9 @@ $matchdayManagement = new MatchdayManagement($matchdays, $seasons, $auth);
 $accountManagement    = new AdminAccountManagement(
     new AccountManagement($adminAccounts, new PasswordHasher(), new TotpSecretEncryption($totpKey), issuer: $leagueName),
     $auth,
+    new \Bowlingliga\Security\AccountPermissions(new \Bowlingliga\Persistence\AccountPermissionRepository($database), $auth),
+    new \Bowlingliga\Persistence\AccountLogRepository($database),
+    new \Bowlingliga\Persistence\PdoTransaction($database),
     $auth,
 );
 
@@ -1168,7 +1171,7 @@ $masterDataActions = [
     'season-create', 'season-remove',
     'team-create', 'team-remove',
     'matchday-create',
-    'account-create', 'account-remove',
+    'account-create', 'account-remove', 'account-permissions',
     'roster-assign', 'roster-remove',
 ];
 

@@ -2055,6 +2055,38 @@ button:hover,
     margin: 0;
 }
 
+/* Permissions of an admin account: checkboxes and a save button in its row */
+.permission-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.75rem;
+    margin: 0.25rem 0 0;
+}
+
+.permission-form__set {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.permission-form__option {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: var(--target-size-min);
+    cursor: pointer;
+}
+
+.permission-form__option input {
+    flex: none;
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
 /* Multi-column on wide screens (e.g. player list) */
 .data-list--grid {
     display: grid;

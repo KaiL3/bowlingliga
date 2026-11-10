@@ -45,6 +45,15 @@ final class AccountException extends RuntimeException implements Translatable
     }
 
     /**
+     * At least one admin account must keep the permission to manage admin
+     * accounts (R23.11).
+     */
+    public static function lastManager(): self
+    {
+        return new self('error.account.last_manager');
+    }
+
+    /**
      * The admin account to edit does not exist.
      */
     public static function accountNotFound(int $id): self

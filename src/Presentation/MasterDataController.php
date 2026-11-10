@@ -12,6 +12,8 @@ use Bowlingliga\Application\TeamManagement;
 use Bowlingliga\I18n\Translator;
 use Bowlingliga\Security\AccessDeniedException;
 use Bowlingliga\Security\AccountException;
+use Bowlingliga\Security\Permission;
+use Bowlingliga\Security\PermissionDeniedException;
 use Bowlingliga\Security\ValidationException;
 
 /**
@@ -65,6 +67,7 @@ final class MasterDataController
         'matchday-create'  => 'matchdays',
         'account-create'     => 'accounts',
         'account-remove'   => 'accounts',
+        'account-permissions' => 'accounts',
     ];
 
     /**
@@ -84,6 +87,25 @@ final class MasterDataController
         string $tab = 'players',
         string $importArea = '',
     ): string {
+        // The admin accounts are only shown to accounts that may manage them (R23.10).
+        $accountAdmin = null;
+        if ($this->accountManagement->canManageAccounts()) {
+            $permissions = [];
+            foreach ($this->reader->allAccounts() as $account) {
+                $permissions[(int) $account['id']] = array_map(
+                    static fn (Permission $p): string => $p->value,
+                    $this->accountManagement->permissionsOf((int) $account['id']),
+                );
+            }
+            $accountAdmin = [
+                'permissions' => $permissions,
+                'log'         => $this->accountManagement->recentChanges(),
+                'self'        => $this->accountManagement->currentAccount(),
+            ];
+        } elseif ($tab === 'accounts') {
+            $error ??= $this->t->error(new PermissionDeniedException(Permission::ManageAccounts));
+        }
+
         return $this->view->render(
             $csrfField,
             $this->reader->allPlayers(),
@@ -97,6 +119,7 @@ final class MasterDataController
             $seasonId !== null ? $this->reader->seasonRoster($seasonId) : [],
             $tab,
             $importArea,
+            $accountAdmin,
         );
     }
 
@@ -123,6 +146,7 @@ final class MasterDataController
                 'matchday-create' => $this->matchdayCreate($input),
                 'account-create'    => $this->accountCreate($input),
                 'account-remove'  => $this->accountRemove($input),
+                'account-permissions' => $this->accountPermissions($input),
                 'roster-assign'   => $this->rosterAssign($input),
                 'roster-remove'  => $this->rosterRemove($input),
                 default            => ActionResult::error($this->t->t('common.unknown_action')),
@@ -244,6 +268,24 @@ final class MasterDataController
         $this->accountManagement->removeAccount($this->integer($input, 'account_id'));
 
         return ActionResult::success($this->t->t('master_data.account_removed'));
+    }
+
+    /**
+     * Saves the permissions of an account from its row in the list (R23.10).
+     *
+     * @param array<string, mixed> $input `account_id`, `permissions[]`
+     */
+    private function accountPermissions(array $input): ActionResult
+    {
+        $id      = $this->integer($input, 'account_id');
+        $keys    = is_array($input['permissions'] ?? null) ? array_values($input['permissions']) : [];
+        $changed = $this->accountManagement->changePermissions($id, $keys);
+        $name    = $this->accountManagement->username($id);
+
+        return ActionResult::success($this->t->t(
+            $changed > 0 ? 'master_data.permissions_saved' : 'master_data.permissions_unchanged',
+            ['name' => $name],
+        ));
     }
 
     /**

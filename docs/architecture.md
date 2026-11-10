@@ -101,6 +101,16 @@ $router->admin('/area/action', static function () use (...): void {
   own browser again. Ports `TrustedDeviceStore` and `DeviceCookie` keep the
   flow testable; nothing in it is specific to admin accounts. The table is
   never part of a data transfer.
+- **Permissions** ([AccountPermissions](../src/Security/AccountPermissions.php),
+  R23.10–R23.14): the keys are the enum `Security\Permission`, the table
+  `account_permission` says who holds which (port `PermissionStore`). The
+  use case `AdminAccountManagement` checks them besides the write access;
+  the view only hides what the account may not use. Rules: at least one
+  holder of `accounts.manage`, nobody changes a permission they do not hold,
+  new accounts get `Permission::forNewAccount()`. Every change goes to
+  `account_log` (port `AccountLogStore`). To add a permission: a new enum
+  case, its label `permission.<key>` in the catalogs, a migration granting
+  it to all existing accounts, and the checks in the use cases of its area.
 - **Session cookie:** HttpOnly, SameSite=Strict, Secure with HTTPS.
 - **HSTS** ([TransportSecurity](../src/Security/TransportSecurity.php)): over
   HTTPS every response carries `Strict-Transport-Security` (without

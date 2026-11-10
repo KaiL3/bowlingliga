@@ -12,6 +12,7 @@ migrations have run. All migrations are repeatable
 | `003_players_public.sql` | `league_setting.players_public` (R40): off for a new installation, on for one that already has seasons |
 | `004_matchday_cancelled.sql` | `matchday.is_cancelled` (R8.20): a cancelled matchday, reversible |
 | `005_trusted_device.sql` | `trusted_device` (R5.10): trusted browsers of an account, exempt from the account lock |
+| `006_account_permission.sql` | `account_permission` (R23.10): permissions per account, existing accounts get all; `account_log` (R23.14): changes to accounts and permissions |
 
 Create new schema changes as `002_…sql`, `003_…sql` and so on, and add them
 to the `applySchema()` lists of the integration tests.
@@ -43,6 +44,10 @@ admin_account ─n login_attempt      (password_hash, totp_secret_encrypted,
   └─n trusted_device                (token_hash = SHA-256 of the cookie token, session_version,
                                      failed_attempts, last_used_at, expires_at; column
                                      account_id, meant for every kind of account)
+  └─n account_permission            (permission = key of Security\Permission, e.g. accounts.manage)
+account_log                          (created_at, actor_account_id/actor_name – NULL = command line,
+                                      target_name, action created/removed/granted/revoked, permission;
+                                      names as text, no foreign key)
 home_page_post, rules, privacy_policy, legal_notice   (CMS)
 league_setting                       (name of the league, players_public; one row)
 

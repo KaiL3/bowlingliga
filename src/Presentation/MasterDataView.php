@@ -6,6 +6,8 @@ namespace Bowlingliga\Presentation;
 
 use Bowlingliga\I18n\Formatter;
 use Bowlingliga\I18n\Translator;
+use Bowlingliga\Security\AccountLogStore;
+use Bowlingliga\Security\Permission;
 
 /**
  * Renders the master data management of the admin area (R28.10).
@@ -69,6 +71,9 @@ final class MasterDataView
      * @param string|null                $error     Error message.
      * @param string                     $tab       Selected tab ({@see self::TABS}); unknown = players.
      * @param string                     $importArea Content of the import tab (from the {@see PlayerImportController}).
+     * @param array{permissions: array<int, list<string>>, log: list<array{created_at: string, actor_name: string|null, target_name: string, action: string, permission: string|null}>, self: int|null}|null $accountAdmin
+     *        Permissions, log and own account id if the logged-in account may
+     *        manage accounts; null hides the tab of the admin accounts (R23.10).
      */
     public function render(
         string $csrfField,
@@ -83,31 +88,35 @@ final class MasterDataView
         array $roster = [],
         string $tab = 'players',
         string $importArea = '',
+        ?array $accountAdmin = null,
     ): string {
-        $tab = isset(self::TABS[$tab]) ? $tab : 'players';
+        $tabs = $accountAdmin !== null ? self::TABS : array_diff_key(self::TABS, ['accounts' => true]);
+        $tab  = isset($tabs[$tab]) ? $tab : 'players';
 
         $area = match ($tab) {
             'seasons'   => $this->renderSeasonArea($csrfField, $seasons),
             'teams'     => $this->renderTeamArea($csrfField, $teams, $seasons, $seasonId, $roster, $player),
             'matchdays' => $this->renderMatchdayArea($csrfField, $matchdays, $seasons, $seasonId),
-            'accounts'    => $this->renderAccountsArea($csrfField, $accounts),
+            'accounts'    => $this->renderAccountsArea($csrfField, $accounts, (array) $accountAdmin),
             'import'    => $importArea,
             default     => $this->renderPlayerArea($csrfField, $player),
         };
 
         return AdminComponents::pageHeader($this->plain('admin.area.master_data.title'), $this->plain('layout.admin_area'))
-            . $this->renderTabBar($tab, $seasonId)
+            . $this->renderTabBar($tabs, $tab, $seasonId)
             . AdminComponents::notes($message, $error)
             . $area;
     }
 
     /**
      * Bar of the master data tabs as links; the selected season is kept.
+     *
+     * @param array<string, string> $tabs
      */
-    private function renderTabBar(string $active, ?int $seasonId): string
+    private function renderTabBar(array $tabs, string $active, ?int $seasonId): string
     {
         $links = '';
-        foreach (self::TABS as $key => $label) {
+        foreach ($tabs as $key => $label) {
             $href = '/admin/master-data?tab=' . $key . ($seasonId !== null ? '&season=' . $seasonId : '');
             $links .= sprintf(
                 '<a class="tab-bar__link" href="%s"%s>%s</a>',
@@ -328,20 +337,28 @@ final class MasterDataView
     }
 
     /**
+     * Admin accounts with their permissions, the form for a new account and
+     * the log of the changes (R23.10, R23.14).
+     *
      * @param list<array<string, mixed>> $accounts
+     * @param array<string, mixed>       $admin    See {@see render()}, `$accountAdmin`.
      */
-    private function renderAccountsArea(string $csrfField, array $accounts): string
+    private function renderAccountsArea(string $csrfField, array $accounts, array $admin): string
     {
         $rows = '';
         foreach ($accounts as $account) {
+            $id   = (int) $account['id'];
+            $name = (string) $account['username'];
+            $own  = ($admin['self'] ?? null) === $id ? ' <span class="badge">' . $this->text('master_data.own_account') . '</span>' : '';
             $rows .= $this->row(
-                $this->escape((string) $account['username']),
-                '',
-                $this->deleteButton($csrfField, 'account-remove', 'account_id', (int) $account['id'], (string) $account['username']),
+                $this->escape($name) . $own,
+                $this->permissionForm($csrfField, $id, $name, $admin['permissions'][$id] ?? []),
+                $this->deleteButton($csrfField, 'account-remove', 'account_id', $id, $name),
             );
         }
 
-        $items = AdminComponents::card($this->plain('master_data.tab.accounts'), $this->items($rows, 'master_data.no_accounts'));
+        $items = '<div>' . AdminComponents::card($this->plain('master_data.tab.accounts'), $this->items($rows, 'master_data.no_accounts'))
+            . $this->accountLog($admin['log'] ?? []) . '</div>';
 
         $form = AdminComponents::card($this->plain('master_data.new_account'), <<<HTML
             <form class="form" method="post" action="/admin/master-data/account-create">
@@ -355,11 +372,65 @@ final class MasterDataView
                     <input type="password" id="account-password" name="password" autocomplete="new-password" minlength="8" required>
                     <small>{$this->text('account.min_length', ['min' => 8])}</small>
                 </div>
+                <div class="form__field"><small>{$this->text('master_data.new_account_permissions')}</small></div>
                 <button type="submit" class="button">{$this->text('master_data.create_account')}</button>
             </form>
             HTML);
 
         return $this->workArea($items, $form);
+    }
+
+    /**
+     * One checkbox per permission and a save button for an account (R23.10).
+     *
+     * @param list<string> $held
+     */
+    private function permissionForm(string $csrfField, int $id, string $name, array $held): string
+    {
+        $boxes = '';
+        foreach (Permission::cases() as $permission) {
+            $boxes .= sprintf(
+                '<label class="permission-form__option"><input type="checkbox" name="permissions[]" value="%s"%s> %s</label>',
+                $this->escape($permission->value),
+                in_array($permission->value, $held, true) ? ' checked' : '',
+                $this->text($permission->label()),
+            );
+        }
+
+        return sprintf(
+            '<form class="permission-form" method="post" action="/admin/master-data/account-permissions">%s'
+            . '<input type="hidden" name="account_id" value="%d">'
+            . '<fieldset class="permission-form__set"><legend class="visually-hidden">%s</legend>%s</fieldset>'
+            . '<button type="submit" class="button button--secondary">%s</button></form>',
+            $csrfField,
+            $id,
+            $this->text('master_data.permissions_of', ['name' => $name]),
+            $boxes,
+            $this->text('master_data.save_permissions'),
+        );
+    }
+
+    /**
+     * The latest changes to accounts and permissions (R23.14).
+     *
+     * @param list<array{created_at: string, actor_name: string|null, target_name: string, action: string, permission: string|null}> $entries
+     */
+    private function accountLog(array $entries): string
+    {
+        $rows = '';
+        foreach ($entries as $entry) {
+            $permission = Permission::tryFrom((string) $entry['permission']);
+            $action     = in_array($entry['action'], [AccountLogStore::CREATED, AccountLogStore::REMOVED, AccountLogStore::GRANTED, AccountLogStore::REVOKED], true)
+                ? $entry['action'] : AccountLogStore::CREATED;
+            $text = $this->text('account_log.' . $action, [
+                'actor'      => $entry['actor_name'] ?? $this->plain('account_log.command_line'),
+                'target'     => $entry['target_name'],
+                'permission' => $permission !== null ? $this->plain($permission->label()) : (string) $entry['permission'],
+            ]);
+            $rows .= $this->row($text, $this->escape($this->format->date(substr($entry['created_at'], 0, 10)) . ' ' . substr($entry['created_at'], 11, 5)), '');
+        }
+
+        return AdminComponents::card($this->plain('master_data.account_log'), $this->items($rows, 'master_data.no_account_log'));
     }
 
     /**
