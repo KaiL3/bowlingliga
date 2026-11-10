@@ -107,7 +107,10 @@ $router->admin('/area/action', static function () use (...): void {
   upload. Photos are cropped to the sheet in the browser (`sheet-crop.js`,
   R3.21) and prepared again on the server (`ScoreSheetPhoto`: upright, at most
   2000 px, JPEG without metadata, R3.20); the CSP allows `blob:` images for
-  the photo while it is cropped.
+  the photo while it is cropped. When served, an image gets a narrow CSP
+  of its own (`default-src 'none'; img-src 'self'`); a PDF is served
+  without a CSP, because the built-in PDF viewers of the browsers behave
+  differently under one.
 
 ## Score sheet files
 

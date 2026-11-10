@@ -495,10 +495,17 @@ $router->publicWithId('/score-sheet', static function (int $id) use ($t, $scoreS
         return;
     }
 
-    // Show the image/PDF directly; the page CSP would block the embedded PDF viewers
-    // of some browsers.
-    header_remove('Content-Security-Policy');
-    header('Content-Type: ' . (string) $dataRecord['mime_type']);
+    // Show the image/PDF directly. An image gets a narrow CSP of its own that
+    // allows nothing but the image itself. PDFs go without a CSP: the page CSP
+    // blocks the embedded PDF viewers of some browsers, and their behaviour
+    // under a narrow policy differs between browsers.
+    $mimeType = (string) $dataRecord['mime_type'];
+    if (str_starts_with($mimeType, 'image/')) {
+        header("Content-Security-Policy: default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; frame-ancestors 'self'");
+    } else {
+        header_remove('Content-Security-Policy');
+    }
+    header('Content-Type: ' . $mimeType);
     header('Content-Disposition: inline');
     // Visibility depends on the fixture status, so the browser asks again each time.
     header('ETag: ' . $etag);

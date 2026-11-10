@@ -516,8 +516,14 @@ final class AdminAreaIntegrationTest extends TestCase
         self::assertSame(200, $status);
         self::assertSame('PNGDATEN', $content);
         self::assertStringContainsString('Content-Type: image/png', $header);
-        self::assertStringNotContainsString('Content-Security-Policy', $header, 'No page CSP for images/PDFs.');
+        self::assertStringContainsString("Content-Security-Policy: default-src 'none'; img-src 'self';", $header, 'Images get a narrow CSP of their own.');
+        self::assertStringNotContainsString("default-src 'self'", $header, 'Not the page CSP.');
         self::assertStringContainsString('ETag: ' . $etag, $header, 'The hash of the immutable file serves as ETag.');
+
+        $pdf = (new \Bowlingliga\Persistence\OriginalScoreSheetRepository($this->database, $files))->save($tp, '%PDF-DATEN', 'application/pdf');
+        [$status, , $header] = $this->get('/score-sheet/' . $pdf);
+        self::assertSame(200, $status);
+        self::assertStringNotContainsString('Content-Security-Policy', $header, 'PDFs go without a CSP for the browsers\' PDF viewers.');
 
         curl_setopt($this->http, CURLOPT_HTTPHEADER, ['If-None-Match: ' . $etag]);
         self::assertSame(304, $this->get('/score-sheet/' . $sheet)[0], 'Unchanged content is not sent again.');
