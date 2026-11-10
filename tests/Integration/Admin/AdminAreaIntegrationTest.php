@@ -247,10 +247,14 @@ final class AdminAreaIntegrationTest extends TestCase
         ]);
         self::assertSame(401, $status);
         self::assertSame(401, $this->get('/admin')[0]);
+        self::assertStringNotContainsString('header__admin', $this->get('/')[1], 'Visitors see no way into the admin area (R28.19).');
 
         $this->logIn();
+        self::assertStringContainsString('<a class="header__admin" href="/admin" title="Adminbereich" aria-label="Adminbereich">', $this->get('/')[1], 'A logged-in admin finds the way back (R28.19).');
+        self::assertStringContainsString('class="header__admin"', $this->get('/table')[1]);
 
         [$status, $html] = $this->get('/admin');
+        self::assertStringNotContainsString('header__admin', $html, 'Not inside the admin area, it has its own bar.');
         self::assertSame(200, $status);
         foreach (['/admin/master-data', '/admin/season-planning', '/admin/results', '/admin/home-page', '/admin/rules', '/admin/league'] as $link) {
             self::assertStringContainsString('href="' . $link . '"', $html, 'The overview links ' . $link);
@@ -260,6 +264,47 @@ final class AdminAreaIntegrationTest extends TestCase
         self::assertSame(302, $status);
         self::assertStringContainsString('Location: /admin/login', $header);
         self::assertSame(401, $this->get('/admin/master-data')[0]);
+        self::assertStringNotContainsString('header__admin', $this->get('/')[1], 'Gone after logging out.');
+    }
+
+    /**
+     * R23.10–R23.14: only an account that may manage accounts sees the admin
+     * accounts and changes them; a new account may not, and its attempts are
+     * refused even as a direct request.
+     */
+    public function testOnlyAccountsWithThePermissionManageAccounts(): void
+    {
+        $this->pdo->exec("INSERT INTO account_permission (account_id, permission) SELECT id, 'accounts.manage' FROM admin_account");
+        $this->logIn();
+
+        [, $form] = $this->get('/admin/master-data?tab=accounts');
+        self::assertStringContainsString('action="/admin/master-data/account-create"', $form);
+        [$status, $html] = $this->post('/admin/master-data/account-create', [
+            'csrf_token' => $this->csrfToken($form),
+            'username'   => 'helfer',
+            'password'   => 'helfer-passwort',
+        ]);
+        self::assertSame(200, $status, $this->message($html));
+        self::assertStringContainsString('testadmin hat das Konto helfer angelegt.', $html);
+        self::assertSame(0, $this->numeral("SELECT COUNT(*) FROM account_permission p JOIN admin_account a ON a.id = p.account_id WHERE a.username = 'helfer'"), 'R23.13');
+        $this->post('/admin/logout', []);
+
+        // The new account works in the admin area but does not see the accounts.
+        [, $login] = $this->get('/admin/login');
+        [$status] = $this->post('/admin/login', ['csrf_token' => $this->csrfToken($login), 'username' => 'helfer', 'password' => 'helfer-passwort']);
+        self::assertSame(302, $status);
+        [$status, $page] = $this->get('/admin/master-data?tab=accounts');
+        self::assertSame(200, $status);
+        self::assertStringNotContainsString('>Adminkonten</a>', $page, 'No tab of the admin accounts.');
+        self::assertStringNotContainsString('account-create', $page);
+        self::assertStringContainsString('Dafür fehlt diesem Konto das Recht „Adminkonten verwalten“.', $page);
+
+        // Direct requests are refused as well.
+        $this->post('/admin/master-data/account-create', ['csrf_token' => $this->csrfToken($page), 'username' => 'dritter', 'password' => 'dritter-passwort']);
+        $this->post('/admin/master-data/account-permissions', ['csrf_token' => $this->csrfToken($page), 'account_id' => (string) $this->numeral("SELECT id FROM admin_account WHERE username = 'helfer'"), 'permissions' => ['accounts.manage']]);
+        self::assertSame(2, $this->numeral('SELECT COUNT(*) FROM admin_account'));
+        self::assertSame(1, $this->numeral('SELECT COUNT(*) FROM account_permission'));
+        self::assertSame(200, $this->get('/admin/account')[0], '"Mein Konto" stays allowed.');
     }
 
     /**
@@ -1240,6 +1285,7 @@ final class AdminAreaIntegrationTest extends TestCase
             'db/migrations/003_players_public.sql',
             'db/migrations/004_matchday_cancelled.sql',
             'db/migrations/005_trusted_device.sql',
+            'db/migrations/006_account_permission.sql',
         ] as $file) {
             $this->pdo->exec((string) file_get_contents($root . '/' . $file));
         }
@@ -1251,7 +1297,7 @@ final class AdminAreaIntegrationTest extends TestCase
         foreach ([
             'fixture_log', 'team_entry_game', 'team_entry', 'game_result', 'lineup', 'original_score_sheet', 'fixture', 'lane_pair',
             'frozen_handicap', 'roster', 'team_season', 'team', 'matchday', 'season_config', 'season',
-            'player', 'previous_season_record', 'admin_account', 'login_attempt', 'trusted_device', 'home_page_post',
+            'player', 'previous_season_record', 'admin_account', 'login_attempt', 'trusted_device', 'account_permission', 'account_log', 'home_page_post',
             'rules', 'privacy_policy', 'legal_notice', 'league_setting',
             'cache_average', 'cache_league_table', 'cache_matchday_table', 'cache_honours',
         ] as $table) {

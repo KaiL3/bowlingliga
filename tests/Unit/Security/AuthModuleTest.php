@@ -420,6 +420,21 @@ final class AuthModuleTest extends TestCase
         self::assertTrue($this->auth()->checkWriteAccess(), 'Activity within 30 minutes keeps the session alive (R5.2).');
     }
 
+    public function testPublicPagesCheckTheLoginWithoutExtendingIt(): void
+    {
+        $this->createAccountWithout2fa();
+        $this->auth()->login('admin', self::PASSWORD);
+
+        // Reading public pages for 20 minutes: still logged in, but no activity (R5.11).
+        $this->currentTime = $this->currentTime->add(new \DateInterval('PT20M'));
+        self::assertTrue($this->auth()->isLoggedIn());
+
+        // 31 minutes after the login and without admin activity the session ends.
+        $this->currentTime = $this->currentTime->add(new \DateInterval('PT11M'));
+        self::assertFalse($this->auth()->isLoggedIn());
+        self::assertNull($this->session->retrieve(AuthModule::SESSION_ACCOUNT_ID), 'The expired session is ended.');
+    }
+
     // --- Maximum duration and session version ---
 
     public function testSessionEndsAfterMaximumDurationDespiteActivity(): void

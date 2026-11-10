@@ -26,7 +26,11 @@ final class MasterDataViewTest extends TestCase
         $this->view = new MasterDataView();
     }
 
-    private function render(?string $message = null, ?string $error = null, string $tab = 'players'): string
+    /**
+     * Renders like for an account that may manage accounts, unless
+     * $manageAccounts is false.
+     */
+    private function render(?string $message = null, ?string $error = null, string $tab = 'players', bool $manageAccounts = true): string
     {
         return $this->view->render(
             '<input type="hidden" name="csrf_token" value="tok">',
@@ -40,7 +44,35 @@ final class MasterDataViewTest extends TestCase
             $error,
             [],
             $tab,
+            '',
+            $manageAccounts ? [
+                'permissions' => [5 => ['accounts.manage']],
+                'log'         => [['created_at' => '2026-11-10 19:30:00', 'actor_name' => null, 'target_name' => 'admin', 'action' => 'created', 'permission' => null]],
+                'self'        => 5,
+            ] : null,
         );
+    }
+
+    public function testTheAccountsShowTheirPermissionsAndTheLog(): void
+    {
+        $html = $this->render(null, null, 'accounts');
+
+        self::assertStringContainsString('admin <span class="badge">eigenes Konto</span>', $html);
+        self::assertStringContainsString('action="/admin/master-data/account-permissions"', $html);
+        self::assertStringContainsString('<input type="hidden" name="account_id" value="5">', $html);
+        self::assertStringContainsString('<label class="permission-form__option"><input type="checkbox" name="permissions[]" value="accounts.manage" checked> Adminkonten verwalten</label>', $html);
+        self::assertStringContainsString('Kommandozeile hat das Konto admin angelegt.', $html, 'Without an actor the command line created it.');
+        self::assertStringContainsString('10.11.2026 19:30', $html);
+        self::assertStringContainsString('Ein neues Konto darf alle Bereiche bearbeiten, aber keine Adminkonten verwalten.', $html);
+    }
+
+    public function testWithoutThePermissionThereIsNoAccountsTab(): void
+    {
+        $html = $this->render(null, null, 'accounts', false);
+
+        self::assertStringNotContainsString('tab=accounts', $html);
+        self::assertStringNotContainsString('account-create', $html);
+        self::assertStringContainsString('tab=players&amp;season=3" aria-current="page"', $html, 'Falls back to the players.');
     }
 
     /**

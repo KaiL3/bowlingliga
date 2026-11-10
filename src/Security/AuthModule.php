@@ -35,7 +35,7 @@ use Bowlingliga\Persistence\AdminAccountRepository;
  * - Even for an unknown username a password check against a dummy hash is
  *   run, to make timing inferences harder.
  */
-final class AuthModule implements WriteAccess, SessionRenewal
+final class AuthModule implements WriteAccess, SessionRenewal, LoggedInAccount
 {
     /** Session key: id of the logged-in account. */
     public const SESSION_ACCOUNT_ID = 'auth_account_id';
@@ -287,6 +287,26 @@ final class AuthModule implements WriteAccess, SessionRenewal
      */
     public function checkWriteAccess(): bool
     {
+        return $this->validSession(extend: true);
+    }
+
+    /**
+     * Whether a valid login exists, without counting the request as activity:
+     * public pages ask this (link to the admin area, player data), and
+     * reading them must not keep the session alive (R5.11). An expired
+     * session ends here as well.
+     */
+    public function isLoggedIn(): bool
+    {
+        return $this->validSession(extend: false);
+    }
+
+    /**
+     * Checks the session (inactivity, maximum duration, account, session
+     * version) and with $extend counts the request as activity (R5.2, R5.7).
+     */
+    private function validSession(bool $extend): bool
+    {
         $accountId = $this->session->retrieve(self::SESSION_ACCOUNT_ID);
 
         if ($accountId === null) {
@@ -317,7 +337,9 @@ final class AuthModule implements WriteAccess, SessionRenewal
         }
 
         // Sliding timeout: update the last activity (R5.2).
-        $this->session->set(self::SESSION_LAST_ACTIVITY, $currentTime);
+        if ($extend) {
+            $this->session->set(self::SESSION_LAST_ACTIVITY, $currentTime);
+        }
 
         return true;
     }

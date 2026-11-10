@@ -88,6 +88,7 @@ final class Layout
         ?string $currentAddress = null,
         array $adminNavigation = [],
         ?array $adminSeason = null,
+        bool $adminLink = false,
     ): string {
         $titleEscaped = $this->escape($title);
         $nav          = $this->renderNavigation($navigation, $currentAddress);
@@ -99,6 +100,7 @@ final class Layout
         // The logo leads to the home page like the first navigation item (with the selected season).
         $home        = $this->escape($navigation[0]['href'] ?? '/');
         $adminBar  = $this->renderAdminBar($adminNavigation, $currentAddress, $adminSeason);
+        $adminIcon = $adminLink ? $this->renderAdminLink() : '';
         $language  = $this->escape($this->t->language());
         $skip      = $this->escape($this->t->t('layout.skip_link'));
         $league    = $this->escape($this->leagueName);
@@ -125,6 +127,7 @@ final class Layout
                     <div class="header__inner">
                         <a class="header__brand" href="{$home}">{$mark}<span>{$league}</span></a>
                         {$nav}
+                        {$adminIcon}
                     </div>
                 </header>
                 {$adminBar}
@@ -371,6 +374,22 @@ final class Layout
 
         return '<svg class="nav__icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" '
             . 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . $paths . '</svg>';
+    }
+
+    /**
+     * Gear symbol in the header that leads back to the admin area. Only
+     * rendered for a logged-in admin on public pages (R28.19).
+     */
+    private function renderAdminLink(): string
+    {
+        $label = $this->escape($this->t->t('layout.admin_area'));
+
+        return '<a class="header__admin" href="/admin" title="' . $label . '" aria-label="' . $label . '">'
+            . '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" '
+            . 'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+            . '<circle cx="12" cy="12" r="3"/>'
+            . '<path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'
+            . '</svg></a>';
     }
 
     /**

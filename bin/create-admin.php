@@ -19,9 +19,13 @@ declare(strict_types=1);
 use Bowlingliga\I18n\Translator;
 use Bowlingliga\Persistence\AdminAccountRepository;
 use Bowlingliga\Persistence\Database;
+use Bowlingliga\Persistence\AccountLogRepository;
+use Bowlingliga\Persistence\AccountPermissionRepository;
 use Bowlingliga\Security\AccountException;
+use Bowlingliga\Security\AccountLogStore;
 use Bowlingliga\Security\AccountManagement;
 use Bowlingliga\Security\PasswordHasher;
+use Bowlingliga\Security\Permission;
 use Bowlingliga\Security\TotpSecretEncryption;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
@@ -44,7 +48,8 @@ if (! is_file($configurationFile)) {
 }
 $config = require $configurationFile;
 
-$accounts = new AdminAccountRepository(new Database($config));
+$database = new Database($config);
+$accounts = new AdminAccountRepository($database);
 if ($onlyIfEmpty && $accounts->countItems() > 0) {
     echo "There is an admin account already – nothing created.\n";
     exit(0);
@@ -69,7 +74,11 @@ $key = base64_decode((string) ($config['totp_key'] ?? $config['totp_schluessel']
 $management = new AccountManagement($accounts, new PasswordHasher(), new TotpSecretEncryption($key));
 
 try {
-    $management->createAccount($username, $password);
+    $id = $management->createAccount($username, $password);
+    // The command line is the way in when nobody can manage accounts any more:
+    // an account created here holds every permission (R23.10, R23.11).
+    (new AccountPermissionRepository($database))->replace($id, array_map(static fn (Permission $p): string => $p->value, Permission::cases()));
+    (new AccountLogRepository($database))->record(new DateTimeImmutable(), null, null, $username, AccountLogStore::CREATED);
 } catch (AccountException $e) {
     fwrite(STDERR, (new Translator('en'))->error($e) . "\n");
     exit(1);

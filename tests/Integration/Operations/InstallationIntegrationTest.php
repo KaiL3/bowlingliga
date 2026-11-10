@@ -100,6 +100,12 @@ final class InstallationIntegrationTest extends TestCase
             $accounts = $this->pdo->query('SELECT username, password_hash FROM admin_account')->fetchAll(PDO::FETCH_ASSOC);
             self::assertCount(1, $accounts);
             self::assertTrue(password_verify('Sehr-Geheim-123', $accounts[0]['password_hash']));
+            // The command line is the way back in: every permission (R23.10, R23.11), logged (R23.14).
+            self::assertSame(['accounts.manage'], $this->pdo->query('SELECT permission FROM account_permission')->fetchAll(PDO::FETCH_COLUMN));
+            self::assertSame(
+                [['actor_name' => null, 'target_name' => 'erster', 'action' => 'created']],
+                $this->pdo->query('SELECT actor_name, target_name, action FROM account_log')->fetchAll(PDO::FETCH_ASSOC),
+            );
         } finally {
             unlink($configFilePath);
         }

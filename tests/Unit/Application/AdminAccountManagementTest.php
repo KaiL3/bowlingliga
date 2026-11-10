@@ -9,10 +9,16 @@ use Bowlingliga\Persistence\AdminAccountRepository;
 use Bowlingliga\Security\AccessDeniedException;
 use Bowlingliga\Security\AccountException;
 use Bowlingliga\Security\AccountManagement;
+use Bowlingliga\Security\AccountPermissions;
+use Bowlingliga\Security\Permission;
+use Bowlingliga\Security\PermissionDeniedException;
 use Bowlingliga\Security\PasswordHasher;
 use Bowlingliga\Security\SessionRenewal;
 use Bowlingliga\Security\TotpSecretEncryption;
 use Bowlingliga\Tests\GermanText;
+use Bowlingliga\Tests\Unit\Security\FixedLoggedInAccount;
+use Bowlingliga\Tests\Unit\Security\InMemoryAccountLogStore;
+use Bowlingliga\Tests\Unit\Security\InMemoryPermissionStore;
 use OTPHP\TOTP;
 use PHPUnit\Framework\TestCase;
 
@@ -20,7 +26,7 @@ use PHPUnit\Framework\TestCase;
  * Unit test for the wired admin account management of the admin area (task
  * 21.4).
  *
- * Validates: R23.1, R23.2, R23.4, R23.5, R23.6, R5.1
+ * Validates: R23.1, R23.2, R23.4, R23.5, R23.6, R23.10, R23.11, R23.13, R23.14, R5.1
  *
  * Checks that the existing {@see AccountManagement} is only executed via the
  * {@see AdminAccountManagement} use case with existing write access (R5.1) and
@@ -35,6 +41,12 @@ final class AdminAccountManagementTest extends TestCase
     private SwitchableWriteAccess $access;
     private AdminAccountManagement $management;
     private RecordingSessionRenewal $sessions;
+    private InMemoryPermissionStore $permissions;
+    private InMemoryAccountLogStore $log;
+    private FixedLoggedInAccount $current;
+
+    /** The logged-in account that may manage accounts. */
+    private int $chief;
 
     protected function setUp(): void
     {
@@ -51,8 +63,21 @@ final class AdminAccountManagementTest extends TestCase
             new TotpSecretEncryption(TotpSecretEncryption::generateKey()),
         );
 
-        $this->sessions   = new RecordingSessionRenewal();
-        $this->management = new AdminAccountManagement($accountManagement, $this->access, $this->sessions);
+        $this->chief       = $this->accounts->create('chef', (new PasswordHasher())->hash('passwort-chef'));
+        $this->permissions = new InMemoryPermissionStore();
+        $this->permissions->replace($this->chief, [Permission::ManageAccounts->value]);
+        $this->log         = new InMemoryAccountLogStore();
+        $this->current     = new FixedLoggedInAccount($this->chief);
+        $this->sessions    = new RecordingSessionRenewal();
+        $this->management  = new AdminAccountManagement(
+            $accountManagement,
+            $this->access,
+            new AccountPermissions($this->permissions, $this->current),
+            $this->log,
+            new ImmediateTransaction(),
+            $this->sessions,
+            static fn (): \DateTimeImmutable => new \DateTimeImmutable('2026-11-10 20:00:00'),
+        );
     }
 
     // --- R23.1 / R23.2: Anlegen ---
@@ -62,7 +87,10 @@ final class AdminAccountManagementTest extends TestCase
         $id = $this->management->createAccount('admin', 'passwort-123');
 
         self::assertNotNull($this->accounts->find($id));
-        self::assertSame(1, $this->accounts->countItems());
+        self::assertSame(2, $this->accounts->countItems());
+        self::assertSame([], $this->permissions->permissionsOf($id), 'A new account may not manage accounts (R23.13).');
+        self::assertSame(['chef created admin'], $this->log->lines(), 'Logged with the acting account (R23.14).');
+        self::assertSame('2026-11-10 20:00:00', $this->log->entries[0]['created_at']);
     }
 
     public function testDuplicateUsernameIsPassedOn(): void
@@ -83,19 +111,84 @@ final class AdminAccountManagementTest extends TestCase
         $this->management->removeAccount($firstId);
 
         self::assertNull($this->accounts->find($firstId));
-        self::assertSame(1, $this->accounts->countItems());
+        self::assertSame(2, $this->accounts->countItems());
+        self::assertSame('chef removed admin1', $this->log->lines()[2]);
     }
 
-    public function testLastAccountCannotBeRemoved(): void
+    public function testTheLastAccountThatManagesAccountsCannotBeRemoved(): void
+    {
+        $this->management->createAccount('admin', 'passwort');
+
+        try {
+            $this->management->removeAccount($this->chief);
+            self::fail('Somebody must be left to manage the accounts (R23.11).');
+        } catch (AccountException $e) {
+            self::assertStringContainsString('Mindestens ein Adminkonto muss Adminkonten verwalten dürfen', GermanText::of($e));
+        }
+        self::assertNotNull($this->accounts->find($this->chief));
+    }
+
+    // --- R23.10–R23.14: permissions ---
+
+    public function testPermissionsAreGrantedAndRevokedAndLogged(): void
     {
         $id = $this->management->createAccount('admin', 'passwort');
 
+        self::assertSame(1, $this->management->changePermissions($id, ['accounts.manage', 'gibt-es-nicht', 7]));
+        self::assertSame([Permission::ManageAccounts], $this->management->permissionsOf($id), 'Unknown keys are ignored.');
+        self::assertSame(0, $this->management->changePermissions($id, ['accounts.manage']), 'Nothing changed, nothing logged.');
+
+        // The chief gives up the permission; another manager is left.
+        self::assertSame(1, $this->management->changePermissions($this->chief, []));
+        self::assertFalse($this->management->canManageAccounts(), 'It applies at once (R23.10).');
+
+        self::assertSame([
+            'chef created admin',
+            'chef granted admin accounts.manage',
+            'chef revoked chef accounts.manage',
+        ], $this->log->lines());
+    }
+
+    public function testTheLastManagerKeepsThePermission(): void
+    {
         $this->expectException(AccountException::class);
         try {
-            $this->management->removeAccount($id);
+            $this->management->changePermissions($this->chief, []);
         } finally {
-            self::assertNotNull($this->accounts->find($id), 'The last account must remain (R23.5).');
+            self::assertSame([Permission::ManageAccounts->value], $this->permissions->permissionsOf($this->chief), 'R23.11');
         }
+    }
+
+    public function testWithoutThePermissionAccountsStayUntouched(): void
+    {
+        $other = $this->management->createAccount('admin', 'passwort-123');
+        $this->current->id = $other;
+
+        $attempts = [
+            'create'      => fn () => $this->management->createAccount('neu', 'passwort-123'),
+            'remove'      => fn () => $this->management->removeAccount($this->chief),
+            'permissions' => fn () => $this->management->changePermissions($other, ['accounts.manage']),
+            'password'    => fn () => $this->management->changePassword($this->chief, 'neues-passwort'),
+            'totp'        => fn () => $this->management->setUpTotp($this->chief, 'chef'),
+            'log'         => fn () => $this->management->recentChanges(),
+        ];
+        foreach ($attempts as $name => $attempt) {
+            try {
+                $attempt();
+                self::fail($name . ' needs the permission to manage accounts (R23.10).');
+            } catch (PermissionDeniedException $e) {
+                self::assertStringContainsString('Adminkonten verwalten', GermanText::of($e), $name);
+            }
+        }
+
+        self::assertFalse($this->management->canManageAccounts());
+        self::assertSame(2, $this->accounts->countItems());
+        self::assertSame([], $this->permissions->permissionsOf($other));
+        self::assertCount(1, $this->log->entries, 'Only the creation is logged.');
+
+        // The own account stays the own business.
+        $this->management->changeOwnPassword($other, 'passwort-123', 'neues-passwort', 'neues-passwort');
+        $this->management->endOtherSessions($other);
     }
 
     // --- R23.6: 2FA-Einrichtung ---
@@ -249,7 +342,7 @@ final class AdminAccountManagementTest extends TestCase
         try {
             $this->management->createAccount('admin', 'passwort');
         } finally {
-            self::assertSame(0, $this->accounts->countItems(), 'Without write access no account may be created (R5.1).');
+            self::assertSame(1, $this->accounts->countItems(), 'Without write access no account may be created (R5.1).');
         }
     }
 

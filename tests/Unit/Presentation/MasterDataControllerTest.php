@@ -22,6 +22,12 @@ use Bowlingliga\Presentation\MasterDataController;
 use Bowlingliga\Presentation\MasterDataReader;
 use Bowlingliga\Presentation\MasterDataView;
 use Bowlingliga\Security\AccountManagement;
+use Bowlingliga\Security\AccountPermissions;
+use Bowlingliga\Security\Permission;
+use Bowlingliga\Tests\Unit\Application\ImmediateTransaction;
+use Bowlingliga\Tests\Unit\Security\FixedLoggedInAccount;
+use Bowlingliga\Tests\Unit\Security\InMemoryAccountLogStore;
+use Bowlingliga\Tests\Unit\Security\InMemoryPermissionStore;
 use Bowlingliga\Security\PasswordHasher;
 use Bowlingliga\Security\WriteAccess;
 use Bowlingliga\Security\TotpSecretEncryption;
@@ -44,6 +50,9 @@ final class MasterDataControllerTest extends TestCase
     private InMemoryPlayerStore $playerStore;
     private InMemoryAccountsRepo $accountsRepo;
     private MasterDataController $controller;
+    private InMemoryPermissionStore $permissions;
+    private FixedLoggedInAccount $current;
+    private int $chief;
 
     protected function setUp(): void
     {
@@ -61,6 +70,12 @@ final class MasterDataControllerTest extends TestCase
 
         $reader = new InMemoryMasterDataReader($this->playerStore, $teamSeason, $season, $matchday, $this->accountsRepo);
 
+        // The logged-in account may manage accounts.
+        $this->chief       = $this->accountsRepo->create('chef', (new PasswordHasher())->hash('passwort-chef'));
+        $this->permissions = new InMemoryPermissionStore();
+        $this->permissions->replace($this->chief, [Permission::ManageAccounts->value]);
+        $this->current     = new FixedLoggedInAccount($this->chief);
+
         $accountManagement = new AdminAccountManagement(
             new AccountManagement(
                 $this->accountsRepo,
@@ -68,6 +83,9 @@ final class MasterDataControllerTest extends TestCase
                 new TotpSecretEncryption(TotpSecretEncryption::generateKey()),
             ),
             $this->access,
+            new AccountPermissions($this->permissions, $this->current),
+            new InMemoryAccountLogStore(),
+            new ImmediateTransaction(),
         );
 
         $this->controller = new MasterDataController(
@@ -119,6 +137,36 @@ final class MasterDataControllerTest extends TestCase
 
         self::assertFalse($duplicate->successful);
         self::assertStringContainsString('bereits vergeben', $duplicate->message);
+        self::assertSame(2, $this->accountsRepo->countItems());
+    }
+
+    public function testTheAccountsTabShowsPermissionsAndLog(): void
+    {
+        $this->controller->process('account-create', ['username' => 'helfer', 'password' => 'geheim123']);
+        $helper = $this->accountsRepo->findByUsername('helfer')['id'] ?? 0;
+
+        $saved = $this->controller->process('account-permissions', ['account_id' => (string) $helper, 'permissions' => ['accounts.manage']]);
+        self::assertTrue($saved->successful, $saved->message);
+        self::assertSame('Die Rechte von helfer sind gespeichert.', $saved->message);
+
+        $html = $this->controller->overview('<input name="csrf_token">', null, null, null, 'accounts');
+        self::assertStringContainsString('<span class="badge">eigenes Konto</span>', $html);
+        self::assertSame(2, substr_count($html, 'name="permissions[]" value="accounts.manage" checked'), 'Both accounts hold it.');
+        self::assertStringContainsString('chef hat helfer das Recht „Adminkonten verwalten“ gegeben.', $html);
+        self::assertStringContainsString('chef hat das Konto helfer angelegt.', $html);
+    }
+
+    public function testWithoutThePermissionTheAccountsTabIsGone(): void
+    {
+        $this->permissions->replace($this->chief, []);
+
+        $html = $this->controller->overview('<input name="csrf_token">', null, null, null, 'accounts');
+        self::assertStringNotContainsString('tab=accounts', $html);
+        self::assertStringNotContainsString('account-create', $html);
+        self::assertStringContainsString('Dafür fehlt diesem Konto das Recht „Adminkonten verwalten“.', $html);
+
+        $result = $this->controller->process('account-create', ['username' => 'neu', 'password' => 'geheim123']);
+        self::assertFalse($result->successful);
         self::assertSame(1, $this->accountsRepo->countItems());
     }
 
