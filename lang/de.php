@@ -564,7 +564,7 @@ return [
     'account.repeat_password'    => 'Neues Passwort wiederholen',
     'account.sessions'           => 'Sitzungen',
     'account.sessions_text'      => 'Eine Anmeldung endet nach 30 Minuten ohne Aktivität, spätestens aber nach 8 Stunden. Ein Passwortwechsel und jede Änderung der Zwei-Faktor-Anmeldung melden alle anderen Geräte ab.',
-    'account.sessions_foreign'   => 'Angemeldet auf einem fremden Gerät und nicht abgemeldet? Hier lassen sich alle anderen Sitzungen sofort beenden.',
+    'account.sessions_foreign'   => 'Angemeldet auf einem fremden Gerät und nicht abgemeldet? Hier lassen sich alle anderen Sitzungen sofort beenden; die anderen Geräte gelten dann nicht mehr als bekannt.',
     'account.end_sessions'       => 'Alle anderen Sitzungen abmelden',
 
     // My account: messages
@@ -1044,6 +1044,10 @@ return [
     'operation.save_totp_secret'                  => 'TOTP-Secret speichern',
     'operation.save_team_entry_lineup'            => 'Aufstellung der Teamerfassung speichern',
     'operation.delete_fixture'                    => 'Teampaarung löschen',
+    'operation.save_trusted_device'               => 'Gerät als vertrauenswürdig speichern',
+    'operation.update_trusted_device_failures'    => 'Fehlversuche des Geräts aktualisieren',
+    'operation.delete_trusted_device'             => 'Gerät entfernen',
+    'operation.prune_trusted_devices'             => 'Alte Geräte entfernen',
     'operation.raise_session_version'             => 'Sitzungsversion erhöhen',
     'operation.save_team_entry_result'            => 'Ergebnis der Teamerfassung speichern',
     'operation.save_totp_time_step'               => 'TOTP-Zeitschritt speichern',

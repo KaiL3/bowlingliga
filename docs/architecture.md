@@ -90,6 +90,17 @@ $router->admin('/area/action', static function () use (...): void {
   Every login step runs in a transaction that locks the account row
   (`findByUsernameForUpdate`/`findForUpdate`): parallel attempts on the same
   account run one after the other, so the 5-attempt limit holds exactly.
+- **Trusted devices** ([TrustedDevices](../src/Security/TrustedDevices.php),
+  R5.10): after a complete login the browser gets the cookie `bl_device` with
+  a random token (32 bytes, base64url, 90 days, path `/`); the table
+  `trusted_device` keeps only its SHA-256 hash, per account and with the
+  account's `session_version`. The account lock skips a trusted device, so
+  locking an account on purpose no longer keeps its owner out; the device
+  counts its own failed attempts and is forgotten after five. A new session
+  version forgets the other devices (`prune()`), `renewSession()` trusts the
+  own browser again. Ports `TrustedDeviceStore` and `DeviceCookie` keep the
+  flow testable; nothing in it is specific to admin accounts. The table is
+  never part of a data transfer.
 - **Session cookie:** HttpOnly, SameSite=Strict, Secure with HTTPS.
 - **HSTS** ([TransportSecurity](../src/Security/TransportSecurity.php)): over
   HTTPS every response carries `Strict-Transport-Security` (without

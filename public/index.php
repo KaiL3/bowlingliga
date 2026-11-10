@@ -209,6 +209,10 @@ $auth = new AuthModule(
     new TotpVerifier(),
     $session,
     new \Bowlingliga\Persistence\PdoTransaction($database),
+    devices: new \Bowlingliga\Security\TrustedDevices(
+        new \Bowlingliga\Persistence\TrustedDeviceRepository($database),
+        new \Bowlingliga\Security\PhpDeviceCookie($_COOKIE, $_SERVER),
+    ),
 );
 
 /**
