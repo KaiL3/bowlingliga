@@ -71,6 +71,17 @@ final class AuthModule implements WriteAccess, SessionRenewal, LoggedInAccount
     /** Time for entering the code after a successful password check. */
     public const SECOND_FACTOR_TIMEOUT_SECONDS = 5 * 60;
 
+    /** Why the password checked has to be replaced, kept while the code is pending (R23.17). */
+    public const SESSION_PENDING_PASSWORD_REASON = 'auth_pending_password_reason';
+
+    /** Account whose credentials are checked and that has to choose a new password (R23.17). */
+    public const SESSION_PASSWORD_CHANGE_ACCOUNT_ID = 'auth_password_change_account_id';
+    public const SESSION_PASSWORD_CHANGE_SINCE = 'auth_password_change_since';
+    public const SESSION_PASSWORD_CHANGE_REASON = 'auth_password_change_reason';
+
+    /** Time for choosing the new password after the credentials were checked. */
+    public const PASSWORD_CHANGE_TIMEOUT_SECONDS = 15 * 60;
+
     /** @var callable(): \DateTimeImmutable */
     private $clock;
 
@@ -86,6 +97,8 @@ final class AuthModule implements WriteAccess, SessionRenewal, LoggedInAccount
      *        deterministic tests; without it the current time is used.
      * @param TrustedDevices|null $devices Trusted devices (R5.10); without
      *        them the account lock applies to every device.
+     * @param PasswordRules|null $passwordRules Password policy (R23.17);
+     *        without it no login has to replace its password.
      */
     public function __construct(
         private readonly AdminAccountRepository $accounts,
@@ -96,6 +109,7 @@ final class AuthModule implements WriteAccess, SessionRenewal, LoggedInAccount
         private readonly Transaction $transaction,
         ?callable $clock = null,
         private readonly ?TrustedDevices $devices = null,
+        private readonly ?PasswordRules $passwordRules = null,
     ) {
         $this->clock = $clock ?? static fn (): \DateTimeImmutable => new \DateTimeImmutable();
     }
@@ -167,6 +181,10 @@ final class AuthModule implements WriteAccess, SessionRenewal, LoggedInAccount
             return $this->processFailedAttempt($accountId, $account, LoginResult::invalidCredentials(), $device);
         }
 
+        // R23.17: only now is the plaintext known to be the password; whether
+        // it has to be replaced is decided here and applies after the code.
+        $reason = $this->passwordRules?->changeReason(AccountKind::Admin, $account, $password);
+
         // R23.7/R23.8: with active 2FA a valid TOTP code is required as well.
         if ($this->isSecondFactorActive($account)) {
             // Two-step: without a code it is asked for in the second step. That is
@@ -175,6 +193,9 @@ final class AuthModule implements WriteAccess, SessionRenewal, LoggedInAccount
                 $this->session->regenerateId();
                 $this->session->set(self::SESSION_PENDING_ACCOUNT_ID, $accountId);
                 $this->session->set(self::SESSION_PENDING_SINCE, $this->currentTime()->getTimestamp());
+                if ($reason !== null) {
+                    $this->session->set(self::SESSION_PENDING_PASSWORD_REASON, $reason->value);
+                }
 
                 return LoginResult::secondFactorRequired();
             }
@@ -185,6 +206,28 @@ final class AuthModule implements WriteAccess, SessionRenewal, LoggedInAccount
 
         // Success: reset failed attempts and set up the session (R5.2).
         $this->resetFailedAttempts($accountId, $account);
+
+        return $this->completeLogin($accountId, $account, $reason);
+    }
+
+    /**
+     * Last step after correct credentials: the session starts, unless the
+     * password has to be replaced first (R5.2, R23.17).
+     *
+     * @param array<string, mixed> $account
+     */
+    private function completeLogin(int $accountId, array $account, ?PasswordChangeReason $reason): LoginResult
+    {
+        if ($reason !== null) {
+            $this->cancelSecondFactor();
+            $this->session->regenerateId();
+            $this->session->set(self::SESSION_PASSWORD_CHANGE_ACCOUNT_ID, $accountId);
+            $this->session->set(self::SESSION_PASSWORD_CHANGE_SINCE, $this->currentTime()->getTimestamp());
+            $this->session->set(self::SESSION_PASSWORD_CHANGE_REASON, $reason->value);
+
+            return LoginResult::passwordChangeRequired();
+        }
+
         $this->setUpSession($accountId, $account);
         $this->devices?->trust($accountId, self::sessionVersion($account), $this->currentTime());
 
@@ -235,12 +278,93 @@ final class AuthModule implements WriteAccess, SessionRenewal, LoggedInAccount
             return $result;
         }
 
+        $reason = PasswordChangeReason::tryFrom((string) $this->session->retrieve(self::SESSION_PENDING_PASSWORD_REASON));
         $this->cancelSecondFactor();
         $this->resetFailedAttempts($accountId, $account);
-        $this->setUpSession($accountId, $account);
-        $this->devices?->trust($accountId, self::sessionVersion($account), $this->currentTime());
 
-        return LoginResult::successful();
+        return $this->completeLogin($accountId, $account, $reason);
+    }
+
+    /**
+     * Why the login waiting for a new password has to replace it, or null if
+     * none is waiting (also after the time limit, R23.17).
+     */
+    public function awaitsPasswordChange(): ?PasswordChangeReason
+    {
+        return $this->pendingPasswordChange() !== null
+            ? PasswordChangeReason::tryFrom((string) $this->session->retrieve(self::SESSION_PASSWORD_CHANGE_REASON))
+            : null;
+    }
+
+    /**
+     * Username of the account waiting for a new password, or null.
+     */
+    public function passwordChangeUsername(): ?string
+    {
+        $accountId = $this->pendingPasswordChange();
+        $account   = $accountId !== null ? $this->accounts->find($accountId) : null;
+
+        return $account !== null ? (string) $account['username'] : null;
+    }
+
+    /**
+     * Completes a login that has to replace its password (R23.17): $change
+     * sets the new password of the account (and throws if it does not meet
+     * the policy, the login keeps waiting then); afterwards the session
+     * starts.
+     *
+     * @param callable(int): void $change
+     *
+     * @throws AccountException from $change.
+     */
+    public function completePasswordChange(callable $change): LoginResult
+    {
+        return $this->transaction->perform(function () use ($change): LoginResult {
+            $accountId = $this->pendingPasswordChange();
+            $account   = $accountId !== null ? $this->accounts->findForUpdate($accountId) : null;
+            if ($accountId === null || $account === null) {
+                $this->cancelPasswordChange();
+
+                return LoginResult::loginExpired();
+            }
+
+            $change($accountId);
+
+            $account = $this->accounts->find($accountId) ?? $account;
+            $this->cancelPasswordChange();
+
+            return $this->completeLogin($accountId, $account, null);
+        });
+    }
+
+    /**
+     * Discards a login waiting for a new password.
+     */
+    public function cancelPasswordChange(): void
+    {
+        $this->session->remove(self::SESSION_PASSWORD_CHANGE_ACCOUNT_ID);
+        $this->session->remove(self::SESSION_PASSWORD_CHANGE_SINCE);
+        $this->session->remove(self::SESSION_PASSWORD_CHANGE_REASON);
+    }
+
+    /**
+     * Account waiting for a new password, or null (also after the time limit).
+     */
+    private function pendingPasswordChange(): ?int
+    {
+        $accountId = $this->session->retrieve(self::SESSION_PASSWORD_CHANGE_ACCOUNT_ID);
+        $since     = $this->session->retrieve(self::SESSION_PASSWORD_CHANGE_SINCE);
+        if (! is_int($accountId) || ! is_int($since)) {
+            return null;
+        }
+
+        if ($this->currentTime()->getTimestamp() - $since > self::PASSWORD_CHANGE_TIMEOUT_SECONDS) {
+            $this->cancelPasswordChange();
+
+            return null;
+        }
+
+        return $accountId;
     }
 
     /**
@@ -259,11 +383,13 @@ final class AuthModule implements WriteAccess, SessionRenewal, LoggedInAccount
     {
         $this->session->remove(self::SESSION_PENDING_ACCOUNT_ID);
         $this->session->remove(self::SESSION_PENDING_SINCE);
+        $this->session->remove(self::SESSION_PENDING_PASSWORD_REASON);
     }
 
     public function logout(): void
     {
         $this->cancelSecondFactor();
+        $this->cancelPasswordChange();
         $this->session->remove(self::SESSION_ACCOUNT_ID);
         $this->session->remove(self::SESSION_LAST_ACTIVITY);
         $this->session->remove(self::SESSION_LOGGED_IN_AT);

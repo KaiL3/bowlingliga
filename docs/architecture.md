@@ -106,11 +106,29 @@ $router->admin('/area/action', static function () use (...): void {
   `account_permission` says who holds which (port `PermissionStore`). The
   use case `AdminAccountManagement` checks them besides the write access;
   the view only hides what the account may not use. Rules: at least one
-  holder of `accounts.manage`, nobody changes a permission they do not hold,
-  new accounts get `Permission::forNewAccount()`. Every change goes to
+  holder of `system.admin` (the system admin; every other admin is a
+  league admin), nobody changes a permission they do not hold, new
+  accounts get `Permission::forNewAccount()`. Every change goes to
   `account_log` (port `AccountLogStore`). To add a permission: a new enum
   case, its label `permission.<key>` in the catalogs, a migration granting
   it to all existing accounts, and the checks in the use cases of its area.
+- **Password policies** ([PasswordRules](../src/Security/PasswordRules.php),
+  R23.15–R23.18): one `PasswordPolicy` per `AccountKind` (port
+  `PasswordPolicyStore`, table `password_policy`), changed by a system admin
+  in `/admin/system` (`PasswordPolicySettings`). `PasswordStrength` rates a
+  password in bits with zxcvbn (`bjeavons/zxcvbn-php`) whose scorer is
+  replaced by `Strength\CharacterSetScorer`: random parts count with their
+  character set as in KeePass, inside the search for the cheapest match
+  sequence. `PasswordRules` checks every new password (length, strength,
+  current password and history via `PasswordHistoryStore`), records the
+  change on the account (`password_changed_at`, `password_bits`,
+  `must_change_password`) and decides at the login whether the password has
+  to be replaced. `AuthModule` then does not start the session but keeps
+  the account waiting for 15 minutes (`awaitsPasswordChange()`,
+  `completePasswordChange()`), like the second factor. The strength display
+  (`PasswordStrengthMeter`, `password-strength.js`) asks
+  `/admin/password-strength` while typing, so it shows the number the
+  server enforces; there is no second estimator in JavaScript.
 - **Session cookie:** HttpOnly, SameSite=Strict, Secure with HTTPS.
 - **HSTS** ([TransportSecurity](../src/Security/TransportSecurity.php)): over
   HTTPS every response carries `Strict-Transport-Security` (without

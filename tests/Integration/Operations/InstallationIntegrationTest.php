@@ -86,22 +86,30 @@ final class InstallationIntegrationTest extends TestCase
         file_put_contents($configFilePath, '<?php return ' . var_export($this->configuration, true) . ';');
 
         try {
+            // The password policy of the admin accounts applies here as well (R23.15, R23.16).
             [$code, $output] = $this->admin(['erster', '--only-if-empty'], $configFilePath, 'Sehr-Geheim-123');
+            self::assertSame(1, $code);
+            self::assertStringContainsString('The password is too weak: 58 bits, at least 70 bits are required.', $output);
+
+            [$code, $output] = $this->admin(['erster', '--only-if-empty'], $configFilePath, 'kX9#mP2$vL7q');
             self::assertSame(0, $code, $output);
             self::assertStringContainsString('Admin account "erster" created', $output);
 
-            [$code, $output] = $this->admin(['zweiter', '--only-if-empty'], $configFilePath, 'Sehr-Geheim-123');
+            [$code, $output] = $this->admin(['zweiter', '--only-if-empty'], $configFilePath, 'kX9#mP2$vL7q');
             self::assertSame(0, $code);
             self::assertStringContainsString('There is an admin account already', $output);
 
             [$code] = $this->admin(['third'], $configFilePath, 'kurz');
             self::assertSame(1, $code, 'Passwords that are too short are rejected.');
 
-            $accounts = $this->pdo->query('SELECT username, password_hash FROM admin_account')->fetchAll(PDO::FETCH_ASSOC);
+            $accounts = $this->pdo->query('SELECT username, password_hash, password_bits, must_change_password FROM admin_account')->fetchAll(PDO::FETCH_ASSOC);
             self::assertCount(1, $accounts);
-            self::assertTrue(password_verify('Sehr-Geheim-123', $accounts[0]['password_hash']));
+            self::assertTrue(password_verify('kX9#mP2$vL7q', $accounts[0]['password_hash']));
+            // Set by its owner: no forced change at the first login (R23.17).
+            self::assertSame([78, 0], [(int) $accounts[0]['password_bits'], (int) $accounts[0]['must_change_password']]);
+            self::assertSame(1, (int) $this->pdo->query('SELECT COUNT(*) FROM password_history')->fetchColumn(), 'R23.18');
             // The command line is the way back in: every permission (R23.10, R23.11), logged (R23.14).
-            self::assertSame(['accounts.manage'], $this->pdo->query('SELECT permission FROM account_permission')->fetchAll(PDO::FETCH_COLUMN));
+            self::assertSame(['system.admin'], $this->pdo->query('SELECT permission FROM account_permission')->fetchAll(PDO::FETCH_COLUMN));
             self::assertSame(
                 [['actor_name' => null, 'target_name' => 'erster', 'action' => 'created']],
                 $this->pdo->query('SELECT actor_name, target_name, action FROM account_log')->fetchAll(PDO::FETCH_ASSOC),

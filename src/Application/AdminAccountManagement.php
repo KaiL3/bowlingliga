@@ -8,6 +8,7 @@ use Bowlingliga\Security\AccountException;
 use Bowlingliga\Security\AccountLogStore;
 use Bowlingliga\Security\AccountManagement;
 use Bowlingliga\Security\AccountPermissions;
+use Bowlingliga\Security\PasswordPolicy;
 use Bowlingliga\Security\Permission;
 use Bowlingliga\Security\PermissionDeniedException;
 use Bowlingliga\Security\SessionRenewal;
@@ -70,10 +71,11 @@ final class AdminAccountManagement
     public function createAccount(string $username, string $plaintextPassword): int
     {
         $this->ensureWriteAccess();
-        $this->permissions->require(Permission::ManageAccounts);
+        $this->permissions->require(Permission::SystemAdmin);
 
         return $this->transaction->perform(function () use ($username, $plaintextPassword): int {
-            $id = $this->accountManagement->createAccount($username, $plaintextPassword);
+            // The creator knows the password: the owner replaces it at the first login (R23.17).
+            $id = $this->accountManagement->createAccount($username, $plaintextPassword, mustChange: true);
             // A new account may do everything except managing accounts (R23.13).
             $this->permissions->grantNewAccount($id);
             $this->record($this->accountManagement->username($id), AccountLogStore::CREATED);
@@ -93,12 +95,12 @@ final class AdminAccountManagement
     public function removeAccount(int $id): void
     {
         $this->ensureWriteAccess();
-        $this->permissions->require(Permission::ManageAccounts);
+        $this->permissions->require(Permission::SystemAdmin);
 
         $this->transaction->perform(function () use ($id): void {
             // R23.11: somebody must be left to manage the accounts.
-            if ($this->permissions->isLastManager($id)) {
-                throw AccountException::lastManager();
+            if ($this->permissions->isLastSystemAdmin($id)) {
+                throw AccountException::lastSystemAdmin();
             }
             $username = $this->accountManagement->username($id);
             $this->accountManagement->removeAccount($id);
@@ -121,7 +123,7 @@ final class AdminAccountManagement
     public function changePermissions(int $id, array $permissionKeys): int
     {
         $this->ensureWriteAccess();
-        $this->permissions->require(Permission::ManageAccounts);
+        $this->permissions->require(Permission::SystemAdmin);
 
         return $this->transaction->perform(function () use ($id, $permissionKeys): int {
             $username = $this->accountManagement->username($id);
@@ -148,9 +150,9 @@ final class AdminAccountManagement
     /**
      * Whether the logged-in account may manage accounts (R23.10).
      */
-    public function canManageAccounts(): bool
+    public function isSystemAdmin(): bool
     {
-        return $this->writeAccess->checkWriteAccess() && $this->permissions->can(Permission::ManageAccounts);
+        return $this->writeAccess->checkWriteAccess() && $this->permissions->can(Permission::SystemAdmin);
     }
 
     /**
@@ -170,7 +172,7 @@ final class AdminAccountManagement
     public function permissionsOf(int $id): array
     {
         $this->ensureWriteAccess();
-        $this->permissions->require(Permission::ManageAccounts);
+        $this->permissions->require(Permission::SystemAdmin);
 
         return $this->permissions->of($id);
     }
@@ -184,7 +186,7 @@ final class AdminAccountManagement
     public function recentChanges(int $limit = 20): array
     {
         $this->ensureWriteAccess();
-        $this->permissions->require(Permission::ManageAccounts);
+        $this->permissions->require(Permission::SystemAdmin);
 
         return $this->log->recent($limit);
     }
@@ -201,7 +203,8 @@ final class AdminAccountManagement
         $this->ensureWriteAccess();
         $this->ensureOwnOrManaging($id);
 
-        $this->accountManagement->changePassword($id, $newPlaintextPassword);
+        // Set for somebody else: the owner replaces it at the next login (R23.17).
+        $this->accountManagement->changePassword($id, $newPlaintextPassword, $id !== $this->permissions->currentAccount());
         $this->sessions?->renewSession($id);
     }
 
@@ -236,6 +239,18 @@ final class AdminAccountManagement
         $this->ensureWriteAccess();
         $this->accountManagement->changeOwnPassword($id, $current, $fresh, $repetition);
         $this->sessions?->renewSession($id);
+    }
+
+    /**
+     * Password policy of the admin accounts, or null without one (R23.15).
+     *
+     * @throws AccessDeniedException if there is no write access (R5.1).
+     */
+    public function passwordPolicy(): ?PasswordPolicy
+    {
+        $this->ensureWriteAccess();
+
+        return $this->accountManagement->passwordPolicy();
     }
 
     /**
@@ -335,7 +350,7 @@ final class AdminAccountManagement
     private function ensureOwnOrManaging(int $id): void
     {
         if ($id !== $this->permissions->currentAccount()) {
-            $this->permissions->require(Permission::ManageAccounts);
+            $this->permissions->require(Permission::SystemAdmin);
         }
     }
 

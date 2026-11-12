@@ -46,7 +46,7 @@ final class MasterDataViewTest extends TestCase
             $tab,
             '',
             $manageAccounts ? [
-                'permissions' => [5 => ['accounts.manage']],
+                'permissions' => [5 => ['system.admin']],
                 'log'         => [['created_at' => '2026-11-10 19:30:00', 'actor_name' => null, 'target_name' => 'admin', 'action' => 'created', 'permission' => null]],
                 'self'        => 5,
             ] : null,
@@ -60,10 +60,10 @@ final class MasterDataViewTest extends TestCase
         self::assertStringContainsString('admin <span class="badge">eigenes Konto</span>', $html);
         self::assertStringContainsString('action="/admin/master-data/account-permissions"', $html);
         self::assertStringContainsString('<input type="hidden" name="account_id" value="5">', $html);
-        self::assertStringContainsString('<label class="permission-form__option"><input type="checkbox" name="permissions[]" value="accounts.manage" checked> Adminkonten verwalten</label>', $html);
+        self::assertStringContainsString('<label class="permission-form__option"><input type="checkbox" name="permissions[]" value="system.admin" checked> Systemadmin</label>', $html);
         self::assertStringContainsString('Kommandozeile hat das Konto admin angelegt.', $html, 'Without an actor the command line created it.');
         self::assertStringContainsString('10.11.2026 19:30', $html);
-        self::assertStringContainsString('Ein neues Konto darf alle Bereiche bearbeiten, aber keine Adminkonten verwalten.', $html);
+        self::assertStringContainsString('Ein neues Konto ist Ligaadmin: Es darf alle Bereiche bearbeiten, aber keine Adminkonten und Systemeinstellungen.', $html);
     }
 
     public function testWithoutThePermissionThereIsNoAccountsTab(): void

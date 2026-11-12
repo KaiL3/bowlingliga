@@ -35,6 +35,9 @@ final class AccountManagement
      * @param string $issuer Issuer shown in the authenticator app: the league
      *                       name (R38.4); the default is that of a new
      *                       installation (R38.2).
+     * @param PasswordRules|null $passwordRules Password policy of the admin
+     *        accounts (R23.15–R23.18); without it only the minimum length
+     *        applies.
      */
     public function __construct(
         private readonly AdminAccountRepository $accounts,
@@ -42,6 +45,7 @@ final class AccountManagement
         private readonly TotpSecretEncryption $totpEncryption,
         private readonly TotpVerifier $totpVerifier = new TotpVerifier(),
         private readonly string $issuer = 'Bowlingliga',
+        private readonly ?PasswordRules $passwordRules = null,
     ) {
     }
 
@@ -53,11 +57,15 @@ final class AccountManagement
      * active 2FA; the TOTP setup happens separately via {@see setUpTotp()}
      * (R23.6).
      *
+     * @param bool $mustChange The password was chosen by somebody else than
+     *        the owner, who has to replace it at the first login (R23.17).
+     *
      * @return int The generated account id.
      *
-     * @throws AccountException if the username is invalid or already taken.
+     * @throws AccountException if the username is invalid or already taken,
+     *         or the password does not meet the policy (R23.15).
      */
-    public function createAccount(string $username, string $plaintextPassword): int
+    public function createAccount(string $username, string $plaintextPassword, bool $mustChange = false): int
     {
         $username = $this->checkUsername($username);
 
@@ -68,10 +76,15 @@ final class AccountManagement
         if (mb_strlen($plaintextPassword) < self::PASSWORD_MIN) {
             throw AccountException::passwordTooShort(self::PASSWORD_MIN);
         }
+        $bits = $this->passwordRules?->check(AccountKind::Admin, $plaintextPassword, $username);
 
         $hash = $this->passwordHasher->hash($plaintextPassword);
+        $id   = $this->accounts->create($username, $hash, null);
+        if ($bits !== null) {
+            $this->passwordRules?->remember($id, $hash, $bits, $mustChange);
+        }
 
-        return $this->accounts->create($username, $hash, null);
+        return $id;
     }
 
     /**
@@ -103,12 +116,20 @@ final class AccountManagement
      *
      * The new password is only stored as hash; the plaintext is not persisted.
      *
-     * @throws AccountException if the account does not exist.
+     * @param bool $mustChange Set by somebody else: the owner has to replace
+     *        it at the next login (R23.17).
+     *
+     * @throws AccountException if the account does not exist or the password
+     *         does not meet the policy (R23.15, R23.18).
      */
-    public function changePassword(int $id, string $newPlaintextPassword): void
+    public function changePassword(int $id, string $newPlaintextPassword, bool $mustChange = false): void
     {
-        if ($this->accounts->find($id) === null) {
-            throw AccountException::accountNotFound($id);
+        $account = $this->accounts->find($id) ?? throw AccountException::accountNotFound($id);
+
+        if ($this->passwordRules !== null) {
+            $this->passwordRules->change(AccountKind::Admin, $id, (string) $account['username'], $newPlaintextPassword, $mustChange);
+
+            return;
         }
 
         $hash = $this->passwordHasher->hash($newPlaintextPassword);
@@ -123,8 +144,8 @@ final class AccountManagement
     /**
      * Changes the own password after checking the current password (R23.3).
      *
-     * @throws AccountException for a wrong current password, a too short new
-     *         password or a differing repetition.
+     * @throws AccountException for a wrong current password, a new password
+     *         that does not meet the policy or a differing repetition.
      */
     public function changeOwnPassword(int $id, string $current, string $fresh, string $repetition): void
     {
@@ -133,6 +154,22 @@ final class AccountManagement
         if (! $this->passwordHasher->check($current, (string) $account['password_hash'])) {
             throw AccountException::passwordWrong();
         }
+
+        $this->replaceOwnPassword($id, $fresh, $repetition);
+    }
+
+    /**
+     * Sets the own new password once the identity is established – after the
+     * current password above, or at the login that demands a new one
+     * (R23.17).
+     *
+     * @throws AccountException for a new password that does not meet the
+     *         policy (R23.15, R23.18) or a differing repetition.
+     */
+    public function replaceOwnPassword(int $id, string $fresh, string $repetition): void
+    {
+        $account = $this->accounts->find($id) ?? throw AccountException::accountNotFound($id);
+
         if (mb_strlen($fresh) < self::PASSWORD_MIN) {
             throw AccountException::passwordTooShort(self::PASSWORD_MIN);
         }
@@ -140,7 +177,30 @@ final class AccountManagement
             throw AccountException::passwordsMismatch();
         }
 
+        if ($this->passwordRules !== null) {
+            $this->passwordRules->change(AccountKind::Admin, $id, (string) $account['username'], $fresh);
+
+            return;
+        }
+
         $this->accounts->updatePasswordHash($id, $this->passwordHasher->hash($fresh));
+    }
+
+    /**
+     * Password policy of the admin accounts, or null without one (R23.15).
+     */
+    public function passwordPolicy(): ?PasswordPolicy
+    {
+        return $this->passwordRules?->policyFor(AccountKind::Admin);
+    }
+
+    /**
+     * Strength of a password for the account named, or null without a policy
+     * (R23.16).
+     */
+    public function passwordBits(string $password, string $username): ?int
+    {
+        return $this->passwordRules?->bits($password, $username);
     }
 
     /**

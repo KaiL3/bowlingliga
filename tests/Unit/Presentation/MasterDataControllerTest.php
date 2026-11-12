@@ -73,7 +73,7 @@ final class MasterDataControllerTest extends TestCase
         // The logged-in account may manage accounts.
         $this->chief       = $this->accountsRepo->create('chef', (new PasswordHasher())->hash('passwort-chef'));
         $this->permissions = new InMemoryPermissionStore();
-        $this->permissions->replace($this->chief, [Permission::ManageAccounts->value]);
+        $this->permissions->replace($this->chief, [Permission::SystemAdmin->value]);
         $this->current     = new FixedLoggedInAccount($this->chief);
 
         $accountManagement = new AdminAccountManagement(
@@ -145,14 +145,14 @@ final class MasterDataControllerTest extends TestCase
         $this->controller->process('account-create', ['username' => 'helfer', 'password' => 'geheim123']);
         $helper = $this->accountsRepo->findByUsername('helfer')['id'] ?? 0;
 
-        $saved = $this->controller->process('account-permissions', ['account_id' => (string) $helper, 'permissions' => ['accounts.manage']]);
+        $saved = $this->controller->process('account-permissions', ['account_id' => (string) $helper, 'permissions' => ['system.admin']]);
         self::assertTrue($saved->successful, $saved->message);
         self::assertSame('Die Rechte von helfer sind gespeichert.', $saved->message);
 
         $html = $this->controller->overview('<input name="csrf_token">', null, null, null, 'accounts');
         self::assertStringContainsString('<span class="badge">eigenes Konto</span>', $html);
-        self::assertSame(2, substr_count($html, 'name="permissions[]" value="accounts.manage" checked'), 'Both accounts hold it.');
-        self::assertStringContainsString('chef hat helfer das Recht „Adminkonten verwalten“ gegeben.', $html);
+        self::assertSame(2, substr_count($html, 'name="permissions[]" value="system.admin" checked'), 'Both accounts hold it.');
+        self::assertStringContainsString('chef hat helfer das Recht „Systemadmin“ gegeben.', $html);
         self::assertStringContainsString('chef hat das Konto helfer angelegt.', $html);
     }
 
@@ -163,7 +163,7 @@ final class MasterDataControllerTest extends TestCase
         $html = $this->controller->overview('<input name="csrf_token">', null, null, null, 'accounts');
         self::assertStringNotContainsString('tab=accounts', $html);
         self::assertStringNotContainsString('account-create', $html);
-        self::assertStringContainsString('Dafür fehlt diesem Konto das Recht „Adminkonten verwalten“.', $html);
+        self::assertStringContainsString('Dafür fehlt diesem Konto das Recht „Systemadmin“.', $html);
 
         $result = $this->controller->process('account-create', ['username' => 'neu', 'password' => 'geheim123']);
         self::assertFalse($result->successful);

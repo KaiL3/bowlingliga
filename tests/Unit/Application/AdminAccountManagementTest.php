@@ -65,7 +65,7 @@ final class AdminAccountManagementTest extends TestCase
 
         $this->chief       = $this->accounts->create('chef', (new PasswordHasher())->hash('passwort-chef'));
         $this->permissions = new InMemoryPermissionStore();
-        $this->permissions->replace($this->chief, [Permission::ManageAccounts->value]);
+        $this->permissions->replace($this->chief, [Permission::SystemAdmin->value]);
         $this->log         = new InMemoryAccountLogStore();
         $this->current     = new FixedLoggedInAccount($this->chief);
         $this->sessions    = new RecordingSessionRenewal();
@@ -123,7 +123,7 @@ final class AdminAccountManagementTest extends TestCase
             $this->management->removeAccount($this->chief);
             self::fail('Somebody must be left to manage the accounts (R23.11).');
         } catch (AccountException $e) {
-            self::assertStringContainsString('Mindestens ein Adminkonto muss Adminkonten verwalten dürfen', GermanText::of($e));
+            self::assertStringContainsString('Mindestens ein Adminkonto muss Systemadmin bleiben', GermanText::of($e));
         }
         self::assertNotNull($this->accounts->find($this->chief));
     }
@@ -134,18 +134,18 @@ final class AdminAccountManagementTest extends TestCase
     {
         $id = $this->management->createAccount('admin', 'passwort');
 
-        self::assertSame(1, $this->management->changePermissions($id, ['accounts.manage', 'gibt-es-nicht', 7]));
-        self::assertSame([Permission::ManageAccounts], $this->management->permissionsOf($id), 'Unknown keys are ignored.');
-        self::assertSame(0, $this->management->changePermissions($id, ['accounts.manage']), 'Nothing changed, nothing logged.');
+        self::assertSame(1, $this->management->changePermissions($id, ['system.admin', 'gibt-es-nicht', 7]));
+        self::assertSame([Permission::SystemAdmin], $this->management->permissionsOf($id), 'Unknown keys are ignored.');
+        self::assertSame(0, $this->management->changePermissions($id, ['system.admin']), 'Nothing changed, nothing logged.');
 
         // The chief gives up the permission; another manager is left.
         self::assertSame(1, $this->management->changePermissions($this->chief, []));
-        self::assertFalse($this->management->canManageAccounts(), 'It applies at once (R23.10).');
+        self::assertFalse($this->management->isSystemAdmin(), 'It applies at once (R23.10).');
 
         self::assertSame([
             'chef created admin',
-            'chef granted admin accounts.manage',
-            'chef revoked chef accounts.manage',
+            'chef granted admin system.admin',
+            'chef revoked chef system.admin',
         ], $this->log->lines());
     }
 
@@ -155,7 +155,7 @@ final class AdminAccountManagementTest extends TestCase
         try {
             $this->management->changePermissions($this->chief, []);
         } finally {
-            self::assertSame([Permission::ManageAccounts->value], $this->permissions->permissionsOf($this->chief), 'R23.11');
+            self::assertSame([Permission::SystemAdmin->value], $this->permissions->permissionsOf($this->chief), 'R23.11');
         }
     }
 
@@ -167,7 +167,7 @@ final class AdminAccountManagementTest extends TestCase
         $attempts = [
             'create'      => fn () => $this->management->createAccount('neu', 'passwort-123'),
             'remove'      => fn () => $this->management->removeAccount($this->chief),
-            'permissions' => fn () => $this->management->changePermissions($other, ['accounts.manage']),
+            'permissions' => fn () => $this->management->changePermissions($other, ['system.admin']),
             'password'    => fn () => $this->management->changePassword($this->chief, 'neues-passwort'),
             'totp'        => fn () => $this->management->setUpTotp($this->chief, 'chef'),
             'log'         => fn () => $this->management->recentChanges(),
@@ -177,11 +177,11 @@ final class AdminAccountManagementTest extends TestCase
                 $attempt();
                 self::fail($name . ' needs the permission to manage accounts (R23.10).');
             } catch (PermissionDeniedException $e) {
-                self::assertStringContainsString('Adminkonten verwalten', GermanText::of($e), $name);
+                self::assertStringContainsString('Systemadmin', GermanText::of($e), $name);
             }
         }
 
-        self::assertFalse($this->management->canManageAccounts());
+        self::assertFalse($this->management->isSystemAdmin());
         self::assertSame(2, $this->accounts->countItems());
         self::assertSame([], $this->permissions->permissionsOf($other));
         self::assertCount(1, $this->log->entries, 'Only the creation is logged.');

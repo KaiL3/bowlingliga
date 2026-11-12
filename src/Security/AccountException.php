@@ -48,9 +48,9 @@ final class AccountException extends RuntimeException implements Translatable
      * At least one admin account must keep the permission to manage admin
      * accounts (R23.11).
      */
-    public static function lastManager(): self
+    public static function lastSystemAdmin(): self
     {
-        return new self('error.account.last_manager');
+        return new self('error.account.last_system_admin');
     }
 
     /**
@@ -83,6 +83,22 @@ final class AccountException extends RuntimeException implements Translatable
     public static function passwordTooShort(int $minimumLength): self
     {
         return new self('error.account.password_too_short', ['min' => $minimumLength]);
+    }
+
+    /**
+     * The new password is weaker than the policy demands (R23.15).
+     */
+    public static function passwordTooWeak(int $bits, int $minimumBits): self
+    {
+        return new self('error.account.password_too_weak', ['bits' => $bits, 'min' => $minimumBits]);
+    }
+
+    /**
+     * The new password is the current one or one of the last ones (R23.18).
+     */
+    public static function passwordReused(int $historySize): self
+    {
+        return new self($historySize > 0 ? 'error.account.password_reused' : 'error.account.password_unchanged', ['count' => $historySize]);
     }
 
     /**

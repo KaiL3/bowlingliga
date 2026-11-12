@@ -139,15 +139,69 @@ final class AdminView
     }
 
     /**
+     * Last step of a login whose password has to be replaced first (R23.17):
+     * the reason, the new password twice with its strength display.
+     *
+     * @param int|null $minBits Minimum strength of the policy (R23.15).
+     */
+    public function renderPasswordChange(
+        string $csrfFieldHtml,
+        string $reasonKey,
+        string $username,
+        ?int $minBits,
+        ?string $error = null,
+    ): string {
+        $errorMessage = $error !== null
+            ? sprintf('<p class="error" role="alert">%s</p>', $this->escape($error))
+            : '';
+        $name  = $this->escape($username);
+        $min   = \Bowlingliga\Security\PasswordRules::MIN_LENGTH;
+        $meter = PasswordStrengthMeter::html($this->t, 'new-password', $minBits, 'change-username');
+
+        return <<<HTML
+            <div class="login">
+                <header class="page-header page-header--admin">
+                    <p class="page-header__kicker">{$this->text('admin.login')}</p>
+                    <h1>{$this->text('password_change.title')}</h1>
+                </header>
+                {$errorMessage}
+                <section class="card">
+                    <p>{$this->text($reasonKey)}</p>
+                    <form class="form" method="post" action="/admin/login/password">
+                        {$csrfFieldHtml}
+                        <input type="text" id="change-username" name="username" value="{$name}" autocomplete="username" hidden>
+                        <div class="form__field">
+                            <label for="new-password">{$this->text('account.new_password')}</label>
+                            <input type="password" id="new-password" name="new" autocomplete="new-password" minlength="{$min}" required autofocus>
+                            <small>{$this->text('account.min_length', ['min' => $min])}</small>
+                            {$meter}
+                        </div>
+                        <div class="form__field">
+                            <label for="repeat-password">{$this->text('account.repeat_password')}</label>
+                            <input type="password" id="repeat-password" name="repeat" autocomplete="new-password" minlength="{$min}" required>
+                        </div>
+                        <button type="submit" class="button">{$this->text('password_change.save')}</button>
+                    </form>
+                    <form method="post" action="/admin/login/password" class="login__cancel">
+                        {$csrfFieldHtml}
+                        <button type="submit" name="cancel" value="1" class="button button--secondary">{$this->text('common.cancel')}</button>
+                    </form>
+                </section>
+            </div>
+            HTML;
+    }
+
+    /**
      * Functional areas for the admin bar, which the {@see Layout} shows on all
-     * pages of the admin area while a login exists.
+     * pages of the admin area while a login exists; the system area only for
+     * a system admin (R23.10).
      *
      * @return list<array{href: string, text: string}>
      */
-    public function barEntries(): array
+    public function barEntries(bool $systemAdmin = false): array
     {
         $entries = [['href' => '/admin', 'text' => $this->plain('admin.overview')]];
-        foreach (self::AREAS as $href => $name) {
+        foreach ($this->areas($systemAdmin) as $href => $name) {
             $entries[] = ['href' => $href, 'text' => $this->plain('admin.area.' . $name . '.short')];
         }
 
@@ -158,11 +212,11 @@ final class AdminView
      * Renders the admin area overview after a successful login and lists the
      * functional areas bundled as tiles (R28.10).
      */
-    public function renderOverview(): string
+    public function renderOverview(bool $systemAdmin = false): string
     {
         $tiles = '';
         // "Mein Konto" is on the right in the bar, and the last tile in the overview.
-        $areas = self::AREAS + ['/admin/account' => 'account'];
+        $areas = $this->areas($systemAdmin) + ['/admin/account' => 'account'];
         foreach ($areas as $href => $name) {
             $tiles .= sprintf(
                 '<li><a class="tile" href="%s"><span class="tile__icon">%s</span>'
@@ -182,6 +236,16 @@ final class AdminView
     }
 
     /**
+     * The functional areas the logged-in account sees.
+     *
+     * @return array<string, string>
+     */
+    private function areas(bool $systemAdmin): array
+    {
+        return $systemAdmin ? self::AREAS + ['/admin/system' => 'system'] : self::AREAS;
+    }
+
+    /**
      * Line icons of the tiles (decorative, in text colour).
      */
     private function icon(string $name): string
@@ -196,6 +260,7 @@ final class AdminView
             'posts'       => '<path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8M8 12h5"/>',
             'rules'       => '<path d="M5 4h11l3 3v13H5z"/><path d="M9 10h6M9 14h6"/>',
             'league'      => '<path d="M5 21V4"/><path d="M5 4h12l-3 4 3 4H5"/>',
+            'system'      => '<path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
             'account'     => '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/><path d="M12 15v2"/>',
             default       => '',
         };

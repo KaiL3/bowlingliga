@@ -73,6 +73,12 @@ final class LoginResult
         return new self(LoginStatus::SECOND_FACTOR_REQUIRED, null);
     }
 
+    /** Credentials correct, a new password is due first (R23.17). */
+    public static function passwordChangeRequired(): self
+    {
+        return new self(LoginStatus::PASSWORD_CHANGE_REQUIRED, null);
+    }
+
     public static function loginExpired(): self
     {
         return new self(

@@ -55,7 +55,7 @@ final class AccountController
             return $this->view->renderError($this->t->error($e));
         }
 
-        return $this->view->render($csrfField, $username, $active, $setup, $message, $error);
+        return $this->view->render($csrfField, $username, $active, $setup, $message, $error, $this->management->passwordPolicy()?->minBits);
     }
 
     /**

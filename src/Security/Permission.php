@@ -14,8 +14,12 @@ namespace Bowlingliga\Security;
  */
 enum Permission: string
 {
-    /** Create and remove admin accounts, grant and revoke permissions. */
-    case ManageAccounts = 'accounts.manage';
+    /**
+     * System administrator (R23.10): manages the admin accounts and their
+     * permissions and the settings of the installation (password policies).
+     * Every admin without it is a league admin.
+     */
+    case SystemAdmin = 'system.admin';
 
     /** Catalog key of the name shown in the admin area. */
     public function label(): string
@@ -24,13 +28,13 @@ enum Permission: string
     }
 
     /**
-     * Permissions of a newly created account: everything except managing
-     * accounts (R23.13).
+     * Permissions of a newly created account: everything except system
+     * administration (R23.13).
      *
      * @return list<self>
      */
     public static function forNewAccount(): array
     {
-        return array_values(array_filter(self::cases(), static fn (self $p): bool => $p !== self::ManageAccounts));
+        return array_values(array_filter(self::cases(), static fn (self $p): bool => $p !== self::SystemAdmin));
     }
 }

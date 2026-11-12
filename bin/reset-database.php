@@ -9,8 +9,9 @@ declare(strict_types=1);
  *   php bin/reset-database.php          shows what would be deleted (no change)
  *   php bin/reset-database.php --yes    deletes all data except admin accounts
  *
- * Kept: `admin_account` (including password and 2FA) and `schema_migration`
- * (the schema stays as it is). Everything else is emptied – seasons, teams,
+ * Kept: `admin_account` (including password and 2FA) with its permissions,
+ * log, trusted devices and password history, the password policies and
+ * `schema_migration` (the schema stays as it is). Everything else is emptied – seasons, teams,
  * players, results, frozen handicaps, original score sheets, CMS texts,
  * caches and login attempts – and the id counters start again at 1. The
  * files of the original score sheets are removed from the score sheet
@@ -30,7 +31,10 @@ if (PHP_SAPI !== 'cli') {
     exit(1);
 }
 
-const KEPT_TABLES = ['admin_account', 'schema_migration'];
+const KEPT_TABLES = [
+    'admin_account', 'account_permission', 'account_log', 'trusted_device',
+    'password_policy', 'password_history', 'schema_migration',
+];
 
 $configurationFile = getenv('BOWLINGLIGA_CONFIG') ?: dirname(__DIR__) . '/config/database.php';
 if (! is_file($configurationFile)) {

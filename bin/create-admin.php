@@ -14,17 +14,26 @@ declare(strict_types=1);
  * For scripts the password can also be passed via the environment variable
  * BOWLINGLIGA_ADMIN_PASSWORD (never as argument, otherwise it shows up in
  * the process list).
+ *
+ * The password has to meet the password policy of the admin accounts
+ * (R23.15); the account counts as set by its owner, so it does not have to
+ * be replaced at the first login.
  */
 
+use Bowlingliga\Application\League\LeagueSettings;
 use Bowlingliga\I18n\Translator;
 use Bowlingliga\Persistence\AdminAccountRepository;
 use Bowlingliga\Persistence\Database;
 use Bowlingliga\Persistence\AccountLogRepository;
 use Bowlingliga\Persistence\AccountPermissionRepository;
+use Bowlingliga\Persistence\LeagueSettingsRepository;
+use Bowlingliga\Persistence\PasswordHistoryRepository;
+use Bowlingliga\Persistence\PasswordPolicyRepository;
 use Bowlingliga\Security\AccountException;
 use Bowlingliga\Security\AccountLogStore;
 use Bowlingliga\Security\AccountManagement;
 use Bowlingliga\Security\PasswordHasher;
+use Bowlingliga\Security\PasswordRules;
 use Bowlingliga\Security\Permission;
 use Bowlingliga\Security\TotpSecretEncryption;
 
@@ -71,7 +80,14 @@ if (mb_strlen($password) < AccountManagement::PASSWORD_MIN) {
 
 // The former key name `totp_schluessel` is still accepted.
 $key = base64_decode((string) ($config['totp_key'] ?? $config['totp_schluessel'] ?? ''), true) ?: '';
-$management = new AccountManagement($accounts, new PasswordHasher(), new TotpSecretEncryption($key));
+$rules = new PasswordRules(
+    new PasswordPolicyRepository($database),
+    new PasswordHistoryRepository($database),
+    $accounts,
+    new PasswordHasher(),
+    commonWords: [LeagueSettings::nameFrom(new LeagueSettingsRepository($database))],
+);
+$management = new AccountManagement($accounts, new PasswordHasher(), new TotpSecretEncryption($key), passwordRules: $rules);
 
 try {
     $id = $management->createAccount($username, $password);

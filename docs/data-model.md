@@ -13,6 +13,7 @@ migrations have run. All migrations are repeatable
 | `004_matchday_cancelled.sql` | `matchday.is_cancelled` (R8.20): a cancelled matchday, reversible |
 | `005_trusted_device.sql` | `trusted_device` (R5.10): trusted browsers of an account, exempt from the account lock |
 | `006_account_permission.sql` | `account_permission` (R23.10): permissions per account, existing accounts get all; `account_log` (R23.14): changes to accounts and permissions |
+| `007_password_policy.sql` | `accounts.manage` becomes `system.admin` (R23.10); `password_policy` (R23.15) with the defaults; `admin_account.password_changed_at`/`password_bits`/`must_change_password` (R23.17), existing passwords dated to the update; `password_history` (R23.18) |
 
 Create new schema changes as `002_…sql`, `003_…sql` and so on, and add them
 to the `applySchema()` lists of the integration tests.
@@ -40,11 +41,15 @@ player 1─n previous_season_record   (season_id, game_count, net_pins_total –
                                      whose previous season is not in the database)
 admin_account ─n login_attempt      (password_hash, totp_secret_encrypted,
                                      totp_last_time_step, locked_until, failed_attempts,
-                                     session_version)
+                                     session_version, password_changed_at, password_bits,
+                                     must_change_password)
   └─n trusted_device                (token_hash = SHA-256 of the cookie token, session_version,
                                      failed_attempts, last_used_at, expires_at; column
                                      account_id, meant for every kind of account)
-  └─n account_permission            (permission = key of Security\Permission, e.g. accounts.manage)
+  └─n account_permission            (permission = key of Security\Permission, e.g. system.admin)
+  └─n password_history              (password_hash, created_at; the newest 24 per account)
+password_policy                      (account_kind admin/user, min_bits, max_age_days – -1 = unlimited,
+                                      history_size; one row per kind)
 account_log                          (created_at, actor_account_id/actor_name – NULL = command line,
                                       target_name, action created/removed/granted/revoked, permission;
                                       names as text, no foreign key)

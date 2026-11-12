@@ -69,15 +69,21 @@ final class AccountPermissionIntegrationTest extends TestCase
         $migration = (string) file_get_contents($this->migrations . '/006_account_permission.sql');
         $this->pdo->exec($migration);
         $permissions = new AccountPermissionRepository($this->database);
-        self::assertSame(['accounts.manage'], $permissions->permissionsOf($anna));
-        self::assertSame([$anna, $ben], $permissions->holders('accounts.manage'));
+        self::assertSame(['accounts.manage'], $permissions->permissionsOf($anna), 'Introduced as "manage admin accounts".');
+
+        // Migration 007 renames it to system admin; whoever held it keeps it.
+        $renaming = (string) file_get_contents($this->migrations . '/007_password_policy.sql');
+        $this->pdo->exec($renaming);
+        self::assertSame(['system.admin'], $permissions->permissionsOf($anna));
+        self::assertSame([$anna, $ben], $permissions->holders('system.admin'));
 
         $permissions->replace($ben, []);
         $this->pdo->exec($migration);
-        self::assertSame([], $permissions->permissionsOf($ben), 'Running the migration again does not undo a revocation.');
+        $this->pdo->exec($renaming);
+        self::assertSame([], $permissions->permissionsOf($ben), 'Running the migrations again does not undo a revocation.');
 
         $this->pdo->exec("DELETE FROM admin_account WHERE id = $anna");
-        self::assertSame([], $permissions->holders('accounts.manage'), 'The permissions go with their account.');
+        self::assertSame([], $permissions->holders('system.admin'), 'The permissions go with their account.');
     }
 
     public function testTheLogKeepsNamesAndShowsTheNewestFirst(): void
@@ -87,11 +93,11 @@ final class AccountPermissionIntegrationTest extends TestCase
         $log  = new AccountLogRepository($this->database);
 
         $log->record(new \DateTimeImmutable('2026-11-10 19:00:00'), null, null, 'anna', AccountLogStore::CREATED);
-        $log->record(new \DateTimeImmutable('2026-11-10 19:05:00'), $anna, 'anna', 'ben', AccountLogStore::GRANTED, 'accounts.manage');
+        $log->record(new \DateTimeImmutable('2026-11-10 19:05:00'), $anna, 'anna', 'ben', AccountLogStore::GRANTED, 'system.admin');
         $this->pdo->exec("DELETE FROM admin_account WHERE id = $anna");
 
         self::assertSame([
-            ['created_at' => '2026-11-10 19:05:00', 'actor_name' => 'anna', 'target_name' => 'ben', 'action' => 'granted', 'permission' => 'accounts.manage'],
+            ['created_at' => '2026-11-10 19:05:00', 'actor_name' => 'anna', 'target_name' => 'ben', 'action' => 'granted', 'permission' => 'system.admin'],
             ['created_at' => '2026-11-10 19:00:00', 'actor_name' => null, 'target_name' => 'anna', 'action' => 'created', 'permission' => null],
         ], $log->recent(10));
         self::assertCount(1, $log->recent(1));

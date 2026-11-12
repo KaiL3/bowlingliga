@@ -62,9 +62,9 @@ final class AccountPermissions
     }
 
     /** Whether removing the account would leave nobody who manages accounts (R23.11). */
-    public function isLastManager(int $accountId): bool
+    public function isLastSystemAdmin(int $accountId): bool
     {
-        return $this->store->holders(Permission::ManageAccounts->value) === [$accountId];
+        return $this->store->holders(Permission::SystemAdmin->value) === [$accountId];
     }
 
     /** Gives a new account the permissions of a new account (R23.13). */
@@ -85,7 +85,7 @@ final class AccountPermissions
      */
     public function change(int $accountId, array $wanted): array
     {
-        $this->require(Permission::ManageAccounts);
+        $this->require(Permission::SystemAdmin);
 
         $before  = $this->of($accountId);
         $granted = array_values(array_filter(Permission::cases(), static fn (Permission $p): bool => in_array($p, $wanted, true) && ! in_array($p, $before, true)));
@@ -94,8 +94,8 @@ final class AccountPermissions
         foreach ([...$granted, ...$revoked] as $permission) {
             $this->require($permission);
         }
-        if (in_array(Permission::ManageAccounts, $revoked, true) && $this->isLastManager($accountId)) {
-            throw AccountException::lastManager();
+        if (in_array(Permission::SystemAdmin, $revoked, true) && $this->isLastSystemAdmin($accountId)) {
+            throw AccountException::lastSystemAdmin();
         }
 
         if ($granted !== [] || $revoked !== []) {

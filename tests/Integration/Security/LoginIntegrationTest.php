@@ -315,6 +315,9 @@ final class LoginIntegrationTest extends TestCase
                 locked_until DATETIME NULL,
                 failed_attempts TINYINT UNSIGNED NOT NULL DEFAULT 0,
                 session_version INT UNSIGNED NOT NULL DEFAULT 1,
+                password_changed_at DATETIME NULL,
+                password_bits SMALLINT UNSIGNED NULL,
+                must_change_password TINYINT(1) NOT NULL DEFAULT 0,
                 PRIMARY KEY (id),
                 CONSTRAINT uq_adminkonto_benutzername UNIQUE (username)
             ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci'

@@ -37,7 +37,7 @@ use Throwable;
 final class AdminAreaIntegrationTest extends TestCase
 {
     private const USER = 'testadmin';
-    private const PASSWORD = 'Geheim-Passwort-35.7';
+    private const PASSWORD = 'Kegel#Abend-Mittwoch-35.7';
 
     /** @var resource|null */
     private static $server = null;
@@ -268,45 +268,92 @@ final class AdminAreaIntegrationTest extends TestCase
     }
 
     /**
-     * R23.10–R23.14: only an account that may manage accounts sees the admin
-     * accounts and changes them; a new account may not, and its attempts are
-     * refused even as a direct request.
+     * R23.10–R23.17: a system admin creates a league admin, whose password
+     * has to meet the policy; the new account replaces it at its first login
+     * and sees neither the admin accounts nor the system area.
      */
-    public function testOnlyAccountsWithThePermissionManageAccounts(): void
+    public function testOnlySystemAdminsManageAccountsAndPolicies(): void
     {
-        $this->pdo->exec("INSERT INTO account_permission (account_id, permission) SELECT id, 'accounts.manage' FROM admin_account");
+        $this->pdo->exec("INSERT INTO account_permission (account_id, permission) SELECT id, 'system.admin' FROM admin_account");
         $this->logIn();
 
         [, $form] = $this->get('/admin/master-data?tab=accounts');
         self::assertStringContainsString('action="/admin/master-data/account-create"', $form);
-        [$status, $html] = $this->post('/admin/master-data/account-create', [
+        self::assertStringContainsString('data-strength-for="account-password" data-min="70"', $form, 'Strength display with the minimum (R23.16).');
+        [, $html] = $this->post('/admin/master-data/account-create', [
             'csrf_token' => $this->csrfToken($form),
             'username'   => 'helfer',
             'password'   => 'helfer-passwort',
         ]);
+        self::assertStringContainsString('Das Passwort ist zu schwach:', $html, 'R23.15');
+        self::assertSame(1, $this->numeral('SELECT COUNT(*) FROM admin_account'));
+        [$status, $html] = $this->post('/admin/master-data/account-create', [
+            'csrf_token' => $this->csrfToken($form),
+            'username'   => 'helfer',
+            'password'   => 'Vorlaeufig#Bahn-7-Kegel',
+        ]);
         self::assertSame(200, $status, $this->message($html));
         self::assertStringContainsString('testadmin hat das Konto helfer angelegt.', $html);
+        self::assertStringContainsString('muss bei der nächsten Anmeldung geändert werden', $html);
         self::assertSame(0, $this->numeral("SELECT COUNT(*) FROM account_permission p JOIN admin_account a ON a.id = p.account_id WHERE a.username = 'helfer'"), 'R23.13');
-        $this->post('/admin/logout', []);
 
-        // The new account works in the admin area but does not see the accounts.
+        // The system area belongs to the system admin.
+        [, $overview] = $this->get('/admin');
+        self::assertStringContainsString('href="/admin/system"', $overview);
+        [$status, $system] = $this->get('/admin/system');
+        self::assertSame(200, $status);
+        self::assertStringContainsString('Passwortrichtlinie: Spieler', $system);
+        [$status, , $header] = $this->post('/admin/system/password-policy', [
+            'csrf_token' => $this->csrfToken($system), 'account_kind' => 'user', 'min_bits' => '60', 'max_age_days' => '-1', 'history_size' => '3',
+        ]);
+        self::assertSame(303, $status);
+        self::assertStringContainsString('Location: /admin/system?saved=user', $header);
+        self::assertSame(60, $this->numeral("SELECT min_bits FROM password_policy WHERE account_kind = 'user'"));
+
+        // The strength display asks the server (R23.16).
+        [$status, $answer] = $this->post('/admin/password-strength', ['csrf_token' => $this->csrfToken($system), 'password' => 'kX9#mP2$vL7q']);
+        self::assertSame(200, $status);
+        self::assertSame('{"bits":78}', $answer);
+        $this->post('/admin/logout', []);
+        [$status] = $this->post('/admin/password-strength', ['csrf_token' => $this->csrfToken($system), 'password' => 'kX9#mP2$vL7q']);
+        self::assertSame(403, $status, 'Not without a login.');
+
+        // First login of the new account: a new password first (R23.17).
         [, $login] = $this->get('/admin/login');
-        [$status] = $this->post('/admin/login', ['csrf_token' => $this->csrfToken($login), 'username' => 'helfer', 'password' => 'helfer-passwort']);
-        self::assertSame(302, $status);
+        [$status, , $header] = $this->post('/admin/login', ['csrf_token' => $this->csrfToken($login), 'username' => 'helfer', 'password' => 'Vorlaeufig#Bahn-7-Kegel']);
+        self::assertSame(303, $status);
+        self::assertStringContainsString('Location: /admin/login/password', $header);
+        self::assertSame(401, $this->get('/admin/master-data')[0], 'Nothing is accessible before the new password.');
+        [$status, $change] = $this->get('/admin/login/password');
+        self::assertSame(200, $status);
+        self::assertStringContainsString('Dieses Passwort hat jemand anderes festgelegt.', $change);
+        [$status, $answer] = $this->post('/admin/password-strength', ['csrf_token' => $this->csrfToken($change), 'password' => 'geheim123']);
+        self::assertSame([200, '{"bits":17}'], [$status, $answer], 'The display works on this page too.');
+        [$status, $change] = $this->post('/admin/login/password', ['csrf_token' => $this->csrfToken($change), 'new' => 'Vorlaeufig#Bahn-7-Kegel', 'repeat' => 'Vorlaeufig#Bahn-7-Kegel']);
+        self::assertSame(422, $status);
+        self::assertStringContainsString('Das Passwort darf weder das aktuelle noch eines der letzten 5 sein.', $change);
+        [$status, , $header] = $this->post('/admin/login/password', ['csrf_token' => $this->csrfToken($change), 'new' => 'Eigenes!Passwort-von-Helfer-9', 'repeat' => 'Eigenes!Passwort-von-Helfer-9']);
+        self::assertSame(303, $status);
+        self::assertStringContainsString('Location: /admin', $header);
+
+        // The league admin works in the admin area but sees neither accounts nor system.
         [$status, $page] = $this->get('/admin/master-data?tab=accounts');
         self::assertSame(200, $status);
         self::assertStringNotContainsString('>Adminkonten</a>', $page, 'No tab of the admin accounts.');
         self::assertStringNotContainsString('account-create', $page);
-        self::assertStringContainsString('Dafür fehlt diesem Konto das Recht „Adminkonten verwalten“.', $page);
+        self::assertStringNotContainsString('href="/admin/system"', $page);
+        self::assertStringContainsString('Dafür fehlt diesem Konto das Recht „Systemadmin“.', $page);
+        self::assertStringContainsString('Dafür fehlt diesem Konto das Recht „Systemadmin“.', $this->get('/admin/system')[1]);
 
         // Direct requests are refused as well.
-        $this->post('/admin/master-data/account-create', ['csrf_token' => $this->csrfToken($page), 'username' => 'dritter', 'password' => 'dritter-passwort']);
-        $this->post('/admin/master-data/account-permissions', ['csrf_token' => $this->csrfToken($page), 'account_id' => (string) $this->numeral("SELECT id FROM admin_account WHERE username = 'helfer'"), 'permissions' => ['accounts.manage']]);
+        $this->post('/admin/master-data/account-create', ['csrf_token' => $this->csrfToken($page), 'username' => 'dritter', 'password' => 'Dritter#Kegel-Bahn-77!']);
+        $this->post('/admin/master-data/account-permissions', ['csrf_token' => $this->csrfToken($page), 'account_id' => (string) $this->numeral("SELECT id FROM admin_account WHERE username = 'helfer'"), 'permissions' => ['system.admin']]);
+        $this->post('/admin/system/password-policy', ['csrf_token' => $this->csrfToken($page), 'account_kind' => 'admin', 'min_bits' => '0', 'max_age_days' => '-1', 'history_size' => '0']);
         self::assertSame(2, $this->numeral('SELECT COUNT(*) FROM admin_account'));
         self::assertSame(1, $this->numeral('SELECT COUNT(*) FROM account_permission'));
+        self::assertSame(70, $this->numeral("SELECT min_bits FROM password_policy WHERE account_kind = 'admin'"));
         self::assertSame(200, $this->get('/admin/account')[0], '"Mein Konto" stays allowed.');
     }
-
     /**
      * R23.6–R23.8: set up the two-factor login via "Mein Konto" (only active
      * with a valid code); afterwards the login requires the code. Disable with
@@ -378,10 +425,10 @@ final class AdminAreaIntegrationTest extends TestCase
 
         // Change the password.
         [$status, $html] = $this->post('/admin/account/password', [
-            'csrf_token' => $this->csrfToken($html), 'current' => self::PASSWORD, 'new' => 'Ganz-Neues-Passwort-2', 'repeat' => 'Ganz-Neues-Passwort-2',
+            'csrf_token' => $this->csrfToken($html), 'current' => self::PASSWORD, 'new' => 'Ganz-Neues-Passwort-2-Bahn9!', 'repeat' => 'Ganz-Neues-Passwort-2-Bahn9!',
         ]);
         self::assertSame(200, $status, $this->message($html));
-        self::assertTrue(password_verify('Ganz-Neues-Passwort-2', $this->text('SELECT password_hash FROM admin_account')));
+        self::assertTrue(password_verify('Ganz-Neues-Passwort-2-Bahn9!', $this->text('SELECT password_hash FROM admin_account')));
     }
 
     /**
@@ -1286,6 +1333,7 @@ final class AdminAreaIntegrationTest extends TestCase
             'db/migrations/004_matchday_cancelled.sql',
             'db/migrations/005_trusted_device.sql',
             'db/migrations/006_account_permission.sql',
+            'db/migrations/007_password_policy.sql',
         ] as $file) {
             $this->pdo->exec((string) file_get_contents($root . '/' . $file));
         }
@@ -1297,7 +1345,7 @@ final class AdminAreaIntegrationTest extends TestCase
         foreach ([
             'fixture_log', 'team_entry_game', 'team_entry', 'game_result', 'lineup', 'original_score_sheet', 'fixture', 'lane_pair',
             'frozen_handicap', 'roster', 'team_season', 'team', 'matchday', 'season_config', 'season',
-            'player', 'previous_season_record', 'admin_account', 'login_attempt', 'trusted_device', 'account_permission', 'account_log', 'home_page_post',
+            'player', 'previous_season_record', 'admin_account', 'login_attempt', 'trusted_device', 'account_permission', 'account_log', 'password_policy', 'password_history', 'home_page_post',
             'rules', 'privacy_policy', 'legal_notice', 'league_setting',
             'cache_average', 'cache_league_table', 'cache_matchday_table', 'cache_honours',
         ] as $table) {

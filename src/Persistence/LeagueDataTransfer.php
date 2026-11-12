@@ -33,7 +33,10 @@ final class LeagueDataTransfer
     public const FORMAT = 1;
 
     /** Neither exported nor touched in the target. */
-    private const NEVER_TRANSFER = ['admin_account', 'login_attempt', 'trusted_device', 'account_permission', 'account_log', 'schema_migration'];
+    private const NEVER_TRANSFER = [
+        'admin_account', 'login_attempt', 'trusted_device', 'account_permission', 'account_log',
+        'password_history', 'password_policy', 'schema_migration',
+    ];
 
     private const CACHE_PREFIX = 'cache_';
 

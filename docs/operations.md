@@ -245,7 +245,10 @@ sheet files.
 ## Emergency help
 
 - **Another admin account via the command line:**
-  `sudo php /var/www.bowlingliga/bin/create-admin.php <name>`
+  `sudo php /var/www.bowlingliga/bin/create-admin.php <name>`. The password
+  has to meet the password policy of the admins (by default 70 bits; the
+  script names the strength of a rejected one), and the account is system
+  admin.
 - **Phone with the authenticator app lost:** reset the two-factor login of
   the account and set it up again after logging in:
   ```bash
@@ -264,7 +267,9 @@ sheet files.
   missing and damaged files; `--clean` additionally deletes files no record
   needs any more. A page `/score-sheet/{id}` that answers "Die Datei dieses
   Spielzettels fehlt" means the file must be restored from the backup.
-- **Empty the database for a fresh start (admin accounts are kept):**
+- **Empty the database for a fresh start (admin accounts with their
+  permissions, devices and password history, and the password policies are
+  kept):**
   `sudo php /var/www.bowlingliga/bin/reset-database.php` shows what would be
   deleted, `--yes` deletes it.
 - **Demo league for trying it out (empty database only):**

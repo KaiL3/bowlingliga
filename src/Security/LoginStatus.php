@@ -48,4 +48,10 @@ enum LoginStatus: string
      * login starts over.
      */
     case LOGIN_EXPIRED = 'login_expired';
+
+    /**
+     * Password (and code) correct, but the password has to be replaced
+     * before the session starts (R23.17).
+     */
+    case PASSWORD_CHANGE_REQUIRED = 'password_change_required';
 }

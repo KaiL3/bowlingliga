@@ -71,7 +71,7 @@ final class MasterDataView
      * @param string|null                $error     Error message.
      * @param string                     $tab       Selected tab ({@see self::TABS}); unknown = players.
      * @param string                     $importArea Content of the import tab (from the {@see PlayerImportController}).
-     * @param array{permissions: array<int, list<string>>, log: list<array{created_at: string, actor_name: string|null, target_name: string, action: string, permission: string|null}>, self: int|null}|null $accountAdmin
+     * @param array{permissions: array<int, list<string>>, log: list<array{created_at: string, actor_name: string|null, target_name: string, action: string, permission: string|null}>, self: int|null, min_bits?: int|null}|null $accountAdmin
      *        Permissions, log and own account id if the logged-in account may
      *        manage accounts; null hides the tab of the admin accounts (R23.10).
      */
@@ -351,7 +351,7 @@ final class MasterDataView
             $name = (string) $account['username'];
             $own  = ($admin['self'] ?? null) === $id ? ' <span class="badge">' . $this->text('master_data.own_account') . '</span>' : '';
             $rows .= $this->row(
-                $this->escape($name) . $own,
+                $this->escape($name) . $own . $this->passwordState($account),
                 $this->permissionForm($csrfField, $id, $name, $admin['permissions'][$id] ?? []),
                 $this->deleteButton($csrfField, 'account-remove', 'account_id', $id, $name),
             );
@@ -360,7 +360,8 @@ final class MasterDataView
         $items = '<div>' . AdminComponents::card($this->plain('master_data.tab.accounts'), $this->items($rows, 'master_data.no_accounts'))
             . $this->accountLog($admin['log'] ?? []) . '</div>';
 
-        $form = AdminComponents::card($this->plain('master_data.new_account'), <<<HTML
+        $meter = PasswordStrengthMeter::html($this->t, 'account-password', isset($admin['min_bits']) ? (int) $admin['min_bits'] : null, 'account-username');
+        $form  = AdminComponents::card($this->plain('master_data.new_account'), <<<HTML
             <form class="form" method="post" action="/admin/master-data/account-create">
                 {$csrfField}
                 <div class="form__field">
@@ -371,13 +372,37 @@ final class MasterDataView
                     <label for="account-password">{$this->text('admin.password')}</label>
                     <input type="password" id="account-password" name="password" autocomplete="new-password" minlength="8" required>
                     <small>{$this->text('account.min_length', ['min' => 8])}</small>
+                    {$meter}
                 </div>
                 <div class="form__field"><small>{$this->text('master_data.new_account_permissions')}</small></div>
+                <div class="form__field"><small>{$this->text('master_data.new_account_password')}</small></div>
                 <button type="submit" class="button">{$this->text('master_data.create_account')}</button>
             </form>
             HTML);
 
         return $this->workArea($items, $form);
+    }
+
+    /**
+     * Strength and age of the password of an account, and whether its owner
+     * has to replace it at the next login (R23.17).
+     *
+     * @param array<string, mixed> $account
+     */
+    private function passwordState(array $account): string
+    {
+        $parts = [];
+        if (isset($account['password_bits'])) {
+            $parts[] = $this->plain('master_data.password_bits', ['bits' => (int) $account['password_bits']]);
+        }
+        if (isset($account['password_changed_at'])) {
+            $parts[] = $this->plain('master_data.password_changed', ['date' => $this->format->date(substr((string) $account['password_changed_at'], 0, 10))]);
+        }
+        if ((bool) ($account['must_change_password'] ?? false)) {
+            $parts[] = $this->plain('master_data.password_must_change');
+        }
+
+        return $parts === [] ? '' : '<br><small>' . $this->escape(implode(' · ', $parts)) . '</small>';
     }
 
     /**

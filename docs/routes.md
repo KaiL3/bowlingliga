@@ -35,6 +35,8 @@ scrolls the active area into view).
 |---|---|---|---|
 | `/admin/login`, `/admin/logout` | GET/POST | Login step 1 (`username`, `password`; with active 2FA 303 to `/admin/login/code`), logout | closures + `AuthModule` |
 | `/admin/login/code` | GET/POST | Login step 2: code from the app (`totp`), `cancel=1`; only reachable while the time limit (5 min) after a successful password check is running | `AuthModule::confirmSecondFactor` |
+| `/admin/login/password` | GET/POST | Last login step if the password has to be replaced (R23.17): `new`, `repeat`, `cancel=1`; only reachable for 15 min after the checked credentials; success starts the session (303 to `/admin`) | `AuthModule::completePasswordChange`, `AccountManagement::replaceOwnPassword` |
+| `/admin/password-strength` | POST | Strength of a new password for the display (`password`, `username`, CSRF token), JSON `{"bits": n}`; only with a login or a login waiting for a new password, otherwise 403 (R23.16) | closure + `AccountManagement::passwordBits` |
 | `/admin` | GET | Overview with links | `AdminView` |
 | `/admin/master-data?tab=` | GET | Tabs players, seasons, teams (with roster), matchdays, admin accounts, import; after an action its tab stays selected | `MasterDataController` |
 | `/admin/master-data/team?id=` | GET | Team page in the admin area (team season id), same content as `/team/{id}` with the average list; linked from the teams in the master data | `TeamProfiles`, `TeamProfileView` |
@@ -71,6 +73,7 @@ scrolls the active area into view).
 | `/admin/home-page` (`?edit=`) | GET | Maintain home page posts | `CmsEditController` |
 | `/admin/home-page/{anlegen,aendern,entfernen}` | POST | create, change, remove a post | as above |
 | `/admin/rules`, `/admin/rules/save` | GET/POST | Maintain the rules | as above |
+| `/admin/system` (`?saved=admin` or `user`), `/admin/system/password-policy` | GET/POST | System area of a system admin (R23.10): password policies of admins and players (`account_kind`, `min_bits`, `max_age_days`, `history_size`, R23.15); saving redirects to the page (303); a league admin gets the refusal | `SystemSettingsController`, `SystemSettingsView`, `PasswordPolicySettings` |
 | `/admin/league` (`?saved=1`), `/admin/league/save` | GET/POST | League name and public player data of the installation (R38, R40); saving redirects to the form (303), so that the header already shows the new name | `LeagueSettingsController`, `LeagueSettingsView` |
 
 Course of a season in the admin area: master data (season → teams →

@@ -81,6 +81,8 @@ final class LeagueDataTransferIntegrationTest extends TestCase
         $transfer = new LeagueDataTransfer($this->pdo, $this->targetFiles);
 
         self::assertArrayNotHasKey('admin_account', $export['tables']);
+        self::assertArrayNotHasKey('password_history', $export['tables'], 'Password hashes never leave the installation (R23.18).');
+        self::assertArrayNotHasKey('password_policy', $export['tables']);
         self::assertArrayNotHasKey('cache_league_table', $export['tables']);
 
         // The target has a different state, its own admin accounts, its own legal texts and caches.

@@ -44,6 +44,34 @@ final class InMemoryAuthAccountRepository extends AdminAccountRepository
         return $id;
     }
 
+    public function updatePasswordHash(int $id, string $passwordHash): void
+    {
+        if (isset($this->accounts[$id])) {
+            $this->accounts[$id]['password_hash'] = $passwordHash;
+            $this->accounts[$id]['session_version']++;
+        }
+    }
+
+    public function recordPasswordChange(int $id, int $bits, \DateTimeImmutable $changedAt, bool $mustChange): void
+    {
+        if (isset($this->accounts[$id])) {
+            $this->accounts[$id]['password_changed_at']  = $changedAt->format('Y-m-d H:i:s');
+            $this->accounts[$id]['password_bits']        = $bits;
+            $this->accounts[$id]['must_change_password'] = $mustChange ? 1 : 0;
+        }
+    }
+
+    /** Test helper: sets a column of the stored row directly. */
+    public function setColumn(int $id, string $column, mixed $value): void
+    {
+        $this->accounts[$id][$column] = $value;
+    }
+
+    public function usernameExists(string $username): bool
+    {
+        return $this->findByUsername($username) !== null;
+    }
+
     public function updateFailedAttempts(int $id, int $failedAttempts): void
     {
         if (isset($this->accounts[$id])) {

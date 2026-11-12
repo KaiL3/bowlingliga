@@ -513,27 +513,64 @@ A rule without a number in brackets belongs to the section as a whole.
 - **Permissions:** an account holds permissions; the permissions themselves
   are fixed in the code (`Security\Permission`), the table
   `account_permission` records who holds which. So far there is one:
-  "Adminkonten verwalten" – create and remove admin accounts, grant and
-  revoke permissions, change another account's password or two-factor
-  login. Without it the tab of the admin accounts is not shown and those
-  actions are refused; "Mein Konto" stays allowed for everybody. A change
-  applies to the next request without logging anybody out (R23.10).
-- At least one account always keeps "Adminkonten verwalten": it can neither
-  be revoked from nor removed with the last such account (R23.11). The
-  command line (`bin/create-admin.php`) creates an account with every
+  **"Systemadmin"** – create and remove admin accounts, grant and revoke
+  permissions, change another account's password or two-factor login, and
+  the system area with the password policies (R23.15). Every admin without
+  it is a **league admin**. Without it the tab of the admin accounts and
+  the system area are not shown and those actions are refused; "Mein
+  Konto" stays allowed for everybody. A change applies to the next request
+  without logging anybody out (R23.10). The permission was introduced as
+  "Adminkonten verwalten" and renamed with the system area; whoever held it
+  is system admin.
+- At least one account always stays system admin: the permission can
+  neither be revoked from nor removed with the last such account (R23.11).
+  The command line (`bin/create-admin.php`) creates an account with every
   permission, as the way back in.
 - Nobody grants or revokes a permission they do not hold themselves
   (R23.12).
-- A new account gets every permission except "Adminkonten verwalten"
-  (R23.13). A new permission comes with a migration that grants it to all
-  existing accounts, so nobody silently loses anything; the existing
-  accounts got "Adminkonten verwalten" with the introduction.
+- A new account gets every permission except "Systemadmin" (R23.13). A new
+  permission comes with a migration that grants it to all existing
+  accounts, so nobody silently loses anything; the existing accounts got
+  "Adminkonten verwalten" with the introduction.
 - Creating and removing accounts and every granted or revoked permission
   is logged with time, acting account and target (by name, so an entry
   stays readable after the account is gone) and shown under the accounts
   (R23.14).
+- **Password policies:** one per kind of account – admins and players
+  (players' accounts follow with the self-registration). A policy has a
+  minimum strength in bits (0–200), a maximum age in days (-1 = unlimited,
+  otherwise 1–3650) and the number of earlier passwords that may not be
+  used again (0–24). Only a system admin changes them, in the system area.
+  Defaults of a new installation: admins 70 bits, players 50 bits, no
+  maximum age, the last 5 passwords blocked (R23.15).
+- **Strength** is estimated in bits like the quality estimation of KeePass:
+  the pattern search of zxcvbn rates dictionary words and names, the
+  username and the league name, keyboard rows, sequences, repetitions,
+  dates and l33t spellings with few guesses; random parts count with the
+  size of their character set (26 lower case, 26 upper case, 10 digits, 33
+  ASCII symbols, 100 for anything else). The bits are log2 of the
+  estimated guesses, rounded down. Every new password – own change, new
+  account, forced change, command line – needs the minimum strength of its
+  policy and at least 8 characters. While typing, a bar up to 128 bits
+  shows the strength the server will check, red below the minimum (R23.16).
+- **Forced change at the login:** the login is decided after password and
+  code; it does not start the session but asks for a new password first if
+  the password was set by somebody else (a new account created in the
+  admin area, a password set for another account), is older than the
+  maximum age, or is weaker than the current minimum – checked with the
+  plaintext just entered, so a raised minimum applies at each account's
+  next login. The page is reachable for 15 minutes; until a valid new
+  password is saved nothing in the admin area is accessible. Every
+  password change records its strength and time; the existing passwords
+  counted as set when the policies were introduced. An account created on
+  the command line counts as set by its owner (R23.17).
+- **History:** a new password may be neither the current one nor one of
+  the last passwords of the account as many as its policy blocks; only the
+  hashes of the last 24 are kept (R23.18).
 - Implementation: `Security/AuthModule`, `AdminAccountManagement`,
-  `Security/AccountPermissions`, `/admin/account`.
+  `Security/AccountPermissions`, `Security/PasswordRules`,
+  `Security/PasswordStrength`, `/admin/account`, `/admin/system`,
+  `/admin/login/password`.
 
 ## R24 – Played matchday
 

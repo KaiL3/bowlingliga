@@ -72,6 +72,26 @@ class AdminAccountRepository extends AbstractRepository
     }
 
     /**
+     * Records when the password was set, its strength and whether its owner
+     * has to replace it at the next login (R23.17).
+     */
+    public function recordPasswordChange(int $id, int $bits, \DateTimeImmutable $changedAt, bool $mustChange): void
+    {
+        $this->transactional('record_password_change', function () use ($id, $bits, $changedAt, $mustChange): void {
+            $this->perform(
+                'UPDATE admin_account SET password_changed_at = :changed_at, password_bits = :bits,
+                    must_change_password = :must_change WHERE id = :id',
+                [
+                    'changed_at'  => $changedAt->format('Y-m-d H:i:s'),
+                    'bits'        => $bits,
+                    'must_change' => $mustChange ? 1 : 0,
+                    'id'          => $id,
+                ]
+            );
+        });
+    }
+
+    /**
      * Sets the failed attempts counter of an admin account (R5.6).
      *
      * The counter is updated on login: increased on a failed attempt, reset to 0
@@ -179,7 +199,8 @@ class AdminAccountRepository extends AbstractRepository
     public function find(int $id): ?array
     {
         return $this->findOne(
-            'SELECT id, username, password_hash, totp_secret_encrypted, totp_last_time_step, locked_until, failed_attempts, session_version
+            'SELECT id, username, password_hash, totp_secret_encrypted, totp_last_time_step, locked_until, failed_attempts, session_version,
+                    password_changed_at, password_bits, must_change_password
              FROM admin_account WHERE id = :id',
             ['id' => $id]
         );
@@ -193,7 +214,8 @@ class AdminAccountRepository extends AbstractRepository
     public function findByUsername(string $username): ?array
     {
         return $this->findOne(
-            'SELECT id, username, password_hash, totp_secret_encrypted, totp_last_time_step, locked_until, failed_attempts, session_version
+            'SELECT id, username, password_hash, totp_secret_encrypted, totp_last_time_step, locked_until, failed_attempts, session_version,
+                    password_changed_at, password_bits, must_change_password
              FROM admin_account WHERE username = :username',
             ['username' => $username]
         );
@@ -210,7 +232,8 @@ class AdminAccountRepository extends AbstractRepository
     public function findForUpdate(int $id): ?array
     {
         return $this->findOne(
-            'SELECT id, username, password_hash, totp_secret_encrypted, totp_last_time_step, locked_until, failed_attempts, session_version
+            'SELECT id, username, password_hash, totp_secret_encrypted, totp_last_time_step, locked_until, failed_attempts, session_version,
+                    password_changed_at, password_bits, must_change_password
              FROM admin_account WHERE id = :id FOR UPDATE',
             ['id' => $id]
         );
@@ -225,7 +248,8 @@ class AdminAccountRepository extends AbstractRepository
     public function findByUsernameForUpdate(string $username): ?array
     {
         return $this->findOne(
-            'SELECT id, username, password_hash, totp_secret_encrypted, totp_last_time_step, locked_until, failed_attempts, session_version
+            'SELECT id, username, password_hash, totp_secret_encrypted, totp_last_time_step, locked_until, failed_attempts, session_version,
+                    password_changed_at, password_bits, must_change_password
              FROM admin_account WHERE username = :username FOR UPDATE',
             ['username' => $username]
         );
@@ -259,7 +283,8 @@ class AdminAccountRepository extends AbstractRepository
     public function findAllAccounts(): array
     {
         return $this->findAll(
-            'SELECT id, username, password_hash, totp_secret_encrypted, totp_last_time_step, locked_until, failed_attempts, session_version
+            'SELECT id, username, password_hash, totp_secret_encrypted, totp_last_time_step, locked_until, failed_attempts, session_version,
+                    password_changed_at, password_bits, must_change_password
              FROM admin_account ORDER BY username'
         );
     }

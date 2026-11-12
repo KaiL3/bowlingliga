@@ -202,6 +202,16 @@ $adminAccounts = new AdminAccountRepository($database);
 // 32 byte sequence (former key name `totp_key` still accepted).
 $totpKey = base64_decode((string) ($config['totp_key'] ?? $config['totp_schluessel'] ?? ''), true) ?: '';
 
+// Password policies (R23.15–R23.18): strength, age and history of the
+// passwords; the league name counts as known to an attacker.
+$passwordRules = new \Bowlingliga\Security\PasswordRules(
+    new \Bowlingliga\Persistence\PasswordPolicyRepository($database),
+    new \Bowlingliga\Persistence\PasswordHistoryRepository($database),
+    $adminAccounts,
+    new PasswordHasher(),
+    commonWords: [$leagueName],
+);
+
 $auth = new AuthModule(
     $adminAccounts,
     new PasswordHasher(),
@@ -213,6 +223,7 @@ $auth = new AuthModule(
         new \Bowlingliga\Persistence\TrustedDeviceRepository($database),
         new \Bowlingliga\Security\PhpDeviceCookie($_COOKIE, $_SERVER),
     ),
+    passwordRules: $passwordRules,
 );
 
 /**
@@ -549,13 +560,22 @@ $seasonAdministration   = new SeasonAdministration(
     scoreSheetFiles: $scoreSheet,
 );
 $matchdayManagement = new MatchdayManagement($matchdays, $seasons, $auth);
-$accountManagement    = new AdminAccountManagement(
-    new AccountManagement($adminAccounts, new PasswordHasher(), new TotpSecretEncryption($totpKey), issuer: $leagueName),
+$adminAccountRules  = new AccountManagement($adminAccounts, new PasswordHasher(), new TotpSecretEncryption($totpKey), issuer: $leagueName, passwordRules: $passwordRules);
+$accountPermissions = new \Bowlingliga\Security\AccountPermissions(new \Bowlingliga\Persistence\AccountPermissionRepository($database), $auth);
+$accountManagement  = new AdminAccountManagement(
+    $adminAccountRules,
     $auth,
-    new \Bowlingliga\Security\AccountPermissions(new \Bowlingliga\Persistence\AccountPermissionRepository($database), $auth),
+    $accountPermissions,
     new \Bowlingliga\Persistence\AccountLogRepository($database),
     new \Bowlingliga\Persistence\PdoTransaction($database),
     $auth,
+);
+
+// System area (R23.10): only for a system admin; password policies (R23.15).
+$systemSettingsController = new \Bowlingliga\Presentation\SystemSettingsController(
+    new \Bowlingliga\Application\PasswordPolicySettings(new \Bowlingliga\Persistence\PasswordPolicyRepository($database), $auth, $accountPermissions),
+    new \Bowlingliga\Presentation\SystemSettingsView($translator),
+    t: $translator,
 );
 
 $masterDataReader = new \Bowlingliga\Persistence\MasterData\RepositoryMasterDataReader(
@@ -816,7 +836,7 @@ $adminSeasonId = static function () use ($session, $allSeasons, $chosenSeasonId,
     return is_int($kept) && in_array($kept, $known, true) ? $kept : $defaultSeasonId();
 };
 
-$adminPage = static function (string $title, string $content) use ($translator, $layout, $navigation, $adminSeasonId, $defaultSeasonId, $seasonForLinks, $allSeasons, $auth, $adminView): string {
+$adminPage = static function (string $title, string $content) use ($translator, $layout, $navigation, $adminSeasonId, $defaultSeasonId, $seasonForLinks, $allSeasons, $auth, $adminView, $accountManagement): string {
     // Admin bar and season selection only with an existing login (not on the login page).
     $loggedIn = $auth->checkWriteAccess();
 
@@ -825,7 +845,7 @@ $adminPage = static function (string $title, string $content) use ($translator, 
         $content,
         $navigation->entries($seasonForLinks($adminSeasonId())),
         (string) ($_SERVER['REQUEST_URI'] ?? '/'),
-        $loggedIn ? $adminView->barEntries() : [],
+        $loggedIn ? $adminView->barEntries($accountManagement->isSystemAdmin()) : [],
         $loggedIn ? ['seasons' => $allSeasons(), 'selected' => $adminSeasonId(), 'current' => $defaultSeasonId()] : null,
     );
 };
@@ -877,6 +897,13 @@ $router->admin('/login', static function () use ($t, $translator, $adminPage, $a
 
     if ($result->status === LoginStatus::SECOND_FACTOR_REQUIRED) {
         header('Location: /admin/login/code');
+        http_response_code(303);
+
+        return;
+    }
+
+    if ($result->status === LoginStatus::PASSWORD_CHANGE_REQUIRED) {
+        header('Location: /admin/login/password');
         http_response_code(303);
 
         return;
@@ -935,11 +962,112 @@ $router->admin('/login/code', static function () use ($t, $translator, $adminPag
         return;
     }
 
+    if ($result->status === LoginStatus::PASSWORD_CHANGE_REQUIRED) {
+        header('Location: /admin/login/password');
+        http_response_code(303);
+
+        return;
+    }
+
     http_response_code(401);
     // Wrong code: try again; locked or expired: start over.
     echo $adminPage('admin.login', $result->status === LoginStatus::INVALID_SECOND_FACTOR
         ? $adminView->renderSecondFactor($csrf->fieldHtml(), $result->message !== null ? $translator->message($result->message) : null)
         : $adminView->renderLogin($csrf->fieldHtml(), $result->message !== null ? $translator->message($result->message) : null));
+});
+
+// Last step of a login whose password has to be replaced first (R23.17):
+// only reachable while the time limit after the checked credentials runs;
+// the session starts once a new password meeting the policy is set.
+$router->admin('/login/password', static function () use ($t, $translator, $adminPage, $adminView, $csrf, $auth, $adminAccountRules): void {
+    if ($auth->checkWriteAccess()) {
+        header('Location: /admin');
+        http_response_code(302);
+
+        return;
+    }
+
+    $reason = $auth->awaitsPasswordChange();
+    if ($reason === null) {
+        header('Location: /admin/login');
+        http_response_code(302);
+
+        return;
+    }
+
+    $page = static fn (?string $error = null): string => $adminPage('password_change.title', $adminView->renderPasswordChange(
+        $csrf->fieldHtml(),
+        $reason->message(),
+        (string) $auth->passwordChangeUsername(),
+        $adminAccountRules->passwordPolicy()?->minBits,
+        $error,
+    ));
+
+    if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) !== 'POST') {
+        echo $page();
+
+        return;
+    }
+
+    if (! $csrf->isValid($_POST['csrf_token'] ?? null)) {
+        http_response_code(400);
+        echo $page($t('common.session_expired_retry'));
+
+        return;
+    }
+
+    if (($_POST['cancel'] ?? '') === '1') {
+        $auth->cancelPasswordChange();
+        header('Location: /admin/login');
+        http_response_code(303);
+
+        return;
+    }
+
+    $fresh      = (string) ($_POST['new'] ?? '');
+    $repetition = (string) ($_POST['repeat'] ?? '');
+    try {
+        $result = $auth->completePasswordChange(static fn (int $account) => $adminAccountRules->replaceOwnPassword($account, $fresh, $repetition));
+    } catch (\Bowlingliga\Security\AccountException $e) {
+        http_response_code(422);
+        echo $page($translator->error($e));
+
+        return;
+    }
+
+    if ($result->isSuccessful()) {
+        header('Location: /admin');
+        http_response_code(303);
+
+        return;
+    }
+
+    http_response_code(401);
+    echo $adminPage('admin.login', $adminView->renderLogin($csrf->fieldHtml(), $result->message !== null ? $translator->message($result->message) : null));
+});
+
+// Strength of a new password for the display while typing (R23.16): only
+// for a login or a login that has to choose a new password; the answer is
+// the number the policy is checked against.
+$router->admin('/password-strength', static function () use ($csrf, $auth, $adminAccountRules): void {
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store');
+
+    $allowed = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'POST'
+        && $csrf->isValid($_POST['csrf_token'] ?? null)
+        && ($auth->checkWriteAccess() || $auth->awaitsPasswordChange() !== null);
+    if (! $allowed) {
+        http_response_code(403);
+        echo '{}';
+
+        return;
+    }
+
+    $password = mb_substr((string) ($_POST['password'] ?? ''), 0, 256);
+    $username = mb_substr((string) ($_POST['username'] ?? ''), 0, 100);
+    $username = $auth->passwordChangeUsername() ?? $username;
+
+    echo json_encode(['bits' => $adminAccountRules->passwordBits($password, $username) ?? 0], JSON_THROW_ON_ERROR);
 });
 
 // Logout (R5.5): only via POST, then back to the login form.
@@ -955,7 +1083,7 @@ $router->admin('/logout', static function () use ($auth): void {
 // Admin area overview after a successful login (R28.10).
 // Without a valid session access is denied and the user is sent to the login
 // (R28.9, R5.1).
-$router->admin('/', static function () use ($adminPage, $adminView, $auth, $csrf): void {
+$router->admin('/', static function () use ($adminPage, $adminView, $auth, $csrf, $accountManagement): void {
     if (! $auth->checkWriteAccess()) {
         // R28.9: deny access and ask the user to log in.
         http_response_code(401);
@@ -967,7 +1095,7 @@ $router->admin('/', static function () use ($adminPage, $adminView, $auth, $csrf
         return;
     }
 
-    echo $adminPage('layout.admin_area', $adminView->renderOverview());
+    echo $adminPage('layout.admin_area', $adminView->renderOverview($accountManagement->isSystemAdmin()));
 });
 
 // --- Stammdatenverwaltung (Task 35.1) ------------------------------------
@@ -1491,6 +1619,55 @@ $router->admin('/rules/save', static function () use (
             $result->successful ? null : $result->message,
         )
     );
+});
+
+// System area (R23.10): password policies (R23.15); only a system admin sees
+// and changes them, the use case checks the permission.
+$router->admin('/system', static function () use ($ensureAdminAccess, $adminPage, $systemSettingsController, $csrf): void {
+    if (! $ensureAdminAccess()) {
+        return;
+    }
+
+    $saved = isset($_GET['saved']) && is_string($_GET['saved']) ? $_GET['saved'] : null;
+    echo $adminPage('admin.area.system.title', $systemSettingsController->page($csrf->fieldHtml(), $saved));
+});
+
+$router->admin('/system/password-policy', static function () use (
+    $isPost,
+    $csrfExpired,
+    $ensureAdminAccess,
+    $adminPage,
+    $systemSettingsController,
+    $csrf
+): void {
+    if (! $ensureAdminAccess()) {
+        return;
+    }
+
+    if (! $isPost()) {
+        header('Location: /admin/system');
+        http_response_code(302);
+
+        return;
+    }
+
+    if (! $csrf->isValid($_POST['csrf_token'] ?? null)) {
+        http_response_code(400);
+        echo $adminPage('admin.area.system.title', $systemSettingsController->page($csrf->fieldHtml(), null, $_POST, $csrfExpired));
+
+        return;
+    }
+
+    $result = $systemSettingsController->savePolicy($_POST);
+    if ($result->successful && $result->redirect !== null) {
+        header('Location: ' . $result->redirect);
+        http_response_code(303);
+
+        return;
+    }
+
+    http_response_code(422);
+    echo $adminPage('admin.area.system.title', $systemSettingsController->page($csrf->fieldHtml(), null, $_POST, $result->message));
 });
 
 // League settings (R38): the form, saving redirects back to it so that the

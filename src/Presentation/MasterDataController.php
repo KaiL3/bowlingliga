@@ -89,7 +89,7 @@ final class MasterDataController
     ): string {
         // The admin accounts are only shown to accounts that may manage them (R23.10).
         $accountAdmin = null;
-        if ($this->accountManagement->canManageAccounts()) {
+        if ($this->accountManagement->isSystemAdmin()) {
             $permissions = [];
             foreach ($this->reader->allAccounts() as $account) {
                 $permissions[(int) $account['id']] = array_map(
@@ -101,9 +101,10 @@ final class MasterDataController
                 'permissions' => $permissions,
                 'log'         => $this->accountManagement->recentChanges(),
                 'self'        => $this->accountManagement->currentAccount(),
+                'min_bits'    => $this->accountManagement->passwordPolicy()?->minBits,
             ];
         } elseif ($tab === 'accounts') {
-            $error ??= $this->t->error(new PermissionDeniedException(Permission::ManageAccounts));
+            $error ??= $this->t->error(new PermissionDeniedException(Permission::SystemAdmin));
         }
 
         return $this->view->render(

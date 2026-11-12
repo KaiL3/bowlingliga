@@ -26,6 +26,7 @@ final class AccountView
 
     /**
      * @param array{secret: string, uri: string, qr: string}|null $setup setup in progress
+     * @param int|null $minBits Minimum strength of the password policy (R23.15).
      */
     public function render(
         string $csrfField,
@@ -34,6 +35,7 @@ final class AccountView
         ?array $setup,
         ?string $message = null,
         ?string $error = null,
+        ?int $minBits = null,
     ): string {
         return AdminComponents::pageHeader(
             $this->plain('layout.my_account'),
@@ -43,7 +45,7 @@ final class AccountView
             . AdminComponents::notes($message, $error)
             . '<div class="grid grid--work">'
             . $this->renderTwoFactor($csrfField, $totpActive, $setup)
-            . $this->renderPassword($csrfField, $username)
+            . $this->renderPassword($csrfField, $username, $minBits)
             . $this->renderSessions($csrfField)
             . '</div>';
     }
@@ -139,17 +141,18 @@ final class AccountView
             HTML;
     }
 
-    private function renderPassword(string $csrfField, string $username): string
+    private function renderPassword(string $csrfField, string $username, ?int $minBits): string
     {
-        $min  = AccountManagement::PASSWORD_MIN;
-        $name = $this->e($username);
+        $min   = AccountManagement::PASSWORD_MIN;
+        $name  = $this->e($username);
+        $meter = PasswordStrengthMeter::html($this->t, 'pw-new', $minBits, 'pw-username');
 
         return <<<HTML
             <section class="card" aria-labelledby="h-password">
                 <div class="card__header"><h2 id="h-password">{$this->text('account.change_password')}</h2></div>
                 <form class="form" method="post" action="/admin/account/password">
                     {$csrfField}
-                    <input type="text" name="username" value="{$name}" autocomplete="username" hidden>
+                    <input type="text" id="pw-username" name="username" value="{$name}" autocomplete="username" hidden>
                     <div class="form__field">
                         <label for="pw-current">{$this->text('account.current_password')}</label>
                         <input type="password" id="pw-current" name="current" autocomplete="current-password" required>
@@ -158,6 +161,7 @@ final class AccountView
                         <label for="pw-new">{$this->text('account.new_password')}</label>
                         <input type="password" id="pw-new" name="new" autocomplete="new-password" minlength="{$min}" required>
                         <small>{$this->text('account.min_length', ['min' => $min])}</small>
+                        {$meter}
                     </div>
                     <div class="form__field">
                         <label for="pw-repeat">{$this->text('account.repeat_password')}</label>
