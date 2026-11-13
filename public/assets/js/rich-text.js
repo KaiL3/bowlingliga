@@ -106,11 +106,35 @@
                 // The image dialog: its source is filled by the upload or the
                 // image list and cannot be typed (R42.4), the server checks it
                 // anyway.
-                editor.on('OpenWindow', (event) => {
-                    const dialog = event.dialog;
-                    if (dialog && typeof dialog.getData === 'function' && 'src' in dialog.getData()) {
-                        dialog.setEnabled('src', false);
-                    }
+                // A tab change builds the fields of the tab anew, enabled –
+                // also when the upload switches back to "General" – so the
+                // source is locked on opening and after every tab change.
+                // The window manager exists only from the start of the editor on.
+                editor.on('init', () => {
+                    const windowManager = editor.windowManager;
+                    const open = windowManager.open.bind(windowManager);
+                    windowManager.open = (spec, params) => {
+                        if (!spec || !spec.initialData || !('src' in spec.initialData)) {
+                            return open(spec, params);
+                        }
+                        const lock = (api) => {
+                            api.setEnabled('src', false);
+                            queueMicrotask(() => api.setEnabled('src', false));
+                        };
+                        const onTabChange = spec.onTabChange;
+                        const dialog = open({
+                            ...spec,
+                            onTabChange: (api, details) => {
+                                if (onTabChange) {
+                                    onTabChange(api, details);
+                                }
+                                lock(api);
+                            },
+                        }, params);
+                        lock(dialog);
+
+                        return dialog;
+                    };
                 });
                 // Keep the text area current, so leaving the form or a failed
                 // submit never loses what was typed.
