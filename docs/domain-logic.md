@@ -16,7 +16,7 @@ A rule without a number in brackets belongs to the section as a whole.
 
 | Area | Sections |
 |---|---|
-| Public pages | [R1](#r1--results-of-a-fixture) · [R2](#r2--average-list-of-a-team) · [R14](#r14--season-selection-and-matchday-list) · [R15](#r15--matchday-detail-view) · [R16](#r16--league-table-and-day-table) · [R28](#r28--navigation-and-season-choice) · [R33](#r33--home-page-posts) · [R34](#r34--rules-page) · [R36](#r36--mobile-use) · [R39](#r39--player-page) · [R40](#r40--public-player-data) · [R41](#r41--team-page) |
+| Public pages | [R1](#r1--results-of-a-fixture) · [R2](#r2--average-list-of-a-team) · [R14](#r14--season-selection-and-matchday-list) · [R15](#r15--matchday-detail-view) · [R16](#r16--league-table-and-day-table) · [R28](#r28--navigation-and-season-choice) · [R33](#r33--home-page-posts) · [R34](#r34--rules-page) · [R42](#r42--images-in-the-texts) · [R36](#r36--mobile-use) · [R39](#r39--player-page) · [R40](#r40--public-player-data) · [R41](#r41--team-page) |
 | League data | [R6](#r6--players) · [R7](#r7--teams) · [R8](#r8--seasons-matchdays-and-season-configuration) · [R25](#r25--data-minimisation) · [R29](#r29--previous-season-records) · [R38](#r38--league-name) · [R40](#r40--public-player-data) |
 | Season planning | [R9](#r9--season-planning) · [R18](#r18--lane-assignment) · [R31](#r31--positionday) · [R32](#r32--lot-draw) |
 | Scoring | [R11](#r11--player-average) · [R12](#r12--handicap) · [R13](#r13--honours) · [R17](#r17--points) · [R20](#r20--ghost-team) · [R21](#r21--roster-and-lineup) · [R24](#r24--played-matchday) · [R27](#r27--blind-players) |
@@ -989,3 +989,37 @@ A rule without a number in brackets belongs to the section as a whole.
   `TableAggregator::tableFrom()` per matchday), `TeamProfileRepository`,
   `TableRawDataRepository` (blind games and matchday per fixture),
   `Presentation/TeamProfileView` with `SvgLineChart`.
+
+## R42 – Images in the texts
+
+- Admins put images into the texts of the website (home page posts, rules,
+  later privacy policy and legal notice): uploaded in the editor (chosen,
+  dropped or pasted) or in the admin area "Bilder", and chosen again from
+  there. Every admin may, writing needs a login (R42.1).
+- Accepted are JPEG, PNG and WebP up to 10 MB and 50 megapixels; the type is
+  taken from the content, SVG and everything else is refused. The image is
+  turned upright, scaled down to at most 2000 px on the longer edge and
+  encoded anew, which removes location and camera data; PNG stays PNG with
+  its transparency, JPEG and WebP become JPEG. The original is not kept.
+  The same image twice stays one image (R42.2).
+- The area "Bilder" lists every image with size, date and the texts that use
+  it, read from the texts each time. An image is removed only while no text
+  uses it; otherwise the area names those texts (R42.3).
+- Images are only taken from the website's own store
+  (`/media/<hash>.jpg|png`); an image of another server, a `data:` address or
+  any other address is removed when the text is saved. The address never
+  changes, so browsers keep an image for a year (R42.4).
+- Placement chosen in the editor: in the text, left or right with the text
+  beside, centred or full width; size and caption are free. Next to the
+  text only from tablet width on; on a phone such an image takes the full
+  width (R42.5).
+- Every image needs a description (alternative text); a text with an image
+  without one is not saved (R42.6).
+- On the public pages a click on an image (or Enter) shows it large in the
+  same overlay as the score sheets (R42.7).
+- The images travel with a data transfer like the score sheets; resetting
+  the database deletes them (R42.8).
+- Implementation: `Domain/Media/ContentImage`, `Application/Media/ContentImages`,
+  `ContentImageRepository`, `ContentTextRepository`, a `FileSystemBlobStore`
+  of its own (`media_dir`), `HtmlSanitizer` with `LocalImageUriFilter`,
+  `MediaController`/`MediaView`, `/media/{hash}.{ext}`, `/admin/media`.

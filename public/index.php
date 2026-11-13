@@ -663,6 +663,48 @@ $cmsEditController = new CmsEditController(
     t: $translator,
 );
 
+// --- Composition root: images of the content (R42) --------------------------
+// A store of their own (media_dir): the cleanup of the score sheet store
+// removes every file no score sheet references.
+$contentImages = new \Bowlingliga\Application\Media\ContentImages(
+    new \Bowlingliga\Persistence\ContentImageRepository($database),
+    \Bowlingliga\Persistence\FileSystemBlobStore::forMedia($config, dirname(__DIR__)),
+    new \Bowlingliga\Persistence\ContentTextRepository($database),
+    $auth,
+);
+$mediaController = new \Bowlingliga\Presentation\MediaController(
+    $contentImages,
+    new \Bowlingliga\Presentation\MediaView($translator),
+    t: $translator,
+);
+
+// Delivery of an image of the content (R42.4): public, the address names the
+// hash of the content, so it never changes and may be cached for good.
+$router->publicWithName('/media', '[0-9a-f]{64}\.(?:jpg|png)', static function (string $name) use ($t, $contentImages): void {
+    $file = $contentImages->file($name);
+    if ($file === null) {
+        http_response_code(404);
+        header('Content-Type: text/plain; charset=utf-8');
+        echo $t('common.page_not_found');
+
+        return;
+    }
+
+    $etag = '"' . $file['hash'] . '"';
+    header('ETag: ' . $etag);
+    header('Cache-Control: public, max-age=31536000, immutable');
+    if (trim((string) ($_SERVER['HTTP_IF_NONE_MATCH'] ?? '')) === $etag) {
+        http_response_code(304);
+
+        return;
+    }
+    header("Content-Security-Policy: default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; frame-ancestors 'self'");
+    header('Content-Type: ' . $file['mime_type']);
+    header('Content-Disposition: inline');
+    header('Content-Length: ' . strlen($file['content']));
+    echo $file['content'];
+});
+
 // --- Composition root: league settings (R38) --------------------------------
 $leagueSettingsController = new LeagueSettingsController(
     new LeagueSettings($leagueStore, $validator, $auth),
@@ -1621,6 +1663,103 @@ $router->admin('/rules/save', static function () use (
     );
 });
 
+// Images of the content (R42): upload (form and editor), overview, removal.
+$router->admin('/media', static function () use ($ensureAdminAccess, $adminPage, $mediaController, $csrf): void {
+    if (! $ensureAdminAccess()) {
+        return;
+    }
+
+    echo $adminPage('admin.area.media.title', $mediaController->page($csrf->fieldHtml()));
+});
+
+// The editor asks for JSON ({"location": …} or {"error": …}), the form of
+// the area gets the page with the message.
+$router->admin('/media/upload', static function () use ($t, $isPost, $csrfExpired, $auth, $adminPage, $mediaController, $csrf): void {
+    $json = str_contains((string) ($_SERVER['HTTP_ACCEPT'] ?? ''), 'application/json');
+    $answer = static function (int $status, array $result) use ($json, $adminPage, $mediaController, $csrf): void {
+        http_response_code($status);
+        if ($json) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode($result['ok'] ? ['location' => $result['location']] : ['error' => $result['message']], JSON_THROW_ON_ERROR);
+
+            return;
+        }
+        echo $adminPage('admin.area.media.title', $mediaController->page(
+            $csrf->fieldHtml(),
+            $result['ok'] ? $result['message'] : null,
+            $result['ok'] ? null : $result['message'],
+        ));
+    };
+
+    if (! $auth->checkWriteAccess()) {
+        $answer(401, ['ok' => false, 'location' => null, 'message' => $t('admin.login_note')]);
+
+        return;
+    }
+    if (! $isPost()) {
+        header('Location: /admin/media');
+        http_response_code(302);
+
+        return;
+    }
+    // Larger than post_max_size: PHP drops the whole request body.
+    if ($_POST === [] && (int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) {
+        $answer(413, ['ok' => false, 'location' => null, 'message' => $t('upload.post_too_large')]);
+
+        return;
+    }
+    if (! $csrf->isValid($_POST['csrf_token'] ?? null)) {
+        $answer(400, ['ok' => false, 'location' => null, 'message' => $csrfExpired]);
+
+        return;
+    }
+
+    $result = $mediaController->upload(is_array($_FILES['file'] ?? null) ? $_FILES['file'] : []);
+    $answer($result['ok'] ? 200 : 422, $result);
+});
+
+$router->admin('/media/remove', static function () use ($isPost, $csrfExpired, $ensureAdminAccess, $adminPage, $mediaController, $csrf): void {
+    if (! $ensureAdminAccess()) {
+        return;
+    }
+    if (! $isPost()) {
+        header('Location: /admin/media');
+        http_response_code(302);
+
+        return;
+    }
+    if (! $csrf->isValid($_POST['csrf_token'] ?? null)) {
+        http_response_code(400);
+        echo $adminPage('admin.area.media.title', $mediaController->page($csrf->fieldHtml(), null, $csrfExpired));
+
+        return;
+    }
+
+    $result = $mediaController->remove($_POST);
+    if (! $result->successful) {
+        http_response_code(422);
+    }
+    echo $adminPage('admin.area.media.title', $mediaController->page(
+        $csrf->fieldHtml(),
+        $result->successful ? $result->message : null,
+        $result->successful ? null : $result->message,
+    ));
+});
+
+// The images for the selection in the editor's image dialog.
+$router->admin('/media/list', static function () use ($auth, $mediaController): void {
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store');
+    if (! $auth->checkWriteAccess()) {
+        http_response_code(401);
+        echo '[]';
+
+        return;
+    }
+
+    echo json_encode($mediaController->editorList(), JSON_THROW_ON_ERROR);
+});
+
 // System area (R23.10): password policies (R23.15); only a system admin sees
 // and changes them, the use case checks the permission.
 $router->admin('/system', static function () use ($ensureAdminAccess, $adminPage, $systemSettingsController, $csrf): void {
@@ -2315,10 +2454,7 @@ $router->admin('/results/upload', static function () use (
 // --- Routing -------------------------------------------------------------
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 
-$handler = $router->resolve($path);
-if ($handler === null) {
-    $handler = $router->resolveWithId($path);
-}
+$handler = $router->resolve($path) ?? $router->resolveWithId($path) ?? $router->resolveWithName($path);
 
 if ($handler === null) {
     http_response_code(404);

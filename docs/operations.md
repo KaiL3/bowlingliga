@@ -65,6 +65,7 @@ What the script does:
 | Code | Copy to `/var/www.bowlingliga`, owned by `root`, the web server may only read |
 | Configuration | `config/database.php` with a random database password, TOTP key, score sheet directory, default `language` and `base_url` (the address in the QR codes of the printed score sheets, derived from domain and HTTPS port). An existing configuration gets missing keys added (an older one gets `'language' => 'de'`, its behaviour so far). |
 | Score sheets | Directory `/var/lib/bowlingliga/score-sheets` for the uploaded original score sheets, owned by the web server (`750`/`640`); owner and permissions are reset on every run. |
+| Images | Directory `/var/lib/bowlingliga/media` for the images of the texts (`media_dir` in the configuration, added to older configurations on the next run), same owner and permissions. |
 | Database | Database and user named like the instance, all migrations. Other databases stay untouched; if the database or user already exists on a fresh installation, the script aborts. |
 | PHP | Own FPM pool (`/etc/php/<version>/fpm/pool.d/bowlingliga.conf`, socket `/run/php/bowlingliga.sock`): uploads up to 10 MB, sessions of 30 minutes in `/var/lib/bowlingliga/sessions`, no error output in the browser. Other PHP applications keep their settings. |
 | nginx | Site `bowlingliga` with its own log files (`/var/log/nginx/bowlingliga.access.log`, `.error.log`), only `public/` is reachable; login throttled to 10 attempts per minute and IP, the team entry `/entry` generously to 120 requests per minute and IP with bursts of 60, because on a matchday the teams often share one address (`/etc/nginx/conf.d/bowlingliga-rate-limit.conf`); stylesheets, scripts and icons under `/assets/` are sent compressed (gzip) and kept by the browser for a year when the page names them with their version (`?v=…`), otherwise for an hour; neither the nginx nor the PHP version is revealed (`server_tokens off` for this site, no `X-Powered-By`). The security headers (CSP, HSTS etc.) are set by the application itself. |
@@ -141,9 +142,10 @@ The data lives in two places that belong together:
 |---|---|---|
 | Database (all league data, accounts, CMS texts, score sheet metadata with checksum) | MariaDB database `bowlingliga` | daily |
 | Original score sheets (photos/PDFs) | `/var/lib/bowlingliga/score-sheets/` | only new files are added; a file never changes, it disappears only when its fixture is deleted |
+| Images of the texts | `/var/lib/bowlingliga/media/` | like the score sheets; a file disappears when the image is removed in the admin area |
 
 In addition `config/database.php` (TOTP key) must be kept once in a safe
-place. A daily backup of database and score sheet directory is enough.
+place. A daily backup of database, score sheet and image directory is enough.
 
 ### Recommended: Borg
 
@@ -184,7 +186,8 @@ mariadb-dump --single-transaction --skip-dump-date bowlingliga > "$DUMP"
 # First the dump, then the directory: score sheets uploaded in between are
 # at most additionally included.
 borg create --compression zstd,6 ::'bowlingliga-{now:%Y-%m-%d}' \
-    "$DUMP" /var/lib/bowlingliga/score-sheets /var/www.bowlingliga/config/database.php
+    "$DUMP" /var/lib/bowlingliga/score-sheets /var/lib/bowlingliga/media \
+    /var/www.bowlingliga/config/database.php
 borg prune --glob-archives 'bowlingliga-*' --keep-daily 30 --keep-monthly 12
 borg compact
 rm -f "$DUMP"
@@ -206,9 +209,9 @@ export BORG_REPO=/var/backups/bowlingliga/borg
 export BORG_PASSCOMMAND='cat /root/.bowlingliga-borg-passphrase'
 borg list                                     # choose an archive
 cd / && sudo -E borg extract ::bowlingliga-2026-10-19 \
-    var/backups/bowlingliga/database.sql var/lib/bowlingliga/score-sheets
+    var/backups/bowlingliga/database.sql var/lib/bowlingliga/score-sheets var/lib/bowlingliga/media
 sudo mariadb bowlingliga < /var/backups/bowlingliga/database.sql
-sudo chown -R www-data:www-data /var/lib/bowlingliga/score-sheets
+sudo chown -R www-data:www-data /var/lib/bowlingliga/score-sheets /var/lib/bowlingliga/media
 sudo php /var/www.bowlingliga/bin/check-score-sheets.php
 ```
 
@@ -229,6 +232,7 @@ mkdir -p /var/backups/bowlingliga
 mariadb-dump --single-transaction bowlingliga | gzip > /var/backups/bowlingliga/$(date +%F).sql.gz
 find /var/backups/bowlingliga -name '*.sql.gz' -mtime +30 -delete
 rsync -a /var/lib/bowlingliga/score-sheets/ /var/backups/bowlingliga/score-sheets/
+rsync -a /var/lib/bowlingliga/media/ /var/backups/bowlingliga/media/
 ```
 
 Without `--delete`, the mirror keeps files of deleted fixtures as well, so

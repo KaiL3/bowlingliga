@@ -65,6 +65,8 @@ final class AdminAreaIntegrationTest extends TestCase
             '<?php return ' . var_export(self::testConfiguration() + [
                 'totp_key'        => base64_encode(random_bytes(32)),
                 'score_sheet_dir' => self::$scoreSheetDir,
+                // Removed with the score sheets after the class.
+                'media_dir'       => self::$scoreSheetDir . '/media',
             ], true) . ';'
         );
 
@@ -354,6 +356,85 @@ final class AdminAreaIntegrationTest extends TestCase
         self::assertSame(70, $this->numeral("SELECT min_bits FROM password_policy WHERE account_kind = 'admin'"));
         self::assertSame(200, $this->get('/admin/account')[0], '"Mein Konto" stays allowed.');
     }
+    /**
+     * R42: an image uploaded in the area and by the editor, delivered for
+     * good under its hash, used in the rules with the overlay, not removable
+     * while used.
+     */
+    public function testImagesInTheTexts(): void
+    {
+        $this->logIn();
+        [$status, $area] = $this->get('/admin/media');
+        self::assertSame(200, $status);
+        self::assertStringContainsString('Es sind noch keine Bilder hochgeladen.', $area);
+
+        // The form of the area.
+        $image = imagecreatetruecolor(30, 20);
+        ob_start();
+        imagejpeg($image);
+        $jpeg = (string) ob_get_clean();
+        [$status, $html] = $this->postFile('/admin/media/upload', ['csrf_token' => $this->csrfToken($area)], 'file', 'mannschaft.jpg', $jpeg);
+        self::assertSame(200, $status, $this->message($html));
+        self::assertStringContainsString('Das Bild ist gespeichert.', $html);
+        $hash = $this->text('SELECT content_hash FROM content_image');
+        $url  = '/media/' . $hash . '.jpg';
+
+        // Delivery: public, for good, with a narrow CSP.
+        $this->post('/admin/logout', []);
+        [$status, $content, $header] = $this->get($url);
+        self::assertSame(200, $status);
+        self::assertSame([30, 20], array_slice((array) getimagesizefromstring($content), 0, 2));
+        self::assertStringContainsString('Content-Type: image/jpeg', $header);
+        self::assertStringContainsString('Cache-Control: public, max-age=31536000, immutable', $header);
+        self::assertStringContainsString("Content-Security-Policy: default-src 'none'", $header);
+        self::assertSame(404, $this->get('/media/' . $hash . '.png')[0]);
+        self::assertSame(404, $this->get('/media/' . str_repeat('0', 64) . '.jpg')[0]);
+        self::assertSame(401, $this->get('/admin/media/list')[0], 'The list for the editor needs a login.');
+        $this->logIn();
+
+        // The editor asks for JSON.
+        [, $rules] = $this->get('/admin/rules');
+        curl_setopt($this->http, CURLOPT_HTTPHEADER, ['Accept: application/json']);
+        $png = imagecreatetruecolor(8, 8);
+        ob_start();
+        imagepng($png);
+        [$status, $answer] = $this->postFile('/admin/media/upload', ['csrf_token' => $this->csrfToken($rules)], 'file', 'logo.png', (string) ob_get_clean());
+        self::assertSame(200, $status);
+        self::assertMatchesRegularExpression('#^\{"location":"\\\\/media\\\\/[0-9a-f]{64}\.png"\}$#', $answer);
+        [$status, $answer] = $this->postFile('/admin/media/upload', ['csrf_token' => $this->csrfToken($rules)], 'file', 'boese.svg', '<svg xmlns="http://www.w3.org/2000/svg"/>');
+        self::assertSame([422, '{"error":"Die Datei ist kein Bild im Format JPEG, PNG oder WebP."}'], [$status, $answer]);
+        curl_setopt($this->http, CURLOPT_HTTPHEADER, []);
+        [, $list] = $this->get('/admin/media/list');
+        self::assertCount(2, (array) json_decode($list, true));
+
+        // Used in the rules: shown with the overlay, the image stays.
+        $this->sendSuccessful('/admin/rules', '/admin/rules/save', [
+            'text' => '<h2>Mannschaft</h2><figure class="image"><img src="' . $url . '" alt="Unsere Mannschaft" class="image--left"><figcaption>Saison 2026</figcaption></figure>',
+        ]);
+        [, $public] = $this->get('/rules');
+        self::assertStringContainsString('<img src="' . $url . '" alt="Unsere Mannschaft" class="image--left" />', $public);
+        self::assertStringContainsString('js-lightbox-dialog', $public);
+
+        [, $area] = $this->get('/admin/media');
+        self::assertStringContainsString('<a href="/admin/rules">Spielregeln</a>', $area);
+        [$status, $html] = $this->post('/admin/media/remove', ['csrf_token' => $this->csrfToken($area), 'hash' => $hash]);
+        self::assertSame(422, $status);
+        self::assertStringContainsString('Das Bild wird noch in 1 Text(en) verwendet', $html);
+
+        // Without a description the text is not saved.
+        [, $form] = $this->get('/admin/rules');
+        [, $html] = $this->post('/admin/rules/save', ['csrf_token' => $this->csrfToken($form), 'text' => '<p><img src="' . $url . '"></p>']);
+        self::assertStringContainsString('Jedes Bild braucht eine Bildbeschreibung', $html);
+
+        // Taken out of the text: removable, the address is gone.
+        $this->sendSuccessful('/admin/rules', '/admin/rules/save', ['text' => '<p>Ohne Bild</p>']);
+        [, $area] = $this->get('/admin/media');
+        [$status, $html] = $this->post('/admin/media/remove', ['csrf_token' => $this->csrfToken($area), 'hash' => $hash]);
+        self::assertSame(200, $status, $this->message($html));
+        self::assertStringContainsString('Das Bild ist entfernt.', $html);
+        self::assertSame(404, $this->get($url)[0]);
+    }
+
     /**
      * R23.6–R23.8: set up the two-factor login via "Mein Konto" (only active
      * with a valid code); afterwards the login requires the code. Disable with
@@ -1334,6 +1415,7 @@ final class AdminAreaIntegrationTest extends TestCase
             'db/migrations/005_trusted_device.sql',
             'db/migrations/006_account_permission.sql',
             'db/migrations/007_password_policy.sql',
+            'db/migrations/008_content_image.sql',
         ] as $file) {
             $this->pdo->exec((string) file_get_contents($root . '/' . $file));
         }
@@ -1345,7 +1427,7 @@ final class AdminAreaIntegrationTest extends TestCase
         foreach ([
             'fixture_log', 'team_entry_game', 'team_entry', 'game_result', 'lineup', 'original_score_sheet', 'fixture', 'lane_pair',
             'frozen_handicap', 'roster', 'team_season', 'team', 'matchday', 'season_config', 'season',
-            'player', 'previous_season_record', 'admin_account', 'login_attempt', 'trusted_device', 'account_permission', 'account_log', 'password_policy', 'password_history', 'home_page_post',
+            'player', 'previous_season_record', 'admin_account', 'login_attempt', 'trusted_device', 'account_permission', 'account_log', 'password_policy', 'password_history', 'content_image', 'home_page_post',
             'rules', 'privacy_policy', 'legal_notice', 'league_setting',
             'cache_average', 'cache_league_table', 'cache_matchday_table', 'cache_honours',
         ] as $table) {

@@ -6,6 +6,7 @@ namespace Bowlingliga\Application\Cms;
 
 use Bowlingliga\Security\HtmlSanitizer;
 use Bowlingliga\Security\WriteAccess;
+use Bowlingliga\Security\ValidationException;
 use Bowlingliga\Security\Validator;
 use Bowlingliga\Security\AccessDeniedException;
 
@@ -47,6 +48,10 @@ final class RulesManagement
 
         // R34.5: maximum length 20000, lower bound 0 (empty content allowed).
         $text = $this->validator->checkCmsText($text, self::TEXT_MAX, 'field.text_content');
+        // R42.6: every image describes itself for screen readers.
+        if ($this->sanitizer->imagesWithoutAlt($text) > 0) {
+            throw ValidationException::forField('field.text_content', 'validation.image_alt');
+        }
 
         // R34.8: whitelist-based sanitizing; empty text stays empty.
         $sanitized = $text === '' ? '' : $this->sanitizer->sanitize($text);

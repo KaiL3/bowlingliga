@@ -85,6 +85,17 @@ $router->admin('/area/action', static function () use (...): void {
   pasting produce only what the server keeps; the server still filters on
   saving. Without JavaScript the text area takes HTML as before. The editor
   runs under the normal CSP (no `eval`, inline styles are allowed anyway).
+- Images of the texts (R42): uploaded in the editor (`images_upload_handler`
+  → `/admin/media/upload`) or in the area "Bilder", prepared by
+  `Domain/Media/ContentImage` (shares EXIF orientation and memory with the
+  score sheet photos via `Domain/Image/PhotoTools`) and stored in a
+  `FileSystemBlobStore` of their own (`media_dir`): the cleanup of the score
+  sheet store would delete them otherwise. `HtmlSanitizer` allows `img`,
+  `figure`, `figcaption` (added to HTML Purifier's HTML 4 definition), the
+  placement classes `IMAGE_CLASSES` and through `LocalImageUriFilter` only
+  image addresses `/media/<hash>.jpg|png`. Which text uses an image is read
+  from the texts (`ContentTextRepository`), not stored. The public route is
+  a name route of the router (`publicWithName`).
 - Use cases check `WriteAccess` once more themselves (defence in depth).
 
 ## Security

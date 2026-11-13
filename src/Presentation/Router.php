@@ -26,6 +26,56 @@ final class Router
     private array $publicIdRoutes = [];
 
     /**
+     * @var list<array{prefix: string, pattern: string, handler: callable}>
+     *      Public routes with a trailing name segment matching a pattern
+     *      (e.g. "/media/<hash>.jpg").
+     */
+    private array $publicNameRoutes = [];
+
+    /**
+     * Registers a public route whose last segment is a name; the handler
+     * receives the name. Only a single segment matching the regular
+     * expression `$pattern` resolves (anchored, e.g. `[0-9a-f]{64}\.jpg`).
+     *
+     * @param callable(string): void $handler
+     */
+    public function publicWithName(string $prefix, string $pattern, callable $handler): void
+    {
+        $this->publicNameRoutes[] = [
+            'prefix'  => $this->normalize($prefix),
+            'pattern' => '~^(?:' . $pattern . ')$~D',
+            'handler' => $handler,
+        ];
+    }
+
+    /**
+     * Resolves a public name route, or null if none matches.
+     *
+     * @return callable():void|null
+     */
+    public function resolveWithName(string $path): ?callable
+    {
+        $normalized = $this->normalize($path);
+
+        foreach ($this->publicNameRoutes as $route) {
+            $prefix = $route['prefix'] . '/';
+            if (! str_starts_with($normalized, $prefix)) {
+                continue;
+            }
+
+            $name = substr($normalized, strlen($prefix));
+            if (preg_match($route['pattern'], $name) !== 1) {
+                continue;
+            }
+            $handler = $route['handler'];
+
+            return static fn (): mixed => $handler($name);
+        }
+
+        return null;
+    }
+
+    /**
      * Registers a public (reading) route.
      */
     public function public(string $path, callable $handler): void

@@ -13,9 +13,9 @@ declare(strict_types=1);
  * log, trusted devices and password history, the password policies and
  * `schema_migration` (the schema stays as it is). Everything else is emptied – seasons, teams,
  * players, results, frozen handicaps, original score sheets, CMS texts,
- * caches and login attempts – and the id counters start again at 1. The
- * files of the original score sheets are removed from the score sheet
- * directory as well.
+ * caches, login attempts and images – and the id counters start again at
+ * 1. The files of the original score sheets and of the images are removed
+ * from their directories as well.
  *
  * Configuration like the website: config/database.php or the file from the
  * environment variable BOWLINGLIGA_CONFIG.
@@ -98,4 +98,12 @@ foreach ($emptied as $table) {
 $removed = (new OriginalScoreSheetRepository($database, FileSystemBlobStore::forScoreSheets($configuration, dirname(__DIR__))))
     ->removeOrphanedFiles(0);
 
-echo "\nEmptied, {$removed} score sheet files deleted. The admin accounts are kept.\n";
+// The same for the images of the content (R42): their records are gone too.
+$media         = FileSystemBlobStore::forMedia($configuration, dirname(__DIR__));
+$removedImages = 0;
+foreach ($media->hashesOlderThan(0) as $hash) {
+    $media->delete($hash);
+    $removedImages++;
+}
+
+echo "\nEmptied, {$removed} score sheet files and {$removedImages} images deleted. The admin accounts are kept.\n";

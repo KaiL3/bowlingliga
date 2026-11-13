@@ -52,7 +52,17 @@ final class CmsView
             );
         }
 
-        return '<section class="posts" aria-label="' . $this->e($this->t->t('public.posts')) . '">' . $sections . '</section>';
+        return '<section class="posts" aria-label="' . $this->e($this->t->t('public.posts')) . '">' . $sections . '</section>'
+            . $this->lightboxFor($sections);
+    }
+
+    /**
+     * The overlay that shows an image of the text large (R42.7), only if the
+     * text has images.
+     */
+    private function lightboxFor(string $html): string
+    {
+        return str_contains($html, '<img') ? (new Lightbox($this->t))->dialog() : '';
     }
 
     /**
@@ -72,7 +82,7 @@ final class CmsView
         $rules = $text === null || trim($text) === ''
             ? '<section class="card"><p class="empty">' . $this->e($this->t->t('public.no_rules')) . '</p></section>'
             // The text is already whitelist-sanitized (R34.8) – output it unchanged.
-            : '<section class="card"><div class="rules prose">' . $text . '</div></section>';
+            : '<section class="card"><div class="rules prose">' . $text . '</div></section>' . $this->lightboxFor($text);
 
         if ($handicapTable === null || $handicapTable->rows === []) {
             return '<h1>' . $this->e($this->t->t('nav.rules')) . '</h1>' . $rules;

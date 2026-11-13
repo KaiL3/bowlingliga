@@ -54,7 +54,7 @@ $config = require $configurationFile;
 try {
     $database = new Database($config);
     $files    = FileSystemBlobStore::forScoreSheets($config, dirname(__DIR__));
-    $transfer = new LeagueDataTransfer($database->pdo(), $files);
+    $transfer = new LeagueDataTransfer($database->pdo(), $files, FileSystemBlobStore::forMedia($config, dirname(__DIR__)));
 
     if ($action === 'export') {
         $export = $transfer->export();

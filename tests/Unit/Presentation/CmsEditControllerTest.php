@@ -81,7 +81,7 @@ final class CmsEditControllerTest extends TestCase
     {
         $this->controller->processHomePage('create', [
             'title' => '<script>alert(1)</script>',
-            'text'  => '<p>Hallo</p><script>alert(2)</script><img src=x onerror=alert(3)>',
+            'text'  => '<p>Hallo</p><script>alert(2)</script><img src=x alt="Bild" onerror=alert(3)>',
         ]);
 
         $saved = $this->homePage->contents[1];
@@ -89,6 +89,21 @@ final class CmsEditControllerTest extends TestCase
         self::assertStringNotContainsString('<script', $saved['text']);
         self::assertStringNotContainsString('onerror', $saved['text']);
         self::assertStringContainsString('<p>Hallo</p>', $saved['text']);
+    }
+
+    /**
+     * R42.6: every image needs a description; otherwise nothing is saved.
+     */
+    public function testAnImageWithoutDescriptionIsNotSaved(): void
+    {
+        $result = $this->controller->processHomePage('create', [
+            'title' => 'Mit Bild',
+            'text'  => '<p>Hallo</p><img src="/media/' . str_repeat('a', 64) . '.jpg">',
+        ]);
+
+        self::assertFalse($result->successful);
+        self::assertStringContainsString('Jedes Bild braucht eine Bildbeschreibung', $result->message);
+        self::assertSame(0, $this->homePage->quantity());
     }
 
     public function testChangeHomePagePost(): void

@@ -7,6 +7,9 @@
  * history entry, so "back" closes the overlay instead of leaving the page.
  * A click on the image switches between fitting the screen and the original
  * size. Without JavaScript the link opens the file itself.
+ *
+ * Images in the texts of the website (.prose img, R42.7) open the same way;
+ * their alternative text becomes the title.
  */
 (function () {
     'use strict';
@@ -26,16 +29,32 @@
                 return;
             }
             event.preventDefault();
-            open(link);
+            open(link, link.href, link.dataset.lightboxTitle || '');
         });
     });
 
-    function open(link) {
-        opener = link;
-        title.textContent = link.dataset.lightboxTitle || '';
+    document.querySelectorAll('.prose img').forEach(function (picture) {
+        // Reachable and operable by keyboard like a link.
+        picture.tabIndex = 0;
+        picture.setAttribute('role', 'button');
+        picture.classList.add('prose__zoomable');
+        picture.addEventListener('click', function () {
+            open(picture, picture.currentSrc || picture.src, picture.alt);
+        });
+        picture.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                open(picture, picture.currentSrc || picture.src, picture.alt);
+            }
+        });
+    });
+
+    function open(element, href, text) {
+        opener = element;
+        title.textContent = text;
         image.classList.remove('lightbox__image--full');
-        image.alt = title.textContent;
-        image.src = link.href;
+        image.alt = text;
+        image.src = href;
         dialog.showModal();
         history.pushState({ lightbox: true }, '');
     }

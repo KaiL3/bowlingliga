@@ -44,6 +44,7 @@ final class AdminView
         '/admin/honours'         => 'honours',
         '/admin/home-page'       => 'posts',
         '/admin/rules'           => 'rules',
+        '/admin/media'           => 'media',
         '/admin/league'          => 'league',
     ];
 
@@ -259,6 +260,7 @@ final class AdminView
             'honours'     => '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>',
             'posts'       => '<path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8M8 12h5"/>',
             'rules'       => '<path d="M5 4h11l3 3v13H5z"/><path d="M9 10h6M9 14h6"/>',
+            'media'       => '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>',
             'league'      => '<path d="M5 21V4"/><path d="M5 4h12l-3 4 3 4H5"/>',
             'system'      => '<path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
             'account'     => '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/><path d="M12 15v2"/>',

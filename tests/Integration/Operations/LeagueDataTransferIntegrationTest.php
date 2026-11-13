@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Bowlingliga\Tests\Integration\Operations;
 
+use Bowlingliga\Persistence\ContentImageRepository;
 use Bowlingliga\Persistence\Database;
 use Bowlingliga\Persistence\FileSystemBlobStore;
 use Bowlingliga\Persistence\LeagueDataTransfer;
@@ -72,6 +73,38 @@ final class LeagueDataTransferIntegrationTest extends TestCase
         if (isset($this->sourceFiles)) {
             self::removeDirectory(dirname($this->sourceFiles->directory()));
         }
+    }
+
+    /**
+     * R42.8: the images of the content travel like the score sheets.
+     */
+    public function testImagesTravelWithTheData(): void
+    {
+        $base        = dirname($this->sourceFiles->directory());
+        $sourceMedia = new FileSystemBlobStore($base . '/source-media');
+        $targetMedia = new FileSystemBlobStore($base . '/target-media');
+        $hash        = $sourceMedia->put(self::PHOTO);
+        (new ContentImageRepository(new Database($this->configuration)))
+            ->add($hash, 'image/jpeg', 30, 20, strlen(self::PHOTO), 'team.jpg', new \DateTimeImmutable('2026-11-13 15:00:00'));
+
+        $export = $this->viaJson((new LeagueDataTransfer($this->pdo, $this->sourceFiles, $sourceMedia))->export());
+        self::assertSame([$hash => base64_encode(self::PHOTO)], $export['media']);
+
+        try {
+            (new LeagueDataTransfer($this->pdo, $this->targetFiles))->import($export, false);
+            self::fail('Without an image store the import stops.');
+        } catch (RuntimeException $e) {
+            self::assertStringContainsString('images is missing', $e->getMessage());
+        }
+
+        (new LeagueDataTransfer($this->pdo, $this->targetFiles, $targetMedia))->import($export, false);
+        self::assertSame(self::PHOTO, $targetMedia->read($hash));
+        self::assertSame(1, (int) $this->pdo->query('SELECT COUNT(*) FROM content_image')->fetchColumn());
+
+        $damaged = $export;
+        $damaged['media'][$hash] = base64_encode('anders');
+        $this->expectException(RuntimeException::class);
+        (new LeagueDataTransfer($this->pdo, $this->targetFiles, new FileSystemBlobStore($base . '/third')))->import($damaged, false);
     }
 
     public function testImportRestoresTheExportedData(): void

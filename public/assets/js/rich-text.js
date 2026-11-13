@@ -7,6 +7,10 @@
 // what the server keeps: the element list comes from the text area
 // (data-allowed = HtmlSanitizer::ALLOWED_ELEMENTS), and everything else is
 // removed while editing and pasting already.
+//
+// Images (R42) are uploaded to /admin/media/upload (also when dropped or
+// pasted), placed by a class and chosen again from /admin/media/list; the
+// editor shows them with the same rules as the public pages.
 (() => {
     'use strict';
 
@@ -20,6 +24,36 @@
     const dark = root.dataset.mode === 'dark'
         || (root.dataset.mode !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
     const german = (root.lang || '').toLowerCase().startsWith('de');
+
+    // Placement of images inside the editor, as in app.css (.prose).
+    const imageStyle = 'img{max-width:100%;height:auto}'
+        + 'figure{margin:1rem 0}figcaption{margin-top:.375rem;font-size:.875rem;opacity:.75}'
+        + 'img.image--center{display:block;margin-inline:auto}'
+        + 'figure:has(>.image--center){width:fit-content;max-width:100%;margin-inline:auto;text-align:center}'
+        + 'img.image--full,figure:has(>.image--full){display:block;width:100%}'
+        + 'img.image--left,figure:has(>.image--left){float:left;max-width:50%;margin:.25rem 1.25rem .75rem 0}'
+        + 'img.image--right,figure:has(>.image--right){float:right;max-width:50%;margin:.25rem 0 .75rem 1.25rem}'
+        + 'figure>img.image--left,figure>img.image--right,figure>img.image--center,figure>img'
+        + '{display:block;float:none;max-width:100%;margin:0}';
+
+    // Upload of an image chosen, dropped or pasted in the editor.
+    const upload = (form) => (blobInfo) => {
+        const body = new FormData();
+        body.append('file', blobInfo.blob(), blobInfo.filename());
+        const token = form ? form.querySelector('input[name="csrf_token"]') : null;
+        body.append('csrf_token', token ? token.value : '');
+
+        return fetch('/admin/media/upload', {
+            method: 'POST', body, credentials: 'same-origin', headers: { Accept: 'application/json' },
+        })
+            .then((response) => response.json().catch(() => ({})))
+            .then((data) => {
+                if (typeof data.location === 'string') {
+                    return data.location;
+                }
+                throw { message: typeof data.error === 'string' ? data.error : 'Upload failed', remove: true };
+            });
+    };
 
     areas.forEach((area) => {
         // The editor keeps the text area hidden; the server checks the content.
@@ -44,13 +78,26 @@
             statusbar: true,
             resize: true,
             min_height: Number(area.getAttribute('rows') || 10) * 28,
-            plugins: 'lists link autolink',
-            toolbar: 'undo redo | blocks | bold italic underline | bullist numlist blockquote | link unlink | removeformat',
+            plugins: 'lists link autolink image',
+            toolbar: 'undo redo | blocks | bold italic underline | bullist numlist blockquote | link unlink image | removeformat',
+            image_caption: true,
+            image_description: true,
+            image_dimensions: true,
+            image_advtab: false,
+            image_uploadtab: true,
+            image_class_list: JSON.parse(area.dataset.imageClasses || '[]'),
+            image_list: '/admin/media/list',
+            images_upload_handler: upload(area.form),
+            images_file_types: 'jpeg,jpg,png,webp',
+            automatic_uploads: true,
+            images_reuse_filename: false,
+            object_resizing: 'img',
+            content_style: imageStyle,
             block_formats: area.dataset.blockFormats,
             valid_elements: area.dataset.allowed,
             valid_styles: {},
             invalid_styles: '*',
-            paste_data_images: false,
+            paste_data_images: true,
             link_default_protocol: 'https',
             link_target_list: false,
             link_title: true,

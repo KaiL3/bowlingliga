@@ -14,6 +14,7 @@ migrations have run. All migrations are repeatable
 | `005_trusted_device.sql` | `trusted_device` (R5.10): trusted browsers of an account, exempt from the account lock |
 | `006_account_permission.sql` | `account_permission` (R23.10): permissions per account, existing accounts get all; `account_log` (R23.14): changes to accounts and permissions |
 | `007_password_policy.sql` | `accounts.manage` becomes `system.admin` (R23.10); `password_policy` (R23.15) with the defaults; `admin_account.password_changed_at`/`password_bits`/`must_change_password` (R23.17), existing passwords dated to the update; `password_history` (R23.18) |
+| `008_content_image.sql` | `content_image` (R42): images of the texts (hash, type, size, original name, upload time); the files lie in the image store |
 
 Create new schema changes as `002_…sql`, `003_…sql` and so on, and add them
 to the `applySchema()` lists of the integration tests.
@@ -48,6 +49,9 @@ admin_account ─n login_attempt      (password_hash, totp_secret_encrypted,
                                      account_id, meant for every kind of account)
   └─n account_permission            (permission = key of Security\Permission, e.g. system.admin)
   └─n password_history              (password_hash, created_at; the newest 24 per account)
+content_image                        (content_hash unique, mime_type, width, height, size_bytes,
+                                      original_name, uploaded_at; file in the image store media_dir,
+                                      usage read from the CMS texts)
 password_policy                      (account_kind admin/user, min_bits, max_age_days – -1 = unlimited,
                                       history_size; one row per kind)
 account_log                          (created_at, actor_account_id/actor_name – NULL = command line,

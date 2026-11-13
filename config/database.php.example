@@ -39,6 +39,12 @@ return [
     // `storage/score-sheets` in the project.
     'score_sheet_dir' => '',
 
+    // R42: directory of the images of the content (posts, rules …), a store
+    // of its own like the score sheets. Outside `public/`, writable for the
+    // web server, part of the backup. Empty = the folder `storage/media` in
+    // the project.
+    'media_dir' => '',
+
     // R37: address of the website for the QR codes on the printed
     // score sheets (e.g. 'https://liga.example.de'). Empty = scheme and host of
     // the request that prints.

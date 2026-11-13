@@ -248,7 +248,7 @@ final class PublicDataIntegrationTest extends TestCase
         $this->dropSchema();
 
         $root = dirname(__DIR__, 3);
-        foreach (['db/migrations/001_schema.sql', 'db/migrations/002_points_rules.sql', 'db/migrations/003_players_public.sql', 'db/migrations/004_matchday_cancelled.sql', 'db/migrations/005_trusted_device.sql', 'db/migrations/006_account_permission.sql', 'db/migrations/007_password_policy.sql'] as $file) {
+        foreach (['db/migrations/001_schema.sql', 'db/migrations/002_points_rules.sql', 'db/migrations/003_players_public.sql', 'db/migrations/004_matchday_cancelled.sql', 'db/migrations/005_trusted_device.sql', 'db/migrations/006_account_permission.sql', 'db/migrations/007_password_policy.sql', 'db/migrations/008_content_image.sql'] as $file) {
             $this->pdo->exec((string) file_get_contents($root . '/' . $file));
         }
     }
@@ -259,7 +259,7 @@ final class PublicDataIntegrationTest extends TestCase
         foreach ([
             'fixture_log', 'team_entry_game', 'team_entry', 'game_result', 'lineup', 'original_score_sheet', 'fixture', 'lane_pair',
             'frozen_handicap', 'roster', 'team_season', 'team', 'matchday', 'season_config', 'season',
-            'player', 'previous_season_record', 'admin_account', 'login_attempt', 'trusted_device', 'account_permission', 'account_log', 'password_policy', 'password_history', 'home_page_post',
+            'player', 'previous_season_record', 'admin_account', 'login_attempt', 'trusted_device', 'account_permission', 'account_log', 'password_policy', 'password_history', 'content_image', 'home_page_post',
             'rules', 'privacy_policy', 'legal_notice', 'league_setting',
         ] as $table) {
             $this->pdo->exec('DROP TABLE IF EXISTS ' . $table);

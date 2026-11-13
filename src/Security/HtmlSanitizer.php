@@ -33,13 +33,23 @@ final class HtmlSanitizer
      * Allowed HTML elements including attributes (whitelist) for rich text
      * content.
      *
-     * Deliberately kept narrow to simple text markup and links; it contains no
-     * elements through which executable code could be injected (no `script`,
-     * `iframe`, `object`, `embed`, `style`). The editor of the admin area
-     * offers exactly these elements (data-allowed of its text area).
+     * Deliberately kept narrow to simple text markup, links and images; it
+     * contains no elements through which executable code could be injected
+     * (no `script`, `iframe`, `object`, `embed`, `style`, no `style`
+     * attribute). Images may only come from the website's own image store
+     * ({@see LocalImageUriFilter}) and are placed by the classes of
+     * {@see IMAGE_CLASSES} (R42.4). The editor of the admin area offers
+     * exactly these elements (data-allowed of its text area).
      */
     public const ALLOWED_ELEMENTS =
-        'p,br,b,strong,i,em,u,ul,ol,li,h1,h2,h3,h4,blockquote,a[href|title]';
+        'p,br,b,strong,i,em,u,ul,ol,li,h1,h2,h3,h4,blockquote,a[href|title],'
+        . 'img[src|alt|width|height|class],figure[class],figcaption';
+
+    /**
+     * Classes an image (or its figure with caption) may carry: the placement
+     * chosen in the editor; `image` marks a figure with caption (R42.5).
+     */
+    public const IMAGE_CLASSES = ['image', 'image--left', 'image--right', 'image--center', 'image--full'];
 
     private ?HTMLPurifier $purifier = null;
 
@@ -76,6 +86,33 @@ final class HtmlSanitizer
         }
 
         return $this->purifier()->purify($rawInput);
+    }
+
+    /**
+     * Number of images in the raw input without a (non-empty) alternative
+     * text; such a text is not saved (R42.6). HTML Purifier would invent one
+     * from the file name otherwise.
+     */
+    public function imagesWithoutAlt(string $rawInput): int
+    {
+        if (stripos($rawInput, '<img') === false) {
+            return 0;
+        }
+
+        $document = new \DOMDocument();
+        $previous = libxml_use_internal_errors(true);
+        $document->loadHTML('<?xml encoding="UTF-8"><body>' . $rawInput . '</body>');
+        libxml_clear_errors();
+        libxml_use_internal_errors($previous);
+
+        $missing = 0;
+        foreach ($document->getElementsByTagName('img') as $image) {
+            if (trim($image->getAttribute('alt')) === '') {
+                $missing++;
+            }
+        }
+
+        return $missing;
     }
 
     /**
@@ -118,6 +155,22 @@ final class HtmlSanitizer
         // Only allow safe URI schemes for links; this rules out
         // javascript:.
         $config->set('URI.AllowedSchemes', ['http' => true, 'https' => true, 'mailto' => true]);
+        $config->set('Attr.AllowedClasses', self::IMAGE_CLASSES);
+
+        // HTML Purifier knows HTML 4 only: figure and figcaption are added.
+        $config->set('HTML.DefinitionID', 'bowlingliga-content');
+        $config->set('HTML.DefinitionRev', 1);
+        $config->set('URI.DefinitionID', 'bowlingliga-content');
+        $config->set('URI.DefinitionRev', 1);
+        $definition = $config->maybeGetRawHTMLDefinition();
+        if ($definition !== null) {
+            $definition->addElement('figure', 'Block', 'Optional: (figcaption, Flow) | (Flow, figcaption) | Flow', 'Common');
+            $definition->addElement('figcaption', 'Inline', 'Flow', 'Common');
+        }
+        $uriDefinition = $config->maybeGetRawURIDefinition();
+        if ($uriDefinition !== null) {
+            $uriDefinition->addFilter(new LocalImageUriFilter(), $config);
+        }
 
         return $this->purifier = new HTMLPurifier($config);
     }

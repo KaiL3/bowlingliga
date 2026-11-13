@@ -59,4 +59,23 @@ final class RouterTest extends TestCase
         self::assertNull($router->resolveWithId('/matchday'), 'Without an id segment no resolution.');
         self::assertNull($router->resolveWithId('/matchday/7/extra'), 'More than one segment does not trigger an id route.');
     }
+
+    public function testNameRouteMatchesOnlyItsPattern(): void
+    {
+        $router = new Router();
+        $seen   = null;
+        $router->publicWithName('/media', '[0-9a-f]{64}\.(?:jpg|png)', static function (string $name) use (&$seen): void {
+            $seen = $name;
+        });
+
+        $name    = str_repeat('a', 64) . '.png';
+        $handler = $router->resolveWithName('/media/' . $name);
+        self::assertNotNull($handler);
+        $handler();
+        self::assertSame($name, $seen);
+
+        foreach (['/media/' . str_repeat('a', 64) . '.gif', '/media/' . $name . '/x', '/media/x' . $name, '/media', '/other/' . $name] as $path) {
+            self::assertNull($router->resolveWithName($path), $path);
+        }
+    }
 }

@@ -32,10 +32,17 @@ final class RichTextEditor
             $formats .= '; ' . $t->t('editor.heading', ['level' => $level]) . '=h' . $level;
         }
 
+        // Placement of an image (R42.5): the classes the sanitizer keeps.
+        $placements = [['title' => $t->t('editor.image_inline'), 'value' => '']];
+        foreach (['image--left', 'image--right', 'image--center', 'image--full'] as $class) {
+            $placements[] = ['title' => $t->t('editor.' . str_replace('--', '_', $class)), 'value' => $class];
+        }
+
         return sprintf(
-            ' data-rich-text data-allowed="%s" data-block-formats="%s" data-editor-version="%s"',
+            ' data-rich-text data-allowed="%s" data-block-formats="%s" data-image-classes="%s" data-editor-version="%s"',
             self::e(HtmlSanitizer::ALLOWED_ELEMENTS),
             self::e($formats),
+            self::e(json_encode($placements, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE)),
             self::e($version),
         );
     }

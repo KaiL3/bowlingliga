@@ -139,4 +139,38 @@ final class HtmlSanitizerTest extends TestCase
             'No inline event handlers allowed.'
         );
     }
+
+    /**
+     * R42.4, R42.5: images stay with their placement, but only from the
+     * website's own image store.
+     */
+    public function testImagesOnlyFromTheOwnStoreWithTheirPlacement(): void
+    {
+        $hash = str_repeat('a', 64);
+        $kept = $this->sanitizer->sanitize(
+            '<figure class="image"><img src="/media/' . $hash . '.jpg" alt="Team" width="300" height="200" class="image--left" style="float:right" onerror="x()">'
+            . '<figcaption>Das <b>Team</b></figcaption></figure>'
+        );
+
+        self::assertSame(
+            '<figure class="image"><img src="/media/' . $hash . '.jpg" alt="Team" width="300" height="200" class="image--left" /><figcaption>Das <b>Team</b></figcaption></figure>',
+            $kept,
+        );
+
+        foreach (['https://example.org/' . $hash . '.jpg', 'data:image/png;base64,AAAA', '/admin/logout', '/media/' . $hash . '.gif', '/media/../config.jpg', '//example.org/media/' . $hash . '.jpg'] as $source) {
+            self::assertStringNotContainsString('<img', $this->sanitizer->sanitize('<p><img src="' . $source . '" alt="x"></p>'), $source);
+        }
+        self::assertSame('<p>Text</p>', $this->sanitizer->sanitize('<p class="image--left evil">Text</p>'), 'Classes only on images and figures.');
+        self::assertSame('<img src="/media/' . $hash . '.png" alt="x" />', $this->sanitizer->sanitize('<img src="/media/' . $hash . '.png" alt="x" class="evil">'), 'Only the placement classes.');
+    }
+
+    /**
+     * R42.6: images without a description are counted before saving.
+     */
+    public function testImagesWithoutDescriptionAreCounted(): void
+    {
+        self::assertSame(0, $this->sanitizer->imagesWithoutAlt('<p>Ohne Bild</p>'));
+        self::assertSame(0, $this->sanitizer->imagesWithoutAlt('<img src="a" alt="Ein Bild">'));
+        self::assertSame(2, $this->sanitizer->imagesWithoutAlt('<p><img src="a"><IMG SRC="b" ALT="  "><img src="c" alt="Ok"></p>'));
+    }
 }

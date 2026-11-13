@@ -35,6 +35,7 @@ const TINYMCE_FILES = [
     'skins/content/default/content.min.css',
     'skins/content/dark/content.min.css',
     'plugins/autolink/plugin.min.js',
+    'plugins/image/plugin.min.js',
     'plugins/link/plugin.min.js',
     'plugins/lists/plugin.min.js',
 ];

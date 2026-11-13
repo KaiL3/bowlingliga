@@ -75,6 +75,8 @@ SETTINGS=/etc/$INSTANCE/install.conf
 NO_HTTPS="${NO_HTTPS:-0}"
 # Default directory of the original score sheets (part of the backup).
 SCORE_SHEETS=/var/lib/$INSTANCE/score-sheets
+# Default directory of the images of the content (part of the backup as well).
+MEDIA=/var/lib/$INSTANCE/media
 SESSIONS=/var/lib/$INSTANCE/sessions
 
 # --- Settings (taken over from the first run on updates) -------------------------
@@ -250,6 +252,7 @@ return [
     'connect_timeout' => 10,
     'totp_key'        => '$TOTP_KEY',
     'score_sheet_dir' => '$SCORE_SHEETS',
+    'media_dir'       => '$MEDIA',
     'base_url'        => '$BASE_URL',
     'language'        => '$SITE_LANGUAGE',
 ];
@@ -266,6 +269,10 @@ config_value() {
 if [[ -z $(config_value score_sheet_dir) ]] && ! grep -q "'score_sheet_dir'" "$CONFIG"; then
     sed -i "s|^];|    'score_sheet_dir' => '$SCORE_SHEETS',\n];|" "$CONFIG"
     note "Score sheet directory $SCORE_SHEETS added to the configuration."
+fi
+if [[ -z $(config_value media_dir) ]] && ! grep -q "'media_dir'" "$CONFIG"; then
+    sed -i "s|^];|    'media_dir'       => '$MEDIA',\n];|" "$CONFIG"
+    note "Image directory $MEDIA added to the configuration."
 fi
 # Without base_url the QR codes would take the address from the request's Host header.
 if [[ -z $(config_value base_url) ]]; then
@@ -287,6 +294,7 @@ DB_NAME="$(config_value dbname)"
 DB_USER="$(config_value user)"
 DB_PASSWORD="$(config_value password)"
 SCORE_SHEETS="$(config_value score_sheet_dir)"
+MEDIA="$(config_value media_dir)"
 
 # --- Permissions: the code belongs to root, the web server may only read ---------
 
@@ -316,6 +324,12 @@ chown -R "$WEB_USER":"$WEB_USER" "$SCORE_SHEETS"
 find "$SCORE_SHEETS" -type d -exec chmod 750 {} +
 find "$SCORE_SHEETS" -type f -exec chmod 640 {} +
 note "Score sheets: $SCORE_SHEETS"
+# The same for the images of the content (R42).
+mkdir -p "$MEDIA"
+chown -R "$WEB_USER":"$WEB_USER" "$MEDIA"
+find "$MEDIA" -type d -exec chmod 750 {} +
+find "$MEDIA" -type f -exec chmod 640 {} +
+note "Images: $MEDIA"
 
 # --- First admin account ---------------------------------------------------------
 

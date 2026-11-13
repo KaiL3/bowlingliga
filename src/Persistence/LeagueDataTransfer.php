@@ -43,9 +43,15 @@ final class LeagueDataTransfer
     /** Only replaced in the target on explicit request. */
     public const LEGAL_TEXTS = ['legal_notice', 'privacy_policy'];
 
+    /**
+     * @param BlobStore|null $files Store of the original score sheets.
+     * @param BlobStore|null $media Store of the images of the content (R42);
+     *        they travel under `media` like the score sheets under `files`.
+     */
     public function __construct(
         private readonly PDO $pdo,
         private readonly ?BlobStore $files = null,
+        private readonly ?BlobStore $media = null,
     ) {
     }
 
@@ -53,7 +59,7 @@ final class LeagueDataTransfer
      * Reads all transferable tables as one consistent state (the source may be
      * in use at the same time).
      *
-     * @return array{format: int, created_at: string, tables: array<string, array{columns: list<string>, rows: list<list<mixed>>}>, files: array<string, string>}
+     * @return array{format: int, created_at: string, tables: array<string, array{columns: list<string>, rows: list<list<mixed>>}>, files: array<string, string>, media: array<string, string>}
      */
     public function export(): array
     {
@@ -75,7 +81,13 @@ final class LeagueDataTransfer
             $this->pdo->exec('COMMIT');
         }
 
-        return ['format' => self::FORMAT, 'created_at' => date('Y-m-d H:i:s'), 'tables' => $tables, 'files' => $this->exportFiles($tables)];
+        return [
+            'format'     => self::FORMAT,
+            'created_at' => date('Y-m-d H:i:s'),
+            'tables'     => $tables,
+            'files'      => $this->exportFiles($tables),
+            'media'      => $this->exportMedia($tables),
+        ];
     }
 
     /**
@@ -117,6 +129,7 @@ final class LeagueDataTransfer
         // Files first: a failure afterwards leaves at most unreferenced files,
         // never a record without its file.
         $this->importFiles($export);
+        $this->importMedia($export);
 
         // This way the order of the foreign keys does not matter; the ids come
         // complete and consistent from the source.
@@ -291,13 +304,65 @@ final class LeagueDataTransfer
     }
 
     /**
+     * Reads the files of all images of the content in the exported rows (R42).
+     *
+     * @param array<string, array{columns: list<string>, rows: list<list<mixed>>}> $tables
+     *
+     * @return array<string, string> hash => base64 content
+     */
+    private function exportMedia(array $tables): array
+    {
+        $media = [];
+        foreach (self::referencedHashes($tables, 'content_image') as $hash) {
+            $content = $this->media?->read($hash);
+            if ($content === null) {
+                throw new RuntimeException("The file {$hash} of an image is missing in the image directory.");
+            }
+            $media[$hash] = base64_encode($content);
+        }
+
+        return $media;
+    }
+
+    /**
+     * Writes the exported images into the target's store and checks that
+     * every recorded image is then present there.
+     *
+     * @param array<string, mixed> $export
+     */
+    private function importMedia(array $export): void
+    {
+        $hashes = self::referencedHashes($export['tables'], 'content_image');
+        if ($hashes === []) {
+            return;
+        }
+        if ($this->media === null) {
+            throw new RuntimeException('The target directory for the images is missing.');
+        }
+
+        foreach ((array) ($export['media'] ?? []) as $hash => $encoded) {
+            $content = base64_decode((string) $encoded, true);
+            if ($content === false || hash('sha256', $content) !== $hash) {
+                throw new RuntimeException("Damaged image {$hash} in the export.");
+            }
+            $this->media->put($content);
+        }
+
+        foreach ($hashes as $hash) {
+            if (! $this->media->exists($hash)) {
+                throw new RuntimeException("The file {$hash} of an image is missing in the export.");
+            }
+        }
+    }
+
+    /**
      * @param array<string, mixed> $tables
      *
      * @return list<string>
      */
-    private static function referencedHashes(array $tables): array
+    private static function referencedHashes(array $tables, string $tableName = 'original_score_sheet'): array
     {
-        $table  = $tables['original_score_sheet'] ?? null;
+        $table  = $tables[$tableName] ?? null;
         $column = is_array($table) ? array_search('content_hash', $table['columns'], true) : false;
         if ($column === false) {
             return [];

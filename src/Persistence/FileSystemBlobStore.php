@@ -44,6 +44,24 @@ final class FileSystemBlobStore implements BlobStore
         return new self($directory !== '' ? $directory : rtrim($projectRoot, '/\\') . '/' . self::DEFAULT_DIRECTORY);
     }
 
+    /** Default directory of the images of the content below the project root. */
+    public const DEFAULT_MEDIA_DIRECTORY = 'storage/media';
+
+    /**
+     * Store for the images of the content (R42): `media_dir` from the
+     * configuration, otherwise {@see DEFAULT_MEDIA_DIRECTORY} below the
+     * project root. A store of its own: the cleanup of the score sheet store
+     * removes every file no score sheet references.
+     *
+     * @param array<string, mixed> $config
+     */
+    public static function forMedia(array $config, string $projectRoot): self
+    {
+        $directory = trim((string) ($config['media_dir'] ?? ''));
+
+        return new self($directory !== '' ? $directory : rtrim($projectRoot, '/\\') . '/' . self::DEFAULT_MEDIA_DIRECTORY);
+    }
+
     public function directory(): string
     {
         return $this->directory;
