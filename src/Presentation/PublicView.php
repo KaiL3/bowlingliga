@@ -151,7 +151,7 @@ final class PublicView
                     <section class="tabs__panel" id="matchdays-panel-all" role="tabpanel" aria-labelledby="matchdays-tab-all">{$list}</section>
                 </div>
             </div>
-            <script src="/assets/js/tabs.js" defer></script>
+            <script src="{$this->escape(Layout::versioned('/assets/js/tabs.js'))}" defer></script>
             HTML;
     }
 
@@ -242,7 +242,7 @@ final class PublicView
             {$tabs}
             {$matchdayTable}
             {$lightbox}
-            <script src="/assets/js/tabs.js" defer></script>
+            <script src="{$this->escape(Layout::versioned('/assets/js/tabs.js'))}" defer></script>
             HTML;
     }
 

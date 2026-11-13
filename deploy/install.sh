@@ -376,11 +376,20 @@ SITE=/etc/nginx/sites-available/$INSTANCE
 # often share one address (the alley's Wi-Fi, carrier NAT), and every open
 # page reloads the sheet every 15 s. 2 requests per second with bursts of 60
 # go unnoticed there but keep scans of team codes and their load small.
+# The map decides how long browsers keep an asset: the pages name stylesheets
+# and scripts with their version (?v=<modification time>), so such a URL never
+# gets other content and may be kept for a year; assets without a version
+# (fonts referenced from the stylesheet, icons) for an hour.
 cat > "/etc/nginx/conf.d/$INSTANCE-rate-limit.conf" <<NGINX
 # Bowlingliga instance $INSTANCE (deploy/install.sh)
 limit_req_zone \$binary_remote_addr zone=${INSTANCE}_login:10m rate=10r/m;
 limit_req_zone \$binary_remote_addr zone=${INSTANCE}_entry:10m rate=120r/m;
 limit_req_status 429;
+
+map \$arg_v \$${INSTANCE}_asset_expires {
+    ""      1h;
+    default 1y;
+}
 NGINX
 
 # The site is rewritten on every run. With an existing certificate it listens
@@ -432,10 +441,16 @@ $LISTEN
     # Never deliver hidden files
     location ~ /\. { deny all; }
 
-    # Stylesheets, scripts, fonts
+    # Stylesheets, scripts, fonts. Compressed here only: Debian's default
+    # compresses nothing but HTML. Versioned URLs are cached for a year.
     location ^~ /assets/ {
         try_files \$uri =404;
-        expires 1h;
+        expires \$${INSTANCE}_asset_expires;
+        gzip on;
+        gzip_vary on;
+        gzip_comp_level 5;
+        gzip_min_length 1024;
+        gzip_types text/css application/javascript text/javascript image/svg+xml application/json;
         add_header X-Content-Type-Options "nosniff" always;
     }
 

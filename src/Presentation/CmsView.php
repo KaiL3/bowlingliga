@@ -97,7 +97,7 @@ final class CmsView
                     <section class="tabs__panel" id="rules-panel-handicap" role="tabpanel" aria-labelledby="rules-tab-handicap">{$handicap}</section>
                 </div>
             </div>
-            <script src="/assets/js/tabs.js" defer></script>
+            <script src="{$this->e(Layout::versioned('/assets/js/tabs.js'))}" defer></script>
             HTML;
     }
 
