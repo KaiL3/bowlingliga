@@ -426,6 +426,15 @@ final class AdminAreaIntegrationTest extends TestCase
         [, $html] = $this->post('/admin/rules/save', ['csrf_token' => $this->csrfToken($form), 'text' => '<p><img src="' . $url . '"></p>']);
         self::assertStringContainsString('Jedes Bild braucht eine Bildbeschreibung', $html);
 
+        // A source changed by hand or an image that is not in the store: refused
+        // with the address, the input stays in the form (R42.4).
+        foreach (['/media/bild.jpg', '/media/' . str_repeat('0', 64) . '.jpg', 'https://example.org/bild.jpg'] as $source) {
+            [, $html] = $this->post('/admin/rules/save', ['csrf_token' => $this->csrfToken($form), 'text' => '<p>Bleibt</p><p><img src="' . $source . '" alt="x"></p>']);
+            self::assertStringContainsString('Das Bild „' . $source . '“ stammt nicht aus dem Bereich Bilder.', $html, $source);
+            self::assertStringContainsString('&lt;p&gt;Bleibt&lt;/p&gt;', $html, 'The input stays.');
+        }
+        self::assertStringContainsString('<img src="' . $url . '"', $this->get('/rules')[1], 'The rules are unchanged.');
+
         // Taken out of the text: removable, the address is gone.
         $this->sendSuccessful('/admin/rules', '/admin/rules/save', ['text' => '<p>Ohne Bild</p>']);
         [, $area] = $this->get('/admin/media');

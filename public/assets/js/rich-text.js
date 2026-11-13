@@ -103,6 +103,15 @@
             link_title: true,
             convert_urls: false,
             setup: (editor) => {
+                // The image dialog: its source is filled by the upload or the
+                // image list and cannot be typed (R42.4), the server checks it
+                // anyway.
+                editor.on('OpenWindow', (event) => {
+                    const dialog = event.dialog;
+                    if (dialog && typeof dialog.getData === 'function' && 'src' in dialog.getData()) {
+                        dialog.setEnabled('src', false);
+                    }
+                });
                 // Keep the text area current, so leaving the form or a failed
                 // submit never loses what was typed.
                 editor.on('change input undo redo', () => editor.save());

@@ -81,7 +81,7 @@ final class CmsEditControllerTest extends TestCase
     {
         $this->controller->processHomePage('create', [
             'title' => '<script>alert(1)</script>',
-            'text'  => '<p>Hallo</p><script>alert(2)</script><img src=x alt="Bild" onerror=alert(3)>',
+            'text'  => '<p>Hallo</p><script>alert(2)</script><img src="/media/' . str_repeat('a', 64) . '.jpg" alt="Bild" onerror=alert(3)>',
         ]);
 
         $saved = $this->homePage->contents[1];

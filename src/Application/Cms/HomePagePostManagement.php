@@ -6,7 +6,6 @@ namespace Bowlingliga\Application\Cms;
 
 use Bowlingliga\Security\HtmlSanitizer;
 use Bowlingliga\Security\WriteAccess;
-use Bowlingliga\Security\ValidationException;
 use Bowlingliga\Security\Validator;
 use Bowlingliga\Security\AccessDeniedException;
 
@@ -42,8 +41,13 @@ final class HomePagePostManagement
         private readonly Validator $validator,
         private readonly HtmlSanitizer $sanitizer,
         private readonly WriteAccess $writeAccess,
+        ?TextImages $images = null,
     ) {
+        $this->images = $images ?? new TextImages($sanitizer);
     }
+
+    /** Checks description and origin of the images of a text (R42.4, R42.6). */
+    private readonly TextImages $images;
 
     /**
      * Creates a home page post and returns its id (R33.1, R33.4).
@@ -102,10 +106,8 @@ final class HomePagePostManagement
     {
         $title = $this->validator->checkCmsTextWithMin($title, self::TITLE_MIN, self::TITLE_MAX, 'field.title');
         $text  = $this->validator->checkCmsTextWithMin($text, self::TEXT_MIN, self::TEXT_MAX, 'field.text_content');
-        // R42.6: every image describes itself for screen readers.
-        if ($this->sanitizer->imagesWithoutAlt($text) > 0) {
-            throw ValidationException::forField('field.text_content', 'validation.image_alt');
-        }
+        // R42.4, R42.6: images with a description, only from the own store.
+        $this->images->check($text, 'field.text_content');
 
         // R33.11: escape the title as plain text, sanitize the text content
         // whitelist-based, so that no executable parts are stored.

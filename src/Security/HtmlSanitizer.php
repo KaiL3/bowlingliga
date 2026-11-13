@@ -95,8 +95,19 @@ final class HtmlSanitizer
      */
     public function imagesWithoutAlt(string $rawInput): int
     {
+        return count(array_filter($this->images($rawInput), static fn (array $image): bool => trim($image['alt']) === ''));
+    }
+
+    /**
+     * Source and description of every image in the raw input, in order
+     * (R42.4, R42.6).
+     *
+     * @return list<array{src: string, alt: string}>
+     */
+    public function images(string $rawInput): array
+    {
         if (stripos($rawInput, '<img') === false) {
-            return 0;
+            return [];
         }
 
         $document = new \DOMDocument();
@@ -105,14 +116,12 @@ final class HtmlSanitizer
         libxml_clear_errors();
         libxml_use_internal_errors($previous);
 
-        $missing = 0;
+        $images = [];
         foreach ($document->getElementsByTagName('img') as $image) {
-            if (trim($image->getAttribute('alt')) === '') {
-                $missing++;
-            }
+            $images[] = ['src' => $image->getAttribute('src'), 'alt' => $image->getAttribute('alt')];
         }
 
-        return $missing;
+        return $images;
     }
 
     /**

@@ -655,9 +655,11 @@ $printController = new PrintController(
 // validation (task 19), HTML sanitizing (R33.11, R34.8) and write protection
 // (R5.1) live in the use cases.
 $htmlSanitizer = new HtmlSanitizer();
+// Images in a text must exist in the image store (R42.4).
+$textImages = new \Bowlingliga\Application\Cms\TextImages($htmlSanitizer, new \Bowlingliga\Persistence\ContentImageRepository($database));
 $cmsEditController = new CmsEditController(
-    new HomePagePostManagement($homePage, $validator, $htmlSanitizer, $auth),
-    new RulesManagement($rules, $validator, $htmlSanitizer, $auth),
+    new HomePagePostManagement($homePage, $validator, $htmlSanitizer, $auth, $textImages),
+    new RulesManagement($rules, $validator, $htmlSanitizer, $auth, $textImages),
     new RepositoryCmsReader($homePage, $rules),
     new CmsEditView($translator),
     t: $translator,

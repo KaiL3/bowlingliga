@@ -6,7 +6,6 @@ namespace Bowlingliga\Application\Cms;
 
 use Bowlingliga\Security\HtmlSanitizer;
 use Bowlingliga\Security\WriteAccess;
-use Bowlingliga\Security\ValidationException;
 use Bowlingliga\Security\Validator;
 use Bowlingliga\Security\AccessDeniedException;
 
@@ -32,8 +31,13 @@ final class RulesManagement
         private readonly Validator $validator,
         private readonly HtmlSanitizer $sanitizer,
         private readonly WriteAccess $writeAccess,
+        ?TextImages $images = null,
     ) {
+        $this->images = $images ?? new TextImages($sanitizer);
     }
+
+    /** Checks description and origin of the images of a text (R42.4, R42.6). */
+    private readonly TextImages $images;
 
     /**
      * Saves the text content of the rules (R34.3, R34.4).
@@ -48,10 +52,8 @@ final class RulesManagement
 
         // R34.5: maximum length 20000, lower bound 0 (empty content allowed).
         $text = $this->validator->checkCmsText($text, self::TEXT_MAX, 'field.text_content');
-        // R42.6: every image describes itself for screen readers.
-        if ($this->sanitizer->imagesWithoutAlt($text) > 0) {
-            throw ValidationException::forField('field.text_content', 'validation.image_alt');
-        }
+        // R42.4, R42.6: images with a description, only from the own store.
+        $this->images->check($text, 'field.text_content');
 
         // R34.8: whitelist-based sanitizing; empty text stays empty.
         $sanitized = $text === '' ? '' : $this->sanitizer->sanitize($text);

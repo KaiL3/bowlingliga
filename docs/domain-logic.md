@@ -1006,8 +1006,11 @@ A rule without a number in brackets belongs to the section as a whole.
   it, read from the texts each time. An image is removed only while no text
   uses it; otherwise the area names those texts (R42.3).
 - Images are only taken from the website's own store
-  (`/media/<hash>.jpg|png`); an image of another server, a `data:` address or
-  any other address is removed when the text is saved. The address never
+  (`/media/<hash>.jpg|png` of an image that exists there). In the editor
+  the source of an image cannot be typed: the upload or the image list fill
+  it. A text with an image from elsewhere (another server, a `data:`
+  address, a source changed by hand, an unknown image) is not saved; the
+  message names the address and the input stays. The address never
   changes, so browsers keep an image for a year (R42.4).
 - Placement chosen in the editor: in the text, left or right with the text
   beside, centred or full width; size and caption are free. Next to the

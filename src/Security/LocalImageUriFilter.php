@@ -14,6 +14,9 @@ namespace Bowlingliga\Security;
  */
 final class LocalImageUriFilter extends \HTMLPurifier_URIFilter
 {
+    /** Address of an image of the own store; group 1 is the hash. */
+    public const SOURCE_PATTERN = '#^/media/([0-9a-f]{64})\.(?:jpg|png)$#D';
+
     /** @var string */
     public $name = 'LocalImages';
 
@@ -32,6 +35,6 @@ final class LocalImageUriFilter extends \HTMLPurifier_URIFilter
             && $uri->host === null
             && $uri->query === null
             && $uri->fragment === null
-            && preg_match('#^/media/[0-9a-f]{64}\.(jpg|png)$#', (string) $uri->path) === 1;
+            && preg_match(self::SOURCE_PATTERN, (string) $uri->path) === 1;
     }
 }

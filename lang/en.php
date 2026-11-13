@@ -860,6 +860,7 @@ return [
     'field.selection'                   => 'Selection',
     'validation.integer'                => '{field} must be a whole number.',
     'validation.image_alt' => '{field}: every image needs a description (alternative text in the image dialog).',
+    'validation.image_source' => '{field}: the image “{source}” does not come from the area Images. Please insert it with “Upload” or the image list of the image dialog.',
     'validation.password_age' => '{field} must be -1 (unlimited) or a whole number between 1 and {max}.',
     'validation.decimal'                => '{field} must be a number (e.g. 7.50).',
     'validation.handicap_factor'        => 'The handicap factor must be greater than 0 and at most 5.',

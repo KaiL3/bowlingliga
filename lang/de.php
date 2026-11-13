@@ -861,6 +861,7 @@ return [
     'field.selection'                   => 'Auswahl',
     'validation.integer'                => '{field} muss eine ganze Zahl sein.',
     'validation.image_alt' => '{field}: Jedes Bild braucht eine Bildbeschreibung (Alternativtext im Bild-Dialog).',
+    'validation.image_source' => '{field}: Das Bild „{source}“ stammt nicht aus dem Bereich Bilder. Bitte über „Hochladen“ oder die Bildauswahl im Bild-Dialog einsetzen.',
     'validation.password_age' => '{field} muss -1 (unbegrenzt) oder eine ganze Zahl zwischen 1 und {max} sein.',
     'validation.decimal'                => '{field} muss eine Zahl sein (z. B. 7,50).',
     'validation.handicap_factor'        => 'Der Handicap-Faktor muss größer als 0 und höchstens 5 sein.',
