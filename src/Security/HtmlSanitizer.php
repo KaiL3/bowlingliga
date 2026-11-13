@@ -35,9 +35,10 @@ final class HtmlSanitizer
      *
      * Deliberately kept narrow to simple text markup and links; it contains no
      * elements through which executable code could be injected (no `script`,
-     * `iframe`, `object`, `embed`, `style`).
+     * `iframe`, `object`, `embed`, `style`). The editor of the admin area
+     * offers exactly these elements (data-allowed of its text area).
      */
-    private const ALLOWED_ELEMENTS =
+    public const ALLOWED_ELEMENTS =
         'p,br,b,strong,i,em,u,ul,ol,li,h1,h2,h3,h4,blockquote,a[href|title]';
 
     private ?HTMLPurifier $purifier = null;

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Bowlingliga\Tests\Unit\Presentation;
 
 use Bowlingliga\Presentation\CmsEditView;
+use Bowlingliga\Security\HtmlSanitizer;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -95,5 +96,47 @@ final class CmsEditViewTest extends TestCase
 
         self::assertStringContainsString('Gespeichert &lt;b&gt;', $html);
         self::assertStringContainsString('Fehler &lt;i&gt;', $html);
+    }
+    /**
+     * Both content fields become the rich text editor, which offers exactly
+     * the elements the server keeps; its scripts come once per page.
+     */
+    public function testContentFieldsBecomeTheRichTextEditor(): void
+    {
+        $pages = [
+            $this->view->renderRulesEdit(self::CSRF, '<p>Regel</p>'),
+            $this->view->renderHomePageEdit(self::CSRF, []),
+        ];
+
+        foreach ($pages as $html) {
+            self::assertMatchesRegularExpression('/<textarea [^>]*data-rich-text data-allowed="' . preg_quote(htmlspecialchars(HtmlSanitizer::ALLOWED_ELEMENTS), '/') . '"/', $html);
+            self::assertStringContainsString('data-block-formats="Absatz=p; Überschrift 2=h2; Überschrift 3=h3; Überschrift 4=h4"', $html);
+            self::assertSame(1, substr_count($html, '/assets/vendor/tinymce/tinymce.min.js?v='));
+            self::assertSame(1, substr_count($html, '/assets/js/rich-text.js?v='));
+            self::assertStringContainsString('Formatieren über die Werkzeugleiste.', $html);
+        }
+    }
+
+    /**
+     * The editor files are published from Composer (bin/publish-tinymce.php): everything the
+     * set-up script loads is there, with the GPL licence next to it.
+     */
+    public function testTheEditorFilesTheSetUpLoadsAreThere(): void
+    {
+        $public = dirname(__DIR__, 3) . '/public';
+        $setup  = (string) file_get_contents($public . '/assets/js/rich-text.js');
+        self::assertSame(1, preg_match("/plugins: '([a-z ]+)'/", $setup, $plugins));
+
+        $files = ['tinymce.min.js', 'license.md', 'themes/silver/theme.min.js', 'models/dom/model.min.js',
+            'icons/default/icons.min.js', 'langs/de.js', 'skins/ui/oxide/skin.min.css', 'skins/ui/oxide-dark/skin.min.css',
+            'skins/content/default/content.min.css', 'skins/content/dark/content.min.css'];
+        foreach (explode(' ', $plugins[1]) as $plugin) {
+            $files[] = 'plugins/' . $plugin . '/plugin.min.js';
+        }
+        foreach ($files as $file) {
+            self::assertFileExists($public . '/assets/vendor/tinymce/' . $file);
+        }
+        self::assertStringContainsString('GNU General Public License Version 2 or later', (string) file_get_contents($public . '/assets/vendor/tinymce/license.md'));
+        self::assertStringContainsString("license_key: 'gpl'", $setup);
     }
 }

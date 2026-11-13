@@ -74,6 +74,17 @@ $router->admin('/area/action', static function () use (...): void {
 - Views return HTML strings. Every output of data is escaped with
   `htmlspecialchars`. Only CMS HTML is output raw, because it passes through
   the `HtmlSanitizer` (HTML Purifier, whitelist) when it is saved.
+- CMS texts are written in TinyMCE ([RichTextEditor](../src/Presentation/RichTextEditor.php),
+  [rich-text.js](../public/assets/js/rich-text.js)): Composer package,
+  published to `public/assets/vendor/tinymce/` by `bin/publish-tinymce.php`
+  after `composer install`, file URLs carry the package version
+  (GPL-2.0-or-later via `license_key: 'gpl'`,
+  no connection to Tiny's servers, branding and upgrade prompts off), loaded
+  only on the editing pages. The text area hands the editor
+  `HtmlSanitizer::ALLOWED_ELEMENTS` as `valid_elements`, so the toolbar and
+  pasting produce only what the server keeps; the server still filters on
+  saving. Without JavaScript the text area takes HTML as before. The editor
+  runs under the normal CSP (no `eval`, inline styles are allowed anyway).
 - Use cases check `WriteAccess` once more themselves (defence in depth).
 
 ## Security

@@ -10,8 +10,10 @@
         "bjeavons/zxcvbn-php": "^1.4",
         "chillerlan/php-qrcode": "^6.0",
         "ezyang/htmlpurifier": "^4.17",
+        "mklkj/tinymce-i18n": "^26.11",
         "mpdf/mpdf": "^8.2",
-        "spomky-labs/otphp": "^11.2"
+        "spomky-labs/otphp": "^11.2",
+        "tinymce/tinymce": "^8.10"
     },
     "suggest": {
         "thiagoalessio/tesseract_ocr": "^2.13 – only for the deferred OCR of score sheets (src/Ocr), not wired"
@@ -40,6 +42,12 @@
         }
     },
     "scripts": {
+        "post-install-cmd": [
+            "@php bin/publish-tinymce.php"
+        ],
+        "post-update-cmd": [
+            "@php bin/publish-tinymce.php"
+        ],
         "test": "phpunit",
         "test:unit": "phpunit --testsuite Unit",
         "test:property": "phpunit --testsuite Property",

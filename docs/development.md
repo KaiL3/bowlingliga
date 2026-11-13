@@ -113,6 +113,17 @@ version of the CI, configured in
 - not updated: the PHP constraint and MariaDB 10.11 of the CI (both state the
   lowest supported version and are changed by hand).
 
+**TinyMCE** (editor of the CMS texts) comes as the Composer packages
+`tinymce/tinymce` and `mklkj/tinymce-i18n` (German language pack), so
+Renovate proposes its updates and `composer audit` reports its advisories
+like for every other package. The web server only delivers `public/`:
+after every `composer install`/`update` the script
+`bin/publish-tinymce.php` copies the files the editor loads to
+`public/assets/vendor/tinymce/` (not versioned, rebuilt on every
+deployment). A new plugin in `rich-text.js` needs its file in the list of
+that script (`CmsEditViewTest` checks that every loaded file is there).
+After an update of TinyMCE check the editor via screenshot, light and dark.
+
 Supported versions: PHP as long as it gets active support from the PHP
 project (8.3 left it at the end of 2025), MariaDB from 10.11 (Debian 12).
 

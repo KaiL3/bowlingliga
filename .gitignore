@@ -1,5 +1,7 @@
-# Dependencies (composer install)
+# Dependencies (composer install) and the editor files published from them
+# by bin/publish-tinymce.php
 /vendor/
+/public/assets/vendor/
 
 # Local credentials and TOTP key (template: config/database.php.example)
 /config/database.php

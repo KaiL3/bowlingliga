@@ -1,6 +1,6 @@
 # Developer documentation
 
-Status: 2026-11-12 · 999 tests green · rules in domain-logic.md · new design (public and admin area), admin area "Saison", printing per matchday
+Status: 2026-11-13 · 1001 tests green · rules in domain-logic.md · new design (public and admin area), admin area "Saison", printing per matchday
 
 This documentation describes the architecture, data model, domain logic and
 development status of the bowling league website. It is meant for everyone
@@ -29,7 +29,7 @@ development sessions, without having to reread the whole code base.
   Own router, composition root in [public/index.php](../public/index.php).
   Libraries: mPDF (printing), HTML Purifier (CMS), otphp (2FA), php-qrcode
   (QR code of the 2FA setup, rendered locally as SVG), zxcvbn-php (password
-  strength); the Tesseract
+  strength), TinyMCE (editor of the CMS texts, self-hosted); the Tesseract
   wrapper for the deferred OCR is only suggested, not installed. Tests: PHPUnit 13 + eris.
 - **Architecture:** Ports & Adapters. `Domain` = pure calculation logic,
   `Application` = use cases with port interfaces, `Persistence` = PDO

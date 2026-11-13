@@ -55,12 +55,14 @@ final class CmsEditView
             '<p class="page-header__actions"><a class="button button--secondary" href="/">' . $this->text('cms.view_home_page') . '</a></p>',
         )
             . $this->renderNotes($message, $error)
-            . '<div class="grid grid--work">'
+            // One column: the editor needs the width; the form comes first,
+            // so "Bearbeiten" lands right on it.
+            . '<div class="grid">'
+            . $this->renderHomePageForm($csrfField, $form)
             . '<section class="card" aria-labelledby="h-home-page-list">'
             . '<div class="card__header"><h2 id="h-home-page-list">' . $this->text('cms.existing') . '</h2></div>'
             . $items
             . '</section>'
-            . $this->renderHomePageForm($csrfField, $form)
             . '</div>';
     }
 
@@ -76,8 +78,10 @@ final class CmsEditView
         ?string $message = null,
         ?string $error = null,
     ): string {
-        $note = $this->text('cms.markup_note');
-        $value    = $this->escape($text);
+        $note   = $this->text('cms.markup_note');
+        $value  = $this->escape($text);
+        $editor = RichTextEditor::attributes($this->t);
+        $script = RichTextEditor::scripts();
 
         return AdminComponents::pageHeader(
             $this->plain('admin.area.rules.title'),
@@ -91,12 +95,13 @@ final class CmsEditView
                     {$csrfField}
                     <div class="form__field">
                         <label for="rules-text">{$this->text('cms.rules_text', ['max' => 20000])}</label>
-                        <textarea id="rules-text" name="text" rows="20" maxlength="20000" aria-describedby="rules-note">{$value}</textarea>
+                        <textarea id="rules-text" name="text" rows="20" maxlength="20000" aria-describedby="rules-note"{$editor}>{$value}</textarea>
                         <small id="rules-note">{$note}</small>
                     </div>
                     <button type="submit" class="button">{$this->text('cms.save_rules')}</button>
                 </form>
                 </section>
+                {$script}
                 HTML;
     }
 
@@ -139,6 +144,8 @@ final class CmsEditView
         $title      = $this->escape($form['title'] ?? '');
         $text       = $this->escape($form['text'] ?? '');
         $note    = $this->text('cms.markup_note');
+        $editor  = RichTextEditor::attributes($this->t);
+        $script  = RichTextEditor::scripts();
         $edit = $id !== null;
 
         $heading = $this->text($edit ? 'cms.edit_post' : 'cms.new_post');
@@ -161,12 +168,13 @@ final class CmsEditView
                     </div>
                     <div class="form__field">
                         <label for="home-page-text">{$this->text('cms.text_length', ['min' => 1, 'max' => 5000])}</label>
-                        <textarea id="home-page-text" name="text" rows="10" maxlength="5000" required aria-describedby="home-page-note">{$text}</textarea>
+                        <textarea id="home-page-text" name="text" rows="10" maxlength="5000" required aria-describedby="home-page-note"{$editor}>{$text}</textarea>
                         <small id="home-page-note">{$note}</small>
                     </div>
                     <div class="form__actions"><button type="submit" class="button">{$button}</button>{$cancel}</div>
                 </form>
             </section>
+            {$script}
             HTML;
     }
 

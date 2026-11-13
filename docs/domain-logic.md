@@ -765,7 +765,9 @@ A rule without a number in brackets belongs to the section as a whole.
   next to the season selection, or only the selection if there are none
   (R33.7–R33.9). Writing requires login (R33.10).
 - The text is cleaned of executable code when saved (HTML Purifier
-  whitelist) (R33.11).
+  whitelist) (R33.11). It is written in a rich text editor whose toolbar
+  offers exactly the markup the whitelist keeps (headings 2–4, bold,
+  italic, underline, lists, quote, links).
 
 ## R34 – Rules page
 

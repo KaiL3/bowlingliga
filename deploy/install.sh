@@ -208,7 +208,7 @@ if [[ $SOURCE != "$TARGET" ]]; then
         --exclude '.git/' --exclude '.claude/' --exclude 'vendor/' \
         --exclude 'tests/' --exclude '.local/' --exclude 'stdout.txt' \
         --exclude 'phpunit.xml' --exclude '.phpunit.cache/' \
-        --exclude 'config/database.php' \
+        --exclude 'config/database.php' --exclude 'public/assets/vendor/' \
         "$SOURCE/" "$TARGET/"
 fi
 
