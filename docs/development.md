@@ -96,6 +96,10 @@ for Composer packages, GitHub Actions, the gitleaks version and the MariaDB
 version of the CI, configured in
 [.github/renovate.json](../.github/renovate.json):
 
+- against `development`, like all other work: the updates reach `main`
+  with the next pull request `development` → `main`, so no merge back is
+  needed; Renovate reads its configuration from `main`, so a change to it
+  takes effect once it is merged there,
 - weekly on Monday morning, a version must be at least 7 days old; the
   lock file is refreshed once a month; open updates are listed in the
   "Dependency Dashboard" issue,

@@ -2,6 +2,7 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "description": "Dependency updates as pull requests, tested by the CI (docs/development.md#dependency-updates).",
   "extends": ["config:recommended", ":dependencyDashboard"],
+  "baseBranchPatterns": ["development"],
   "timezone": "Europe/Berlin",
   "schedule": ["before 6am on monday"],
   "minimumReleaseAge": "7 days",
